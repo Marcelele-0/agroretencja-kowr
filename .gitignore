@@ -31,9 +31,15 @@ data/*.parquet
 ml/runs/
 *.log
 
-# RL irrigation module (ml/rl_irrigator): the pre-fetched dataset (data/**/*.parquet, ~6 MB) is
-# versioned; HTTP cache, TensorBoard logs and training checkpoints are not.
-ml/rl_irrigator/data/cache/
+# RL irrigation module (ml/rl_irrigator): downloaded data stays local (re-create it with
+# ml/rl_irrigator/scripts/fetch_training_data.py); only the small manifests with sources and
+# retrieval dates are versioned.
+ml/rl_irrigator/data/**
+!ml/rl_irrigator/data/**/
+!ml/rl_irrigator/data/MANIFEST.json
+!ml/rl_irrigator/data/soils/points.json
+!ml/rl_irrigator/data/holdout/MANIFEST.json
+!ml/rl_irrigator/data/holdout/soils/points.json
 ml/rl_irrigator/runs/
 ml/rl_irrigator/models/checkpoints/
 # RL checkpoints: only the deployed model is force-added (git add -f)

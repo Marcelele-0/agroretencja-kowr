@@ -136,7 +136,7 @@ artifacts/models/ppo_irrigator_weights.npz, artifacts/validation/rl_eval.json   
 ml/rl_irrigator/
   PLAN.md, EXPERIMENTS.md, README.md
   config/      crops.yaml, soils.yaml, rl.yaml
-  data/        weather/, forecasts/, holdout/, soils/, MANIFEST.json   (dane .parquet w repo, cache/ w .gitignore)
+  data/        weather/, forecasts/, holdout/, soils/, MANIFEST.json   (dane lokalnie, w .gitignore; w repo tylko manifesty)
   kowr_rl/     data.py, simulator.py, baselines.py, env.py, train.py, evaluate.py, inference.py, api.py
   scripts/     fetch_training_data.py, benchmark_latency.py
   tests/
