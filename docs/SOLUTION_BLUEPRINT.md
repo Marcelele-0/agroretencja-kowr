@@ -2,7 +2,8 @@
 
 > **Wyzwanie:** HackNation 2026 — KOWR: *Zatrzymaj wodę, chroń plony – Inteligentne wsparcie gospodarowania wodą w rolnictwie*  
 > **Standard dokumentacji:** ASD-STE100 (krótkie zdania, strona czynna, zero zbędnych opisów)  
-> **Status IP (§ 5 Regulaminu KOWR):** Czysty kod pisany od zera wyłącznie pod zadanie konkursowe KOWR.
+> **Status IP (§ 5 Regulaminu KOWR):** Czysty kod pisany od zera wyłącznie pod zadanie konkursowe KOWR.  
+> **Konsultacje z mentorami (21.11.2026):** Ustalenia i ich wpływ na priorytety opisuje [sekcja 8](#8-ustalenia-z-konsultacji-z-mentorami-kowr-21112026).
 
 ---
 
@@ -68,7 +69,7 @@ Silnik fizyczny działa w 100% deterministycznie na CPU (`< 50 ms` dla pełnych 
 - **Zapas wody dostępnej w glebie ($\text{TAW}$) wg 4 kategorii IUNG-PIB** (powiązanych z danymi `ISRIC SoilGrids`):
   - Kat. I: `< 127,5 mm` | Kat. II: `127,5–170 mm` | Kat. III: `170–202,5 mm` | Kat. IV: `> 202,5 mm`.
 - **Woda łatwo dostępna:** $\text{RAW} = p \cdot \text{TAW}$ (parametry uprawowe $K_c, K_y, p$ z tabel FAO-56/33, konsultowane z mentorami KOWR: dr Bolewski, dr hab. Gozdowski).
-- **Klimatyczny Bilans Wodny (60 dni, IUNG):** $\text{KBW}_{60}(t) = \sum_{d=t-59}^{t}(P_d - ET_{0,d})$.
+- **Klimatyczny Bilans Wodny (60 dni, IUNG):** $\text{KBW}_{60}(t) = \sum_{d=t-59}^{t}(P_d - ET_{0,d})$. Obok wartości ciągłej silnik liczy 14 stałych okien SMSR IUNG-PIB dla roku daty $t$ (sekcja 8.2).
 - **Dobowy krok bilansu w strefie korzeniowej** $D_{r,d} \in [0, \text{TAW}]$:
   $$K_{s,d} = \begin{cases} 1 & D_{r,d-1} \le \text{RAW} \\ \max\!\left(0,\; \frac{\text{TAW} - D_{r,d-1}}{\text{TAW} - \text{RAW}}\right) & D_{r,d-1} > \text{RAW} \end{cases}, \qquad ET_{c,d} = K_c(d)\cdot ET_{0,d}, \qquad ET_{a,d} = K_{s,d}\cdot ET_{c,d}$$
   $$D_{r,d} = \text{clip}\!\Big(D_{r,d-1} + ET_{a,d} - (P_d - RO_d) - I_d,\; 0,\; \text{TAW}\Big), \qquad DP_d = \max\!\big(0,\; P_d + I_d - RO_d - ET_{a,d} - D_{r,d-1}\big)$$
@@ -83,7 +84,7 @@ $$\text{WaterScore} = 0.40 \cdot S_{\text{bilans}} + 0.30 \cdot S_{\text{sat/ML}
 Gdy odczyt satelitarny i rekonstrukcja ML są niedostępne lub poza AoA, waga $0.30$ jest jawnie przeliczana proporcjonalnie na pozostałe trzy składowe.
 
 **Reguły Absolutnego Weta (`WaterRisk` — nigdy nie uśredniane w `WaterScore`):**
-1. $\text{KBW}_{60}(t)$ poniżej progu suszy IUNG dla pary `(uprawa, kategoria gleby)` $\rightarrow$ **KRYTYCZNE**.
+1. KBW ostatniego zakończonego okna SMSR (koniec okna $\le t$) poniżej progu suszy IUNG dla trójki `(uprawa, kategoria gleby, okno)` $\rightarrow$ **KRYTYCZNE** (tabela progów: sekcja 8.2).
 2. $D_r > 0.85 \cdot \text{TAW}$ w fazie wrażliwej uprawy $\rightarrow$ **KRYTYCZNE**.
 3. Średni spadek $\beta > 5^\circ$ na glebie lekkiej kat. I bez pasa buforowego $\rightarrow$ min. **WYSOKIE**.
 
@@ -139,11 +140,11 @@ Gdy odczyt satelitarny i rekonstrukcja ML są niedostępne lub poza AoA, waga $0
 
 Interfejs działa w przeglądarkach Windows bez wtyczek. Układ dzieli ekran na **60% Karty Decyzji** po lewej i **40% Mapy Dowodowej** po prawej.
 
-1. **Pasek wejściowy (3 kliknięcia):** Identyfikator `TERYT` / klik na mapie + wybór uprawy + wybór daty z 10 lat (skróty: *Dziś* | *Szczyt wegetacji* | *Najsuchszy dzień 10-lecia*).
+1. **Pasek wejściowy (3 kliknięcia):** Identyfikator `TERYT` / klik na mapie + wybór uprawy + wybór daty z 10 lat (skróty: *Dziś* | *Szczyt wegetacji* | *Najsuchszy dzień 10-lecia*). Link otwiera od razu mapę Polski z granicami działek i polem wyszukiwania. Data poza sezonem 21.III–30.IX uruchamia widok „poza sezonem” (sekcja 8.3).
 2. **Karta Decyzji (5 kroków KOWR):**
    - *Krok 1:* `WaterScore (0–100)` + `WaterRisk (Veto)` + osobna `Pewność Danych (AoA)` + wykres 10 lat (2016–2026).
    - *Krok 2:* Wykres 4 przyczyn niedoboru wody (`TreeSHAP` + wyjaśnienie słowne).
-   - *Krok 3:* Ranking retencji (*NWRM* + agrotechnika) + **Symulator „Co jeśli”** przeliczający w czasie rzeczywistym przyrost rezerwy wodnej (dni, mm) i spadek straty plonu (**FAO-33**) w najsuchszym roku dekady.
+   - *Krok 3:* Ranking retencji (*NWRM* + agrotechnika) + **Symulator „Co jeśli”** przeliczający w czasie rzeczywistym przyrost rezerwy wodnej (dni, mm) i spadek straty plonu (**FAO-33**) w najsuchszym roku dekady. Ranking rozdziela działania „bez urządzeń wodnych” i działania „wymaga zgody Wód Polskich” (sekcja 8.1, pkt 5).
    - *Krok 4:* Karta nawadniania (*Czy podlewać w ciągu 7 dni / ile mm / okno*) + 10-letnia tabela porównania strategii (`Bez` vs `Reguła FAO` vs `Agent RL`).
 3. **Rola mapy (3 czytelne widoki bez żargonu GIS):**
    - *Gdzie ucieka woda* (`NMT 1 m`: cieniowanie, strzałki spływu D8, niebieskie strefy wysokiego TWI),
@@ -193,6 +194,7 @@ Interfejs działa w przeglądarkach Windows bez wtyczek. Układ dzieli ekran na 
 - **Konsultacja z mentorami KOWR:** Potwierdzenie tabeli parametrów `(Kc, Ky, p)` i przyrostu $\Delta\text{TAW}$ z **dr. inż. Tymoteuszem Bolewskim** oraz **dr. hab. Dariuszem Gozdowskim**.
 - **Checkpoint Dnia 1 (22:00):** Wpisanie dowolnego `TERYT`, uprawy i daty z 10 lat zwraca pełny JSON 5 kroków KOWR i pobiera raport PDF w `< 20 s`.
 - **Cut List awaryjny:** (1) Płaski raster 2D TWI + wektory GeoJSON zamiast 3D WebGL; (2) Analiza perfekcyjnej pojedynczej działki zamiast portfela wielu działek; (3) Jeśli `GUGiK NMT WCS` przekroczy 5 s, automatyczny fallback na DEM 30 m.
+- **Kolejność dostaw (sekcja 8.1):** Najpierw działający potok live `mapa → ULDK → KBW SMSR → rekomendacja` na publicznym adresie. Potem `HydroFusion-PL` i tabele walidacji. Jury widzi tylko serwis, więc moduł bez śladu w interfejsie nie daje punktów.
 
 ---
 
@@ -214,5 +216,83 @@ Interfejs działa w przeglądarkach Windows bez wtyczek. Układ dzieli ekran na 
 | **Wartość praktyczna dla użytkownika** | **25%** | Ranking NWRM/agrotechniki osadzony na NMT 1 m działki, efekt policzony w dniach rezerwy i `%` plonu (FAO-33) + 2-stronicowy PDF. |
 | **Dane i wiarygodność naukowa** | **25%** | 5 źródeł, zgodność z FAO-56/33 i IUNG-PIB KBW, separacja ML od fizyki, `WaterRisk Veto`, `AoA`, walidacja holdout i brak pozornej precyzji. |
 | **Innowacyjność i potencjał rozwojowy** | **20%** | Kaskada `S2 10 m → NMT 1 m` + 2 lekkie modele ML (`HydroFusion-PL` + `PPO`) uruchamiane na CPU `< 80 ms` + skalowanie na zasób WRSP. |
-| **Prostota obsługi** | **15%** | 3 kliknięcia (`Działka → Uprawa → Data`), zero żargonu GIS, 3 czytelne widoki mapy, działanie w przeglądarkach Windows bez instalacji. |
+| **Prostota obsługi** | **15%** | 3 kliknięcia (`Działka → Uprawa → Data`), zero żargonu GIS, 3 czytelne widoki mapy, działanie w przeglądarkach Windows i na telefonie bez instalacji. |
 | **Działający prototyp i jakość techniczna** | **15%** | Równoległy potok `asyncio` (`10–18 s`, limit `≤ 30 s`), fallbacki na awarie API, pełna dokumentacja 9 sekcji README i czyste IP. |
+
+---
+
+## 8. Ustalenia z konsultacji z mentorami KOWR (21.11.2026)
+
+> **Źródło:** Sesja pytań z członkiem jury KOWR, 21.11.2026. Mentor zaznaczył, że mówi we własnym imieniu, a nie w imieniu całego jury.  
+> **Zasada:** Koncepcja z sekcji 1–7 zostaje. Ustalenia zmieniają priorytety, procedurę KBW i zakres upraw.
+
+### 8.1. Pięć ustaleń o największym wpływie
+
+1. **Jury ocenia tylko działający serwis webowy.** Jeden projekt dostaje ok. 3 minuty oceny. Repozytorium „raczej nikt nie będzie analizował”.
+   - Moduł bez śladu w interfejsie nie daje punktów. Najpierw dostarczamy potok live `działka → KBW SMSR → rekomendacja`.
+   - `HydroFusion-PL` i tabele walidacji wchodzą do produktu, gdy ich wynik widać w Karcie Decyzji.
+   - Pierwszy ekran to mapa Polski z polem wyszukiwania. Serwis nie ma logowania ani ekranu powitalnego.
+   - Dane podstawowe działki pojawiają się w `≤ 2 s`: identyfikator, gmina, obręb, powierzchnia, granica. Kolejne kroki doładowują się po kolei.
+2. **Wzorcem jest System Monitoringu Suszy Rolniczej (SMSR) IUNG-PIB na poziomie działki.**
+   - Mentor oczekuje „czegoś podobnego, tylko na poziomie działki, działającego”, plus rekomendacji.
+   - Rolnik używa SMSR, bo na jego podstawie może ubiegać się o pomoc po dużej suszy.
+   - Silnik liczy KBW według procedury SMSR (sekcja 8.2). Karta Decyzji pokazuje werdykt „susza wg progów IUNG: tak / nie” dla uprawy, kategorii gleby i okna.
+   - Hipoteza (niepotwierdzona): dane referencyjne jury mają format zbliżony do werdyktów SMSR.
+3. **Zero makiet (mock).** Jury wpisuje znany identyfikator działki. Jeden błędny fakt podstawowy ujawnia makietę.
+   - `ULDK` działa na żywo dla każdego identyfikatora. Cache przyspiesza odpowiedź, ale nie zastępuje ścieżki live.
+   - Przy awarii źródła interfejs pokazuje „brak danych”. Interfejs nie wstawia wartości zastępczej.
+   - `ULDK` nie zwraca powierzchni ewidencyjnej. Interfejs podpisuje powierzchnię jako „z granic działki”.
+4. **Zakres obejmuje wszystkie grunty rolne:** grunty orne, łąki, pastwiska i sady. Działki nierolnicze są poza zakresem.
+   - Lista upraw przechodzi na 14 grup SMSR (sekcja 8.2) plus `użytki zielone`. Zmiana `CropCode` w `schemas.py` wymaga decyzji zespołu, bo zmienia kontrakt API.
+   - Działkę nierolniczą rozpoznaje warstwa IUNG WMS `Susza:katgl_landuse2024` (`sgeo.iung.pl/geoserver/Susza/wms`). Kody 11–14 oznaczają las, wodę, zabudowę i komunikację.
+   - Dla działki nierolniczej serwis zwraca komunikat zamiast analizy. Moduł `ml/rl_irrigator` (gałąź `feat/RL`) już korzysta z tej warstwy.
+   - Użytki zielone nie mają progu SMSR. Dla nich działa sam bilans FAO-56, a `Pewność` spada o jeden poziom.
+   - Gleby organiczne (kod 5) wymagają osobnej obsługi, bo dużo łąk leży na glebach organicznych.
+5. **Każda zmiana urządzeń wodnych wymaga zgody Wód Polskich.** Dotyczy to zastawki, piętrzenia w rowie i zbiornika. Główny problem rolnictwa w Polsce to odwadnianie: sieć melioracyjna odprowadza wodę.
+   - Ranking retencji ma dwie grupy działań.
+   - Grupa „bez urządzeń wodnych”: międzyplon, mulcz, uprawa uproszczona, materia organiczna, pas buforowy.
+   - Grupa „wymaga zgody Wód Polskich”: piętrzenie w rowie, zastawka, zbiornik, sterowanie odpływem. Każde działanie z tej grupy ma ten opis i link do PGW Wody Polskie.
+   - Symulator „Co jeśli” liczy obie grupy bez zmian.
+   - Pitch: zdanie „melioracja odprowadza wodę, którą można zatrzymać” wzmacnia hasło *zatrzymaj wodę tam, gdzie spadła*.
+   - Do weryfikacji w Prawie wodnym: kiedy wystarcza zgłoszenie wodnoprawne, a kiedy potrzebne jest pozwolenie. Dotyczy to także poboru wody do nawadniania.
+
+### 8.2. Procedura SMSR IUNG-PIB (sprawdzona 21.11.2026)
+
+Strony źródłowe: `susza.iung.pulawy.pl` — `/system/`, `/progi/`, `/kategorie/`, `/wykazy/`, `/raporty/`.
+
+| Element | Wartość w SMSR |
+| :--- | :--- |
+| **Wskaźnik** | $\text{KBW} = P - ET_p$. SMSR liczy $ET_p$ metodą Penmana. |
+| **Okna** | 60 dni (6 dekad). Nowe okno startuje co 10 dni w sezonie 21.III–30.IX. Sezon ma 14 okien: `21.III–20.V`, `1.IV–31.V`, `11.IV–10.VI`, …, `21.VII–20.IX`, `1.VIII–30.IX`. |
+| **Uprawy (14)** | Zboża ozime, zboża jare, kukurydza na ziarno, kukurydza na kiszonkę, rzepak i rzepik, ziemniak, burak cukrowy, drzewa owocowe, krzewy owocowe, truskawki, warzywa gruntowe, rośliny strączkowe, chmiel, tytoń. SMSR nie ocenia użytków zielonych. |
+| **Kategorie gleb** | I: WOD `< 127,5 mm`. II: `127,5–169,9 mm`. III: `170–202,5 mm`. IV: `> 202,5 mm`. Źródło: mapa glebowo-rolnicza. |
+| **Progi** | Tabela `/progi/` według Rozporządzenia MRiRW z 11.04.2019. Tabela podaje krytyczne KBW dla trójki `(uprawa, kategoria, okno)`. Progi są jednakowe dla wszystkich województw i odpowiadają spadkowi plonu o 20%. |
+| **Przykład progu** | Zboża ozime, kat. I, okno `21.III–20.V`: `−129 mm`. Znak `x` oznacza brak strat w oknie. Znak `-` oznacza, że uprawa nie występuje na danej kategorii gleby. |
+| **Publikacja** | Wyniki per gmina, lata 2020–2026, format HTML i PNG. SMSR nie udostępnia API ani WMS wyników. |
+
+**Wpływ na silnik (sekcja 3.1):**
+- Tabelę progów przepisujemy raz do `hydro_core` jako JSON ze wskazaniem źródła.
+- Open-Meteo zwraca $ET_0$ FAO-56 Penman-Monteith. SMSR liczy $ET_p$ klasycznym Penmanem. README opisuje tę różnicę jako źródło rozbieżności z SMSR.
+- Strona `/system/` podaje przykład `−140 mm` dla okna `1.IV–31.V` (kat. I, zboża). Tabela podaje `−132 mm` (ozime) i `−127 mm` (jare). Stosujemy tabelę, bo tabela cytuje rozporządzenie.
+- Walidacja (sekcja 9 README): werdykt dla działki porównujemy z wykazem gminnym SMSR z lat 2020–2025.
+
+### 8.3. Pozostałe ustalenia
+
+| Ustalenie mentora | Wpływ na rozwiązanie |
+| :--- | :--- |
+| Link otwiera mapę Polski z działkami EGiB. Użytkownik wybiera działkę kliknięciem albo wpisuje identyfikator. Źródło działek to nasz wybór; starszy plik Parquet jest akceptowalny. | Koncepcja bez zmian (sekcja 4). Przy dużym zbliżeniu mapa pokazuje granice działek. Kliknięcie wywołuje `ULDK GetParcelByXY`. |
+| Szybkość jest krytyczna, bo jury ocenia kilkadziesiąt projektów. | NMT 1 m nie blokuje wyniku. W sondzie 21.11.2026 `WCS GetCoverage` przekroczył 20 s. Widok „Gdzie ucieka woda” doładowuje się po Kroku 1 albo przechodzi na DEM 30 m. |
+| Tylko funkcje bezpłatne. | Produkt i pitch nie mają warstw płatnych. Zgodne z sekcją 2. |
+| Aplikacja webowa bez instalacji, także na telefonie. | Układ 60/40 ma wariant mobilny: mapa u góry, Karta Decyzji w arkuszu od dołu. |
+| Okno 10 lat: mentor proponuje widok tego samego terminu we wszystkich latach, np. każdy czerwiec albo każdy 10 czerwca. | Oś 10 lat dostaje tryb „ten sam termin co roku” dla lat 2016–2025 z pozycją bieżącego roku. Archiwum Open-Meteo zwraca 10 lat w jednym zapytaniu, więc tryb nie wydłuża analizy. |
+| Stan na dziś i porada na najbliższy sezon. W sezonie: „nawodnij dawką X” albo „poczekaj, za 5 dni prognozowany opad”. | Potwierdza Krok 4: prognoza Open-Meteo w regule FAO-56 i w PPO. Poza sezonem (1.X–20.III) skrót *Dziś* pokazuje podsumowanie ostatniego sezonu i działania przed wiosną. Ten widok nie daje decyzji o nawadnianiu. Ocena jury odbywa się w listopadzie, czyli poza sezonem. |
+| Wskaźniki i skalę wybiera zespół. Skala 1–10 jest akceptowalna. | `WaterScore (0–100)` zostaje. |
+| Wilgotność gleby w % jest opcjonalna i ma duży błąd. W jednej działce różnica sięga kilkudziesięciu % przez spływ (np. 50% i 10%). | Serwis nie podaje jednej wartości % dla działki. Zmienność w działce pokazuje warstwa TWI i spływu, co wspiera NMT 1 m. |
+| Mentor nie sprawdza licencji. Oficjalnie zalecane są dane otwarte. Mentor wspomniał Google Earth Engine i embeddingi satelitarne Google. | Zostajemy przy danych otwartych (§ 5 Regulaminu). Nie dodajemy GEE: wymaga logowania, ma limity i wydłuża czas odpowiedzi. |
+
+### 8.4. Pytania otwarte
+
+1. Czy pozostali członkowie jury też oceniają tylko serwis? Mentor mówił we własnym imieniu.
+2. Jaki format mają prywatne dane referencyjne jury?
+3. Czy jury testuje daty spoza sezonu 21.III–30.IX?
+4. Jakie kody warstwy `katgl_landuse2024` mają łąki i pastwiska?
