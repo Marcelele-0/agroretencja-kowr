@@ -1,0 +1,213 @@
+/* Rusałka design system v11: tokens. Source: tokens.json of the design system artifact. Do not edit by hand. */
+:root, [data-theme="light"] {
+  --ground: #edf0ea; /* Tło strony: jasna mgła w dzień, las nocą. */
+  --surface: #ffffff; /* Karty, arkusz dolny, pola formularza, przyciski ikon na mapie. Tekst `ink` i `ink-muted`. */
+  --surface-sunk: #e3e8e1; /* Wgłębienia: tor paska postępu, najechanie na Pill i Button outline. */
+  --ink: #13211a; /* Tekst główny na `ground`, `surface` i `surface-sunk`. */
+  --ink-muted: #56625a; /* Tekst pomocniczy na `ground`, `surface` i `surface-sunk`. */
+  --hairline: #13211a1f; /* Separatory i linie siatki wykresów. Dekoracja, nie granica kontrolki. */
+  --line-strong: #6e7a72; /* Obrys kontrolek: pole, Pill outline, Button outline. Nieaktywne segmenty miernika RiskChip i ConfidenceBadge. >= 3:1 na `ground` i `surface`. */
+  --brand: #1d3a2a; /* Linie sygnetu Wordmark (okrąg i fale, 1,5 px) na `ground` i `surface`. */
+  --forest: #1d3a2a; /* Akcja główna (Button primary), karta PhotoCard forest. Tekst `on-forest`. */
+  --on-forest: #f1f5ec; /* Tekst i ikony na `forest`. */
+  --night: #0f1a14; /* Ciemna sekcja z cienkimi liniami: GridFrame, PhotoCard night, tło zdjęć przed wczytaniem. Tekst `on-night`. */
+  --on-night: #eef2ea; /* Tekst na `night`. */
+  --line-night: #eef2ea40; /* Cienka linia 1 px na `night`, zdjęciu i `nav`: obwódka sekcji, okrąg Marks, obrys FloatingNav. */
+  --lime: #c6ee7c; /* Limonka: ActionCard, aktywna pozycja FloatingNav, aktywna pinezka. Tekst `on-bright`. */
+  --on-bright: #13211a; /* Stały ciemny tekst na jasnych wypełnieniach: `lime`, `field` i stopnie skali od `dry-3` do `wet-2`. */
+  --field: #f4d03f; /* Żółć działki na mapie: wypełnienie 30%, kreskowanie i obrys wybranej działki. */
+  --photo-ink: #ffffff; /* Tekst, obrysy i znaczniki na zdjęciach i mapie. Zawsze nad `scrim` albo `glass-dark`. */
+  --scrim: #0b1710b3; /* Ciemny gradient pod tekstem na zdjęciu (dół PhotoHero, lewa strona GridFrame photo). */
+  --scrim-soft: #0b171047; /* Lekki gradient u góry PhotoHero i cień tekstu na zdjęciu. */
+  --glass-edge: #ffffffb3; /* Obrys Button outline na zdjęciu. */
+  --glass-line: #ffffff38; /* Linia 1 px szkła: obwódka GlassCard, ParcelPopover, MetricTile, LayerSwitch i podziały między polami GlassCard. */
+  --glass-dark: #0f1c14a3; /* Jedyne szkło w systemie: przydymione, bez połysku i cienia. GlassCard, ParcelPopover, MetricTile, LayerSwitch, Pill glass. Tylko nad zdjęciem lub mapą. Tekst `photo-ink`. */
+  --water: #2b6f9e; /* Woda jako znak i tekst: seria Spływ, miernik ConfidenceBadge, wartości mm. */
+  --sky: #a6d4ef; /* Jasna woda: strzałki spływu na mapie, początek gradientu ProgressBar water. */
+  --soil: #94673a; /* Seria Gleba w CauseBreakdown. */
+  --moss: #5d7d2c; /* Seria Uprawa; tło zastępcze obrazów w kartach. */
+  --dry-5: #7a1a10; /* Stan wody −5, susza skrajna: KBW poniżej progu IUNG i zapas wody wyczerpany. Tekst `on-deep`. */
+  --dry-4: #b02e1c; /* Stan wody −4, susza silna. RiskChip krytyczne (strona suszy). Tekst `on-deep`. */
+  --dry-3: #e0703f; /* Stan wody −3, susza. RiskChip wysokie, seria Klimat w CauseBreakdown. Tekst `on-bright`. */
+  --dry-2: #f09a52; /* Stan wody −2, niedobór wody. RiskChip umiarkowane. Tekst `on-bright`. */
+  --dry-1: #f4d08c; /* Stan wody −1, lekki niedobór. Tekst `on-bright`. */
+  --optimum: #62b86c; /* Stan wody 0: optimum, roślina ma wodę łatwo dostępną. RiskChip niskie. Tekst `on-bright`. */
+  --wet-1: #a8dae2; /* Stan wody +1, lekki nadmiar. Tekst `on-bright`. */
+  --wet-2: #62b2da; /* Stan wody +2, nadmiar wody. RiskChip umiarkowane (strona nadmiaru). Tekst `on-bright`. */
+  --wet-3: #2873b5; /* Stan wody +3, przewilgocenie. RiskChip wysokie (strona nadmiaru). Tekst `on-deep`. */
+  --wet-4: #1c4f9c; /* Stan wody +4, silne przewilgocenie. RiskChip krytyczne (strona nadmiaru). Tekst `on-deep`. */
+  --wet-5: #13265f; /* Stan wody +5, zalanie: woda stoi na działce. Ciemny granat. Tekst `on-deep`. */
+  --on-deep: #ffffff; /* Tekst na ciemnych stopniach skali: `dry-5`, `dry-4`, `wet-3`…`wet-5`. */
+  --nav: #121b16; /* Tło pływającej nawigacji i ramki telefonu w makietach. */
+  --on-nav: #c9d1cb; /* Ikony nieaktywne w FloatingNav. */
+  --focus: #2b6f9e; /* Pierścień fokusu: 2 px, odsunięty o 2 px. */
+  --shadow-card: 0 1px 2px #13211a14, 0 14px 32px -20px #13211a52; /* Tylko przyciski ikon na mapie. Karty na `ground` mają obwódkę `hairline`, nie cień. */
+  --shadow-float: 0 22px 44px -22px #0b17108c; /* Elementy pływające: FloatingNav, pinezki, ParcelPopover, ActionCard po najechaniu. */
+}
+[data-theme="dark"] {
+  --ground: #0d1410;
+  --surface: #172019;
+  --surface-sunk: #24302a;
+  --ink: #ebefe7;
+  --ink-muted: #a3ada6;
+  --hairline: #ebefe71f;
+  --line-strong: #76817a;
+  --brand: #c6ee7c;
+  --forest: #3a7350;
+  --on-forest: #f1f5ec;
+  --night: #142019;
+  --on-night: #eef2ea;
+  --line-night: #eef2ea40;
+  --lime: #c6ee7c;
+  --on-bright: #13211a;
+  --field: #f4d03f;
+  --photo-ink: #ffffff;
+  --scrim: #0b1710b3;
+  --scrim-soft: #0b171047;
+  --glass-edge: #ffffffb3;
+  --glass-line: #ffffff38;
+  --glass-dark: #0f1c14a3;
+  --water: #8cc4e8;
+  --sky: #a6d4ef;
+  --soil: #c99a66;
+  --moss: #9dbd5c;
+  --dry-5: #a8291a;
+  --dry-4: #c8432c;
+  --dry-3: #e0703f;
+  --dry-2: #f09a52;
+  --dry-1: #f4d08c;
+  --optimum: #62b86c;
+  --wet-1: #a8dae2;
+  --wet-2: #62b2da;
+  --wet-3: #2f78bd;
+  --wet-4: #3567bd;
+  --wet-5: #3352a8;
+  --on-deep: #ffffff;
+  --nav: #2a3830;
+  --on-nav: #dfe5e0;
+  --focus: #c6ee7c;
+}
+:root {
+  --space-1: 4px; /* Odstęp segmentów miernika, ikony od tekstu. */
+  --space-2: 8px; /* Odstęp wewnątrz Pill i chipów. */
+  --space-3: 12px; /* Padding ActionCard, odstęp elementów w karcie. */
+  --space-4: 16px; /* Padding komórki siatki i GlassCard. Minimalny margines boczny strony. */
+  --space-6: 24px; /* Odstęp kart w rzędzie. */
+  --space-8: 32px; /* Odstęp bloków w karcie decyzji. */
+  --space-12: 48px; /* Skok siatki znaczników krzyżowych; odstęp sekcji kroków KOWR. */
+  --space-16: 64px; /* Oddech nad hasłem display-xl. */
+  --radius-none: 0px; /* Dane w tabelach audytu. */
+  --radius-sm: 8px; /* Przyciski prostokątne (primary, light, lime). */
+  --radius-md: 16px; /* Karty: PhotoCard, GlassCard, ActionCard. */
+  --radius-lg: 24px; /* Duże powierzchnie: PhotoHero, MapView, BottomSheet, ParcelForm, GridFrame. */
+  --radius-pill: 999px; /* Pill, Button outline/icon, ParcelSearch, FloatingNav, LayerSwitch. */
+  --glass-blur: 18px; /* backdrop-filter: blur() szkła. */
+  --stroke-hair: 1px; /* Separatory, obrysy kontrolek. */
+  --stroke-parcel: 2.6px; /* Obrys wybranej działki na mapie. */
+  --font-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --text-display-xl: 500 72px/66px var(--font-sans); /* Hasło na PhotoHero. Klasa .ar-display (font-stretch 86%). Jedno słowo w <em> jest przygaszone (55%), nie kursywą. */
+  --text-display-lg: 500 44px/42px var(--font-sans); /* Tytuł sekcji na zdjęciu lub `night`. Klasa .ar-display. */
+  --text-display-md: 500 28px/28px var(--font-sans); /* Tytuł GlassCard, ActionCard i nagłówek sekcji (.ar-section-title). */
+  --text-poster: 500 104px/90px var(--font-sans); /* Plakat GridFrame: klasa .ar-poster (font-stretch 86%, wersaliki, `photo-ink`). Tylko na `night` lub zdjęciu. */
+  --text-numeral: 500 44px/40px var(--font-sans); /* DateRange. Wąski krój (font-stretch 86%), cyfry tabelaryczne. */
+  --text-title: 500 24px/25px var(--font-sans); /* Tytuł PhotoCard. Wąski krój (font-stretch 86%). */
+  --text-metric: 500 34px/34px var(--font-sans); /* Wartość MetricTile, GradientScale i CauseBreakdown. Wąski krój (font-stretch 86%). */
+  --text-heading: 600 17px/21px var(--font-sans); /* Nagłówek BottomSheet i karty. */
+  --text-body: 400 15px/22px var(--font-sans); /* Tekst główny. */
+  --text-body-sm: 400 13px/19px var(--font-sans); /* Opisy w kartach, legenda. */
+  --text-label: 600 11px/14px var(--font-sans); /* Button outline. Wersaliki przez CSS. Nigdzie indziej. */
+  --text-data: 500 13px/18px var(--font-mono); /* TERYT, współrzędne, mm, m³/ha. */
+  --text-data-sm: 500 11px/14px var(--font-mono); /* Podpisy osi, skala mapy, atrybucja źródeł. */
+}
+.display-xl {
+  font-family: var(--font-sans);
+  font-size: 72px;
+  line-height: 66px;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.display-lg {
+  font-family: var(--font-sans);
+  font-size: 44px;
+  line-height: 42px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.display-md {
+  font-family: var(--font-sans);
+  font-size: 28px;
+  line-height: 28px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.poster {
+  font-family: var(--font-sans);
+  font-size: 104px;
+  line-height: 90px;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.numeral {
+  font-family: var(--font-sans);
+  font-size: 44px;
+  line-height: 40px;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.title {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  line-height: 25px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.metric {
+  font-family: var(--font-sans);
+  font-size: 34px;
+  line-height: 34px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+.heading {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.body-sm {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 19px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.data {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.data-sm {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
