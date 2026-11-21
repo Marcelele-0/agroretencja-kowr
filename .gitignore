@@ -37,3 +37,7 @@ ml/rl_irrigator/data/forecasts/*.parquet
 ml/rl_irrigator/data/cache/
 ml/rl_irrigator/runs/
 ml/rl_irrigator/models/checkpoints/
+# RL checkpoints: only the deployed runs are force-added (git add -f)
+ml/rl_irrigator/models/**/*.zip
+ml/rl_irrigator/models/**/*.pkl
+ml/rl_irrigator/models/**/policy.npz
