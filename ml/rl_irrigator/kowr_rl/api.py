@@ -47,7 +47,7 @@ class RecommendRequest(_Location):
     policy: Literal["default", "rl", "fao_rule", "fao_forecast", "fao_small", "calendar", "none"] = "default"
     irrigation_history: list[tuple[dt.date, float]] | None = Field(default=None, description="Opcjonalnie: [(data, mm), ...] dotychczasowych nawodnien")
     include_history: bool = Field(default=False, description="Dolacz 10-letnie porownanie strategii")
-    plan_days: int = Field(default=7, ge=7, le=14, description="Dlugosc planu: 7 albo do 14 dni (plan_14d z prawdopodobienstwem podlewania)")
+    plan_days: int = Field(default=7, ge=7, le=14, description="Dlugosc planu: 7 albo do 14 dni (plan_14d: prawdopodobienstwo podlewania z ensemble ECMWF i prognoza wody w 3 strefach gleby)")
 
 
 class CompareRequest(_Location):

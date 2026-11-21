@@ -140,7 +140,7 @@ class HttpClient:
     # -- cache -------------------------------------------------------------------------
     @staticmethod
     def full_url(url: str, params: dict[str, Any]) -> str:
-        return f"{url}?{urlencode(params)}" if params else url
+        return f"{url}?{urlencode(params, doseq=True)}" if params else url
 
     def _cache_path(self, full_url: str) -> Path | None:
         if self.cache_dir is None:

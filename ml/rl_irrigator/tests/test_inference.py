@@ -53,6 +53,24 @@ def make_handler(today: dt.date, iung_code: int = 2):
             for k in range(1, 8):
                 hourly[f"precipitation_previous_day{k}"] = [_p(dt.date.fromisoformat(t[:10])) / 24 * 0.8 for t in times]
             return httpx.Response(200, json={"hourly": hourly})
+        if host == "ensemble-api.open-meteo.com":
+            ds = _days(today, today + dt.timedelta(days=int(q["forecast_days"]) - 1))
+            times = [f"{d.isoformat()}T{h:02d}:00" for d in ds for h in range(24)]
+            rng = np.random.default_rng(7)
+            hourly: dict = {"time": times}
+            for m in range(51):
+                sfx = "" if m == 0 else f"_member{m:02d}"
+                f = float(rng.uniform(0.3, 1.7))
+                hourly["precipitation" + sfx] = [_p(dt.date.fromisoformat(t[:10])) / 24 * f for t in times]
+                hourly["temperature_2m" + sfx] = [18.0 + 6 * np.sin(np.pi * (int(t[11:13]) - 6) / 12) + rng.normal(0, 1) for t in times]
+                hourly["shortwave_radiation" + sfx] = [max(0.0, 600 * np.sin(np.pi * (int(t[11:13]) - 5) / 15)) if 5 <= int(t[11:13]) <= 20 else 0.0 for t in times]
+            return httpx.Response(200, json={"hourly": hourly})
+        if host == "rest.isric.org":
+            fc = {"0-5cm": 380, "5-15cm": 360, "15-30cm": 340, "30-60cm": 300, "60-100cm": 280, "100-200cm": 260}
+            wp = {"0-5cm": 160, "5-15cm": 150, "15-30cm": 150, "30-60cm": 140, "60-100cm": 140, "100-200cm": 130}
+            layers = [{"name": n, "unit_measure": {"d_factor": 10}, "depths": [{"label": k, "values": {"mean": v}} for k, v in src.items()]}
+                      for n, src in (("wv0033", fc), ("wv1500", wp))]
+            return httpx.Response(200, json={"properties": {"layers": layers}})
         if host == "sgeo.iung.pl":
             return httpx.Response(200, json={"type": "FeatureCollection", "features": [{"properties": {"GRAY_INDEX": iung_code}}]})
         if host == "uldk.gugik.gov.pl":
@@ -242,3 +260,53 @@ def test_plan_14_days_with_scenarios(mock_client) -> None:
     assert w is None or (0 <= w["p10_mm"] <= w["expected_mm"] + 1e-9 <= w["p90_mm"] + 2e-9)
     assert p14["total_plan_mm"] <= 150 + 1e-9
     assert "plan_14d" not in inf.recommend(52.1, 18.2, "kukurydza", "2024-07-10", 150, 0, client=mock_client, today=TODAY)["recommendation"]
+
+
+def _check_zones(p14: dict, n_days: int) -> None:
+    z = p14["soil_zones"]
+    assert [x["zone"] for x in z["zones"]] == ["0-28 cm", "28-100 cm", "100-200 cm"]
+    assert len(z["days"]) == n_days and z["data_scale"]
+    for d in z["days"]:
+        for blk in [d["root_zone"]] + d["zones"]:
+            probs = blk["class_probabilities"]
+            assert set(probs) == set(z["classes"]) and abs(sum(probs.values()) - 1.0) < 0.03
+            assert blk["class"] in z["classes"]
+        r = d["root_zone"]
+        assert 0 <= r["water_pct_p10"] <= r["water_pct_median"] <= r["water_pct_p90"] <= 100
+        assert 0.0 <= d["stress_probability_no_irrigation"] <= 1.0
+        if "stress_probability_with_plan" in d:
+            assert d["stress_probability_with_plan"] <= d["stress_probability_no_irrigation"] + 1e-9
+
+
+def test_plan_14_days_ecmwf_ensemble_and_soil_zones(mock_client) -> None:
+    out = inf.recommend(52.1, 18.2, "kukurydza", TODAY.isoformat(), 150, 0, plan_days=14, client=mock_client, today=TODAY)
+    assert out["status"] == "ok", out.get("message")
+    p14 = out["recommendation"]["plan_14d"]
+    assert p14["probability_source"] == "ecmwf_ens"
+    assert p14["water_need_mm"]["n_scenarios"] == 51
+    assert p14["days"][0]["dose_mm"] == out["recommendation"]["dose_today_mm"]
+    _check_zones(p14, 14)
+    z = p14["soil_zones"]
+    assert z["n_scenarios"] >= 51 and "ECMWF ENS" in z["weather_source"] and "SoilGrids" in z["soil_profile_source"]
+    assert abs(sum(x["available_water_mm"] for x in z["zones"][:2]) - out["location"]["taw_mm"]) < 0.5
+    names = " ".join(s["name"] for s in out["sources"])
+    assert "Ensemble" in names and "SoilGrids" in names
+    assert mock_client.calls.get("ensemble-api.open-meteo.com") == 1
+    json.dumps(out)
+
+
+def test_plan_14_days_historical_uses_analog_years(mock_client, monkeypatch) -> None:
+    monkeypatch.delenv("KOWR_RL_ENS_ARCHIVE", raising=False)
+    out = inf.recommend(52.1, 18.2, "ziemniak", "2025-07-01", 150, 0, plan_days=14, client=mock_client, today=TODAY)
+    assert out["status"] == "ok", out.get("message")
+    p14 = out["recommendation"]["plan_14d"]
+    assert p14["probability_source"] == "analog_years"
+    _check_zones(p14, 14)
+    assert "lata analogiczne" in p14["soil_zones"]["weather_source"]
+    assert "ensemble-api.open-meteo.com" not in mock_client.calls
+
+
+def test_plan_7_days_does_not_fetch_zone_sources(mock_client) -> None:
+    out = inf.recommend(52.1, 18.2, "kukurydza", TODAY.isoformat(), 150, 0, client=mock_client, today=TODAY)
+    assert out["status"] == "ok"
+    assert "rest.isric.org" not in mock_client.calls and "ensemble-api.open-meteo.com" not in mock_client.calls
