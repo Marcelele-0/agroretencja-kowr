@@ -6,7 +6,7 @@ import { computeLocal, longestDrought, soilCause, withLevers, type Levers, type 
 import { landForCalc, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
 import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, signed, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, WET_MEASURES, type Measure } from "../lib/catalog";
-import { backendCrop, cropOf as cropInfo, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
+import { backendCrop, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
 import { riskFromStage } from "../lib/kbw";
 import type { LandUse } from "../lib/iung";
@@ -96,11 +96,6 @@ export function Analysis() {
     if (hit && hit.id !== activeId) show(hit.id);
   };
   const setCropOf = (id: string, c: CropCode) => write(items.map((x) => (x.id === id ? { ...x, crop: c } : x)), activeId);
-  const remove = (id: string) => {
-    const next = items.filter((x) => x.id !== id);
-    if (!next.length) return;
-    write(next, id === activeId ? next[Math.max(0, items.findIndex((x) => x.id === id) - 1)]!.id : activeId);
-  };
   const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const body = (
@@ -168,15 +163,9 @@ export function Analysis() {
                     onClick={() => show(r.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(r.id); } }}>
                     <div className="rs-pitem__name">
                       <b>{p ? `Działka ${p.number}, ${p.region}` : r.id}</b>
-                      <span>{cropInfo(r.crop).label}{p ? ` · ${ha(p.areaHa)} ha` : ""}{r.land?.kind === "mineral" ? ` · gleba kat. ${r.land.category}` : ""}</span>
                     </div>
                     <div className="rs-pitem__state">{r.local || (on && local) ? <WaterBalance size="sm" value={stage} /> : <span className="ar-muted">{r.land?.kind === "nonAgri" ? "grunt nierolny" : r.error ?? "…"}</span>}</div>
                     {r.local ? <div className="rs-pitem__mini"><StateTimeline compact days={r.local.timeline} selected={r.local.date} today={todayIso()} /></div> : <span />}
-                    {items.length > 1 ? (
-                      <span className="rs-pitem__remove" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="icon" size="sm" icon="minus" label={`Usuń działkę ${p?.number ?? r.id} z listy`} onClick={() => remove(r.id)} />
-                      </span>
-                    ) : null}
                   </div>
                 </li>
               );

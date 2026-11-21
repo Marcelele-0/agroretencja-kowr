@@ -247,10 +247,10 @@ button.rs-st__day:hover { background: var(--hairline); }
   .rs-detail .ar-section-title, .rs-listtitle { font-size: 24px; }
   .rs-cards { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
   /* Panel row: name on the first line, state and the 60-day chart on the second, remove at the right. */
-  .rs-pitem__row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "name name rm" "state mini rm"; gap: 6px 12px; }
+  .rs-pitem__row { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "name name" "state mini"; gap: 8px 14px; padding: 12px 14px; }
   .rs-pitem__name { grid-area: name; }
-  .rs-pitem__state { grid-area: state; }
+  .rs-pitem__state { grid-area: state; align-self: center; }
   .rs-pitem__mini { grid-area: mini; }
-  .rs-pitem__remove { grid-area: rm; align-self: start; }
+  .rs-pitem__mini .rs-st__plot { height: 64px; }
   .rs-datebar__date { font-size: 26px; }
 }
