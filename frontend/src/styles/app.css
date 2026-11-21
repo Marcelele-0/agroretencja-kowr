@@ -254,3 +254,18 @@ button.rs-st__day:hover { background: var(--hairline); }
   .rs-pitem__mini .rs-st__plot { height: 64px; }
   .rs-datebar__date { font-size: 26px; }
 }
+
+/* ---------- Water state for farmers: word in the state colour, a taller scale, no numbers ---------- */
+.ar-bal__cells { height: 40px; gap: 4px; }
+.ar-bal__cell { height: 16px; border-radius: 4px; }
+.ar-bal__cell--on { height: 38px; outline: 2px solid var(--ink); outline-offset: 2px; }
+.ar-bal__read { align-items: center; }
+.rs-bal__dot { flex: none; width: 18px; height: 18px; border-radius: 5px; }
+.ar-bal--sm .rs-bal__dot { display: none; }
+.rs-bal__word { color: var(--ink); font: 500 28px/1 var(--font-sans); font-stretch: 86%; letter-spacing: -.03em; }
+.ar-bal--sm .rs-bal__word { font: 600 13.5px/1.1 var(--font-sans); letter-spacing: 0; }
+.ar-bal--sm .ar-bal__cells { height: 18px; }
+.ar-bal--sm .ar-bal__cell { height: 9px; }
+.ar-bal--sm .ar-bal__cell--on { height: 18px; outline-width: 1px; outline-offset: 1px; }
+.ar-bal__ends { font-size: 12px; }
+.ar-yrs__cell { height: 36px; }

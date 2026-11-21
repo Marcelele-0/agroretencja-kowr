@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cx, Icon, type IconName } from "./core";
-import { BAL, balCls, balStep, signed } from "./status";
+import { BAL, balCls, balStep } from "./status";
 
 export function MetricTile({ icon, label, value, unit, tone = "surface", className }: { icon?: IconName; label: ReactNode; value: ReactNode; unit?: string; tone?: "glass" | "surface"; className?: string }) {
   return (
@@ -81,7 +81,7 @@ export function YearCompare({ years, highlightYear, title, summary, droughtAt = 
   years: { year: number; value: number | null }[]; highlightYear?: number; title?: string; summary?: ReactNode; droughtAt?: number; children?: ReactNode; className?: string;
 }) {
   const dry = years.filter((y) => y.value !== null && balStep(y.value)! <= droughtAt).length;
-  const label = years.map((y) => `${y.year}: ${y.value === null ? "brak danych" : `${signed(balStep(y.value)!)} ${BAL[String(balStep(y.value))]!.toLowerCase()}`}`).join(", ");
+  const label = years.map((y) => `${y.year}: ${y.value === null ? "brak danych" : BAL[String(balStep(y.value))]!.toLowerCase()}`).join(", ");
   return (
     <figure className={cx("ar-yrs", className)} style={{ "--n": years.length || 10 } as CSSProperties}>
       <figcaption className="ar-yrs__head">
@@ -91,7 +91,7 @@ export function YearCompare({ years, highlightYear, title, summary, droughtAt = 
       <div className="ar-yrs__row" role="img" aria-label={`${title ?? "Stan wody w kolejnych latach"}. ${label}`}>
         {years.map((y) => {
           const n = balStep(y.value);
-          return <span key={y.year} className={cx("ar-yrs__cell", n === null ? "ar-yrs__cell--none" : balCls(n), y.year === highlightYear && "ar-yrs__cell--on")} aria-hidden="true">{n === null ? "brak" : signed(n)}</span>;
+          return <span key={y.year} className={cx("ar-yrs__cell", n === null ? "ar-yrs__cell--none" : balCls(n), y.year === highlightYear && "ar-yrs__cell--on")} title={`${y.year}: ${n === null ? "brak danych" : BAL[String(n)]!.toLowerCase()}`} aria-hidden="true">{n === null ? "brak" : ""}</span>;
         })}
       </div>
       <div className="ar-yrs__years" aria-hidden="true">{years.map((y) => <span key={y.year} className={y.year === highlightYear ? "is-on" : ""}>{"’" + String(y.year).slice(2)}</span>)}</div>
@@ -124,7 +124,7 @@ export function StateTimeline({ days, selected, today, onPick, title, summary, c
   days: { date: string; value: number | null; forecast: boolean }[]; selected: string; today: string; onPick?: (date: string) => void; title?: string; summary?: ReactNode; compact?: boolean;
 }) {
   const label = (d: string) => { const [, m, dd] = d.split("-"); return `${Number(dd)}.${Number(m)}`; };
-  const aria = days.map((d) => `${d.date}: ${d.value === null ? "brak" : signed(d.value)}${d.forecast ? " (prognoza)" : ""}`).join(", ");
+  const aria = days.map((d) => `${d.date}: ${d.value === null ? "brak" : BAL[String(balStep(d.value))]!.toLowerCase()}${d.forecast ? " (prognoza)" : ""}`).join(", ");
   const hasForecast = days.some((d) => d.forecast);
   return (
     <figure className={cx("rs-st", compact && "rs-st--compact")} style={{ "--n": days.length } as CSSProperties}>
@@ -133,7 +133,7 @@ export function StateTimeline({ days, selected, today, onPick, title, summary, c
         {summary ? <span className="ar-kbw__sum">{summary}</span> : null}
       </figcaption>}
       <div className="rs-st__wrap">
-        {compact ? null : <div className="rs-st__y" aria-hidden="true"><span>nadmiar</span><span>0</span><span>susza</span></div>}
+        {compact ? null : <div className="rs-st__y" aria-hidden="true"><span>nadmiar</span><span>optimum</span><span>susza</span></div>}
         <div className="rs-st__plot" role="img" aria-label={`${title ?? "Stan wody dzień po dniu"}. ${aria}`}>
           <span className="rs-st__zero" aria-hidden="true" />
           {days.map((d) => {
@@ -141,7 +141,7 @@ export function StateTimeline({ days, selected, today, onPick, title, summary, c
             const h = n === null ? 0 : Math.max(Math.abs(n), 0.35) * 10;
             const bar = <span className={cx("rs-st__bar", n === null ? "" : balCls(n))} style={n === null ? undefined : n >= 0 ? { bottom: "50%", height: `${h}%` } : { top: "50%", height: `${h}%` }} />;
             const cls = cx("rs-st__day", d.forecast && "rs-st__day--fc", d.date === selected && "rs-st__day--on", d.date === today && "rs-st__day--today");
-            const tip = `${label(d.date)}: ${n === null ? "brak danych" : `${signed(n)} ${BAL[String(n)]!.toLowerCase()}`}${d.forecast ? " (prognoza)" : ""}`;
+            const tip = `${label(d.date)}: ${n === null ? "brak danych" : BAL[String(n)]!.toLowerCase()}${d.forecast ? " (prognoza)" : ""}`;
             return onPick
               ? <button key={d.date} type="button" className={cls} title={tip} aria-label={`Pokaż ${tip}`} onClick={() => onPick(d.date)}>{bar}</button>
               : <span key={d.date} className={cls} title={tip}>{bar}</span>;

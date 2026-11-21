@@ -4,7 +4,7 @@ import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse, RlSource } from "../api/contract";
 import { computeLocal, longestDrought, soilCause, withLevers, type Levers, type LocalResult } from "../analysis/local";
 import { landForCalc, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
-import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, signed, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
+import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
@@ -218,7 +218,7 @@ function timelineSummary(local: LocalResult): string | null {
   const today = todayIso();
   const in7 = local.timeline.find((d) => d.date === addDays(today, 7));
   if (!in7 || in7.value === null) return null;
-  return `Za 7 dni: ${signed(in7.value)} ${BAL[String(in7.value)]!.toLowerCase()} (prognoza)`;
+  return `Za 7 dni: ${BAL[String(in7.value)]!.toLowerCase()} (prognoza)`;
 }
 
 function causesTitle(local: LocalResult | null): string {
@@ -325,7 +325,7 @@ function Why({ local, components }: { local: LocalResult; components?: NonNullab
           <tr><td>Parowanie ET₀</td><td>−{mm(e.et060)} mm{e.etMean !== null ? <span className="ar-muted"> · średnio {mm(e.etMean)} mm</span> : null}</td></tr>
           <tr><td>KBW = opad − parowanie</td><td><b>{mm(e.k60)} mm</b></td></tr>
           {e.threshold !== null ? <tr><td>{e.reference ? "Próg odniesienia (zboża jare)" : "Próg IUNG"}{e.window ? ` w oknie ${e.window}` : ""}</td><td>{mm(e.threshold)} mm</td></tr> : null}
-          {e.rule && local.stage !== null ? <tr><td>Reguła</td><td>{e.rule}, więc stan wody to {signed(local.stage)}: {BAL[String(local.stage)]!.toLowerCase()}.</td></tr> : null}
+          {e.rule && local.stage !== null ? <tr><td>Reguła</td><td>{e.rule}, więc stan wody: {BAL[String(local.stage)]!.toLowerCase()}.</td></tr> : null}
         </tbody>
       </table>
       {driver ? <p className="rs-why__driver">{driver}</p> : null}
