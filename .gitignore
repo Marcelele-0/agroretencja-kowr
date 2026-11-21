@@ -41,3 +41,6 @@ ml/rl_irrigator/models/checkpoints/
 ml/rl_irrigator/models/**/*.zip
 ml/rl_irrigator/models/**/*.pkl
 ml/rl_irrigator/models/**/policy.npz
+ml/rl_irrigator/data/holdout/weather/*.parquet
+ml/rl_irrigator/data/holdout/forecasts/*.parquet
+ml/rl_irrigator/models/**/dagger_student.npz

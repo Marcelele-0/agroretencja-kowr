@@ -98,3 +98,19 @@ def test_observation_has_no_future_weather(crops) -> None:
     env_b = KowrIrrigationEnv(specs=[spec2], forecast_mode="spec")
     obs_b, _ = env_b.reset(seed=0)
     np.testing.assert_array_equal(obs_a, obs_b)
+
+
+def test_low_budget_oversampling() -> None:
+    from kowr_rl.config import load_rl_config
+    from kowr_rl.env import sample_budget
+
+    ep = dict(load_rl_config()["episode"])
+    rng = np.random.default_rng(0)
+    plain = np.array([sample_budget(rng, ep, 0.0) for _ in range(4000)])
+    over = np.array([sample_budget(rng, ep, 0.5) for _ in range(4000)])
+    lo, hi = ep["budget_mm"]
+    for b in (plain, over):
+        assert b.min() >= lo and b.max() <= hi and np.all(b % ep["budget_step_mm"] == 0)
+    low_lo, low_hi = ep["low_budget_mm"]
+    share = lambda x: np.mean((x >= low_lo) & (x <= low_hi))  # noqa: E731
+    assert share(over) > share(plain) + 0.3

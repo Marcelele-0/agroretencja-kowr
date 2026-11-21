@@ -38,6 +38,18 @@ from .simulator import (
 OBS_LOW, OBS_HIGH = -10.0, 10.0
 
 
+def sample_budget(rng: np.random.Generator, episode_cfg: dict[str, Any], low_budget_prob: float | None = None) -> float:
+    """Seasonal budget [mm]: uniform on ``budget_mm`` rounded down to ``budget_step_mm``; with
+    probability ``low_budget_prob`` uniform on ``low_budget_mm`` instead (oversampling tight budgets)."""
+    step = episode_cfg["budget_step_mm"]
+    lo, hi = episode_cfg["budget_mm"]
+    q = episode_cfg.get("low_budget_prob", 0.0) if low_budget_prob is None else low_budget_prob
+    if q > 0 and rng.random() < q:
+        lo, hi2 = episode_cfg["low_budget_mm"]
+        hi = min(hi, hi2)
+    return float(min(np.floor(rng.uniform(lo, hi + step) / step) * step, hi))
+
+
 class KowrIrrigationEnv(gym.Env):
     metadata = {"render_modes": []}
 
@@ -49,6 +61,7 @@ class KowrIrrigationEnv(gym.Env):
         specs: list[SeasonSpec] | None = None,
         forecast_mode: str = "noisy",
         reward_cfg: dict[str, float] | None = None,
+        low_budget_prob: float | None = None,
     ) -> None:
         """
         Args:
@@ -56,6 +69,7 @@ class KowrIrrigationEnv(gym.Env):
             points: dataset points (default: all points from ``data/MANIFEST.json``).
             specs: fixed list of seasons, played in order (overrides random sampling).
             forecast_mode: "noisy" (synthetic, training) or "spec" (use ``spec.forecast``).
+            low_budget_prob: override of ``episode.low_budget_prob`` (oversampling tight budgets).
         """
         super().__init__()
         cfg = load_rl_config()
@@ -70,8 +84,7 @@ class KowrIrrigationEnv(gym.Env):
             self.years = list(cfg["split"][f"{split}_years"])
             self.crops = [load_crops()[c] for c in cfg["episode"]["crops"]]
             self.soils = list(cfg["episode"]["soil_categories"])
-            self.budget_range = cfg["episode"]["budget_mm"]
-            self.budget_step = cfg["episode"]["budget_step_mm"]
+            self.low_budget_prob = low_budget_prob
         self.observation_space = spaces.Box(OBS_LOW, OBS_HIGH, shape=(N_OBS,), dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.actions))
         self.batch: SeasonBatch | None = None
@@ -83,9 +96,8 @@ class KowrIrrigationEnv(gym.Env):
         year = int(self.years[rng.integers(len(self.years))])
         crop = self.crops[rng.integers(len(self.crops))]
         soil = int(self.soils[rng.integers(len(self.soils))])
-        lo, hi = self.budget_range
-        budget = float(np.floor(rng.uniform(lo, hi + self.budget_step) / self.budget_step) * self.budget_step)
-        return make_spec(point, year, crop, soil, min(budget, hi))
+        budget = sample_budget(rng, self.cfg["episode"], self.low_budget_prob)
+        return make_spec(point, year, crop, soil, budget)
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed)

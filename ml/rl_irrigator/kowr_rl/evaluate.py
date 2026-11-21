@@ -7,6 +7,9 @@ bootstrap over points and years. Writes ``reports/evaluation.md`` with figures a
 ``artifacts/validation/rl_eval.json``.
 
 Usage: uv run --group train python -m kowr_rl.evaluate --runs E1_s1 E1_s2 E1_s3
+
+E6: ``--dataset holdout`` evaluates on the spatial hold-out points (``data/holdout``, never
+used in training or model selection); ``--ensemble`` deploys the average of all given runs.
 """
 
 from __future__ import annotations
@@ -20,11 +23,11 @@ from typing import Any
 
 import numpy as np
 
-from . import ARTIFACT_VALIDATION_DIR, MODELS_DIR, REPORTS_DIR
+from . import ARTIFACT_VALIDATION_DIR, DATA_DIR, MODELS_DIR, REPORTS_DIR
 from .baselines import baseline_policies, run_oracle
 from .config import load_crops, load_rl_config, load_soils
 from .forecast import noisy_forecast
-from .policy import NumpyPolicy
+from .policy import EnsemblePolicy, NumpyPolicy
 from .simulator import SeasonBatch, SimResult, build_batch, simulate
 
 LABELS = {
@@ -32,12 +35,21 @@ LABELS = {
     "calendar": "Kalendarz",
     "fao_rule": "Regula FAO",
     "fao_forecast": "FAO + prognoza",
+    "fao_small": "FAO male dawki + prognoza",
     "rl": "Agent RL",
     "oracle": "Wyrocznia (znana pogoda)",
 }
 # Dataviz reference palette (validated): identity colours follow the strategy everywhere.
 INK, INK2, MUTED, GRID, BASE, SURFACE = "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7", "#fcfcfb"
-COLORS = {"fao_rule": "#2a78d6", "rl": "#eb6834", "fao_forecast": "#1baf7a", "none": "#b8b7b0", "calendar": "#9f9e98", "oracle": "#52514e"}
+COLORS = {
+    "fao_rule": "#2a78d6",
+    "rl": "#eb6834",
+    "fao_forecast": "#1baf7a",
+    "fao_small": "#eda100",
+    "none": "#b8b7b0",
+    "calendar": "#9f9e98",
+    "oracle": "#52514e",
+}
 METRICS = ("yield_rel", "water_mm", "dp_mm", "stress_days")
 
 
@@ -244,7 +256,31 @@ def fig_seasons(cases: list[dict[str, Any]], path: Path) -> None:
 # ======================================================================================
 # Main evaluation
 # ======================================================================================
-def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = None, split: str = "test") -> dict[str, Any]:
+def decision_table(diff: Any, budgets: list[float], rule: dict[str, Any], reps: int, rng: np.random.Generator) -> list[dict[str, Any]]:
+    """Pre-registered M5 rule, pooled and per budget level, for paired differences ``diff``."""
+    rows = []
+    for label, sub in [("wszystkie budzety", diff)] + [(f"{b:.0f} mm", diff[diff.budget == b]) for b in budgets]:
+        dy = cluster_bootstrap(sub, "yield_rel", reps, rng)
+        dw = cluster_bootstrap(sub, "water_mm", reps, rng)
+        # (a) yield not worse than FAO by more than 1 pp (mean) AND significantly less water
+        #     (whole 95% CI of the water difference below 0);
+        # (b) significantly higher yield at the same budget (whole 95% CI of dYield above 0)
+        #     without using more water on average (otherwise it is a water-for-yield trade, not a win).
+        pass_a = dy[0] >= -rule["max_yield_drop_pp"] / 100 and dw[2] < 0
+        pass_b = dy[1] > 0 and dw[0] <= 0
+        rows.append({"scope": label, "d_yield": dy, "d_water": dw, "pass_less_water": pass_a, "pass_higher_yield": pass_b, "pass": pass_a or pass_b})
+    return rows
+
+
+def run_evaluation(
+    runs: list[str],
+    *,
+    oracle: bool = True,
+    reps: int | None = None,
+    split: str = "test",
+    dataset: str = "train_points",
+    ensemble: bool = False,
+) -> dict[str, Any]:
     import pandas as pd
 
     from .dataset import factorial_specs, load_points
@@ -253,13 +289,13 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
     ev = cfg["evaluation"]
     reps = reps or ev["bootstrap_reps"]
     years = cfg["split"][f"{split}_years"]
-    tag = "" if split == "test" else f"_{split}"
+    tag = ("" if split == "test" else f"_{split}") + ("" if dataset == "train_points" else f"_{dataset}")
     budgets = [float(b) for b in ev["budget_levels_mm"]]
     crops = cfg["episode"]["crops"]
     soils = cfg["episode"]["soil_categories"]
     rng = np.random.default_rng(0)
     t0 = time.perf_counter()
-    points = load_points()
+    points = load_points() if dataset == "train_points" else load_points(str(DATA_DIR / dataset))
     batch = build_batch(factorial_specs(points, years, crops, soils, budgets, forecast="real"))
     fc_missing = float(np.nanmean([m["forecast_missing_frac"] for m in batch.meta]))
     print(f"test batch: {batch.size} seasons, forecast cells missing {fc_missing:.4f} ({time.perf_counter() - t0:.1f}s)")
@@ -269,11 +305,16 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
     for name, pol in baseline_policies().items():
         results[name] = simulate(batch, pol)
         rows += to_rows(batch, results[name], name)
-    deployed = best_run(runs)
     policies = {r: NumpyPolicy.load(ensure_npz(r)) for r in runs}
+    if ensemble:
+        deployed = "ensemble(" + "+".join(runs) + ")"
+        policies[deployed] = EnsemblePolicy([policies[r] for r in runs])
+    else:
+        deployed = best_run(runs)
     for r, pol in policies.items():
         res = simulate(batch, pol)
-        rows += to_rows(batch, res, f"rl:{r}")
+        if r in runs:
+            rows += to_rows(batch, res, f"rl:{r}")
         if r == deployed:
             results["rl"] = res
             rows += to_rows(batch, res, "rl")
@@ -291,7 +332,7 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
         rows += to_rows(batch, results["oracle"], "oracle")
         print(f"oracle: {time.perf_counter() - t1:.0f}s")
     df = pd.DataFrame(rows)
-    order = [s for s in ("none", "calendar", "fao_rule", "fao_forecast", "rl", "oracle") if s in results]
+    order = [s for s in ("none", "calendar", "fao_rule", "fao_forecast", "fao_small", "rl", "oracle") if s in results]
 
     summary: dict[str, dict[str, Any]] = {}
     for s in order + [f"rl:{r}" for r in runs]:
@@ -318,19 +359,12 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
     # RL vs FAO: paired differences with bootstrap CIs
     diff = paired(df, "rl", "fao_rule")
     diff_ff = paired(df, "rl", "fao_forecast")
-    decision_rows = []
     rule = ev["ready_rule"]
-    for label, sub in [("wszystkie budzety", diff)] + [(f"{b:.0f} mm", diff[diff.budget == b]) for b in budgets]:
-        dy = cluster_bootstrap(sub, "yield_rel", reps, rng)
-        dw = cluster_bootstrap(sub, "water_mm", reps, rng)
-        # (a) yield not worse than FAO by more than 1 pp (mean) AND significantly less water
-        #     (whole 95% CI of the water difference below 0);
-        # (b) significantly higher yield at the same budget (whole 95% CI of dYield above 0)
-        #     without using more water on average (otherwise it is a water-for-yield trade, not a win).
-        pass_a = dy[0] >= -rule["max_yield_drop_pp"] / 100 and dw[2] < 0
-        pass_b = dy[1] > 0 and dw[0] <= 0
-        decision_rows.append({"scope": label, "d_yield": dy, "d_water": dw, "pass_less_water": pass_a, "pass_higher_yield": pass_b, "pass": pass_a or pass_b})
+    decision_rows = decision_table(diff, budgets, rule, reps, rng)
     ready = all(r["pass"] for r in decision_rows)
+    # E6: the same rule for RL vs the small-dose heuristic, and for that heuristic vs FAO
+    vs_small = decision_table(paired(df, "rl", "fao_small"), budgets, rule, reps, rng) if "fao_small" in results else None
+    small_vs_fao = decision_table(paired(df, "fao_small", "fao_rule"), budgets, rule, reps, rng) if "fao_small" in results else None
     vs_ff = {"d_yield": cluster_bootstrap(diff_ff, "yield_rel", reps, rng), "d_water": cluster_bootstrap(diff_ff, "water_mm", reps, rng)}
 
     # Crop x soil (pooled over budgets)
@@ -400,6 +434,10 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
         "per_budget": {s: {str(b): v for b, v in d.items()} for s, d in per_budget.items()},
         "rl_vs_fao": decision_rows,
         "rl_vs_fao_forecast": vs_ff,
+        "rl_vs_fao_small": vs_small,
+        "fao_small_vs_fao": small_vs_fao,
+        "dataset": dataset,
+        "n_points": int(len(points)),
         "robustness_synthetic_forecast": robust,
         "crop_soil": crop_soil,
         "ready": ready,
@@ -407,7 +445,7 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
         "bootstrap_reps": reps,
     }
     ARTIFACT_VALIDATION_DIR.mkdir(parents=True, exist_ok=True)
-    (ARTIFACT_VALIDATION_DIR / "rl_eval.json" if not tag else REPORTS_DIR / f"rl_eval{tag}.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+    (ARTIFACT_VALIDATION_DIR / f"rl_eval{tag}.json" if split == "test" else REPORTS_DIR / f"rl_eval{tag}.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
     out["tag"] = tag
     write_report(out, order)
     return out
@@ -425,16 +463,30 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
     L: list[str] = []
     tag = out.get("tag", "")
     fig_s, fig_b, fig_e = f"strategies{tag or '_test'}.png", f"budget_curves{tag or '_test'}.png", f"example_seasons{tag}.png"
-    if tag:
+    holdout = out.get("dataset", "train_points") != "train_points"
+    if tag.startswith("_val"):
         L.append(f"# PROBA na roku walidacyjnym ({', '.join(map(str, out['test_years']))}) - nie jest to wynik testowy\n")
+    elif holdout:
+        L.append("# Ewaluacja agenta RL nawadniania: CZYSTY TEST na nowych lokalizacjach (holdout, lata 2025-2026)\n")
     else:
         L.append("# Ewaluacja agenta RL nawadniania (lata testowe 2025-2026)\n")
-    L.append(f"Wygenerowano: {out['generated_at']} przez `kowr_rl.evaluate`. Liczby pochodza z `{'artifacts/validation/rl_eval.json' if not tag else f'reports/rl_eval{tag}.json'}`.\n")
+    src = f"artifacts/validation/rl_eval{tag}.json" if not tag.startswith("_val") else f"reports/rl_eval{tag}.json"
+    L.append(f"Wygenerowano: {out['generated_at']} przez `kowr_rl.evaluate`. Liczby pochodza z `{src}`.\n")
+    if holdout:
+        L.append(
+            "**Zestaw holdout (E6):** 50 nowych punktow rolnych z siatki przesunietej o 0,35 st. (>= 25 km od kazdego punktu treningowego), "
+            "nieuzywanych ani w treningu, ani przy wyborze modelu. Lata 2025-2026 byly juz raz ogladane w pierwszym tescie (E5), "
+            "wiec niezaleznosc dotyczy lokalizacji, nie pogody tych lat jako calosci (PLAN.md, sekcja 5).\n"
+        )
+    elif out.get("rl_vs_fao_small") is not None and not tag:
+        L.append(
+            "**Uwaga (E6):** te lata i punkty byly juz ogladane przy pierwszym tescie (E5). Czysty test E6 to `reports/evaluation_holdout.md`.\n"
+        )
     L.append(
-        f"**Uklad:** 50 punktow rolnych x lata {', '.join(map(str, out['test_years']))} x 4 uprawy x 4 kategorie gleby IUNG x 4 budzety wody "
+        f"**Uklad:** {out.get('n_points', 50)} punktow rolnych x lata {', '.join(map(str, out['test_years']))} x 4 uprawy x 4 kategorie gleby IUNG x 4 budzety wody "
         f"= {out['n_seasons_per_strategy']} sezonow na strategie. Kazda strategia dostaje te same dane: pogode z archiwum Open-Meteo i "
         f"**prawdziwe archiwalne prognozy ECMWF** (wyprzedzenie 1-7 dni; brakujace komorki: {100 * out['forecast_missing_frac']:.2f}%). "
-        f"Wybrany agent: `{out['deployed_run']}` (najlepszy na walidacji 2024). Przedzialy: 95% bootstrap po punktach i latach "
+        f"Wybrany agent: `{out['deployed_run']}` (wybrany na walidacji 2024). Przedzialy: 95% bootstrap po punktach i latach "
         f"({out['bootstrap_reps']} powtorzen). Przy tylko dwoch latach testowych przedzialy sa szerokie, bo obejmuja niepewnosc miedzy latami.\n"
     )
     verdict = "**GOTOWY**" if out["ready"] else "**NIEGOTOWY - eksperymentalny**"
@@ -458,6 +510,19 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
         f"\nRL vs **FAO + prognoza** (uczciwszy rywal, ktory tez korzysta z prognozy): delta plonu {_ci(ff['d_yield'], '{:+.2f}', 100)} pkt proc., "
         f"delta wody {_ci(ff['d_water'], '{:+.1f}')} mm.\n"
     )
+    for key, title in (
+        ("rl_vs_fao_small", "RL vs **FAO male dawki + prognoza** (najlepsza prosta regula z E6) - ta sama regula decyzyjna"),
+        ("fao_small_vs_fao", "Sama regula **FAO male dawki + prognoza** vs regula FAO - ta sama regula decyzyjna"),
+    ):
+        rows = out.get(key)
+        if not rows:
+            continue
+        L.append(f"\n{title}:\n")
+        L.append("| Zakres | Delta plonu [pkt proc.] | Delta wody [mm] | Wynik |")
+        L.append("|---|---|---|---|")
+        for r in rows:
+            L.append(f"| {r['scope']} | {_ci(r['d_yield'], '{:+.2f}', 100)} | {_ci(r['d_water'], '{:+.1f}')} | {'OK' if r['pass'] else 'NIE'} |")
+        L.append("")
     L.append(f"Domyslna strategia w module: **`{out['recommended_default_policy']}`** (`config/rl.yaml`, `default_policy`).\n")
 
     L.append("## Wyniki zbiorcze\n")
@@ -522,8 +587,10 @@ def main() -> None:
     ap.add_argument("--no-oracle", action="store_true")
     ap.add_argument("--reps", type=int, default=None)
     ap.add_argument("--split", choices=["test", "val"], default="test", help="val = dry run on the validation year (no test leakage)")
+    ap.add_argument("--dataset", default="train_points", help="train_points (data/) or holdout (data/holdout, E6 clean test)")
+    ap.add_argument("--ensemble", action="store_true", help="deploy the average of all --runs instead of the best one")
     args = ap.parse_args()
-    out = run_evaluation(args.runs, oracle=not args.no_oracle, reps=args.reps, split=args.split)
+    out = run_evaluation(args.runs, oracle=not args.no_oracle, reps=args.reps, split=args.split, dataset=args.dataset, ensemble=args.ensemble)
     print(json.dumps({k: out[k] for k in ("deployed_run", "ready", "recommended_default_policy")}))
     for r in out["rl_vs_fao"]:
         print(r["scope"], "dY=%+.4f [%+.4f, %+.4f]" % r["d_yield"], "dW=%+.1f [%+.1f, %+.1f]" % r["d_water"], "OK" if r["pass"] else "NO")

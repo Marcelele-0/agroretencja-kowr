@@ -1,0 +1,813 @@
+{
+ "points": [
+  {
+   "id": "pl_49p39_20p15",
+   "grid_node": {
+    "lat": 49.45,
+    "lon": 20.15
+   },
+   "lat": 49.39,
+   "lon": 20.15,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:17:33+00:00",
+   "n_tries": 3,
+   "teryt_gmina": "121108_2",
+   "voivodeship": "małopolskie",
+   "county": "powiat nowotarski",
+   "commune": "Łapsze Niżne"
+  },
+  {
+   "id": "pl_49p39_20p91",
+   "grid_node": {
+    "lat": 49.45,
+    "lon": 20.85
+   },
+   "lat": 49.39,
+   "lon": 20.91,
+   "iung_code": 4,
+   "iung_retrieved_at": "2026-11-21T15:17:34+00:00",
+   "n_tries": 4,
+   "teryt_gmina": "121011_3",
+   "voivodeship": "małopolskie",
+   "county": "powiat nowosądecki",
+   "commune": "Muszyna"
+  },
+  {
+   "id": "pl_49p45_22p25",
+   "grid_node": {
+    "lat": 49.45,
+    "lon": 22.25
+   },
+   "lat": 49.45,
+   "lon": 22.25,
+   "iung_code": 4,
+   "iung_retrieved_at": "2026-11-21T15:17:37+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "181707_3",
+   "voivodeship": "podkarpackie",
+   "county": "powiat sanocki",
+   "commune": "Zagórz"
+  },
+  {
+   "id": "pl_50p15_16p59",
+   "grid_node": {
+    "lat": 50.15,
+    "lon": 16.65
+   },
+   "lat": 50.15,
+   "lon": 16.59,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:17:40+00:00",
+   "n_tries": 5,
+   "teryt_gmina": "020810_3",
+   "voivodeship": "dolnośląskie",
+   "county": "powiat kłodzki",
+   "commune": "Międzylesie"
+  },
+  {
+   "id": "pl_50p15_18p05",
+   "grid_node": {
+    "lat": 50.15,
+    "lon": 18.05
+   },
+   "lat": 50.15,
+   "lon": 18.05,
+   "iung_code": 4,
+   "iung_retrieved_at": "2026-11-21T15:17:41+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "160201_3",
+   "voivodeship": "opolskie",
+   "county": "powiat głubczycki",
+   "commune": "Baborów"
+  },
+  {
+   "id": "pl_50p15_19p45",
+   "grid_node": {
+    "lat": 50.15,
+    "lon": 19.45
+   },
+   "lat": 50.15,
+   "lon": 19.45,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:17:41+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "120305_3",
+   "voivodeship": "małopolskie",
+   "county": "powiat chrzanowski",
+   "commune": "Trzebinia"
+  },
+  {
+   "id": "pl_50p09_20p85",
+   "grid_node": {
+    "lat": 50.15,
+    "lon": 20.85
+   },
+   "lat": 50.09,
+   "lon": 20.85,
+   "iung_code": 4,
+   "iung_retrieved_at": "2026-11-21T15:17:42+00:00",
+   "n_tries": 3,
+   "teryt_gmina": "121605_3",
+   "voivodeship": "małopolskie",
+   "county": "powiat tarnowski",
+   "commune": "Radłów"
+  },
+  {
+   "id": "pl_50p15_21p55",
+   "grid_node": {
+    "lat": 50.15,
+    "lon": 21.55
+   },
+   "lat": 50.15,
+   "lon": 21.55,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:17:43+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "181502_2",
+   "voivodeship": "podkarpackie",
+   "county": "powiat ropczycko-sędziszowski",
+   "commune": "Ostrów"
+  },
+  {
+   "id": "pl_50p15_22p95",
+   "grid_node": {
+    "lat": 50.15,
+    "lon": 22.95
+   },
+   "lat": 50.15,
+   "lon": 22.95,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:17:43+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "180906_3",
+   "voivodeship": "podkarpackie",
+   "county": "powiat lubaczowski",
+   "commune": "Oleszyce"
+  },
+  {
+   "id": "pl_50p85_15p95",
+   "grid_node": {
+    "lat": 50.85,
+    "lon": 15.95
+   },
+   "lat": 50.85,
+   "lon": 15.95,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:17:45+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "020605_2",
+   "voivodeship": "dolnośląskie",
+   "county": "powiat karkonoski",
+   "commune": "Janowice Wielkie"
+  },
+  {
+   "id": "pl_50p85_17p35",
+   "grid_node": {
+    "lat": 50.85,
+    "lon": 17.35
+   },
+   "lat": 50.85,
+   "lon": 17.35,
+   "iung_code": 4,
+   "iung_retrieved_at": "2026-11-21T15:17:45+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "160102_2",
+   "voivodeship": "opolskie",
+   "county": "powiat brzeski",
+   "commune": "Skarbimierz"
+  },
+  {
+   "id": "pl_50p85_18p69",
+   "grid_node": {
+    "lat": 50.85,
+    "lon": 18.75
+   },
+   "lat": 50.85,
+   "lon": 18.69,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:17:47+00:00",
+   "n_tries": 5,
+   "teryt_gmina": "240608_2",
+   "voivodeship": "śląskie",
+   "county": "powiat kłobucki",
+   "commune": "Przystajń"
+  },
+  {
+   "id": "pl_50p79_20p09",
+   "grid_node": {
+    "lat": 50.85,
+    "lon": 20.15
+   },
+   "lat": 50.79,
+   "lon": 20.09,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:17:49+00:00",
+   "n_tries": 2,
+   "teryt_gmina": "261306_3",
+   "voivodeship": "świętokrzyskie",
+   "county": "powiat włoszczowski",
+   "commune": "Włoszczowa"
+  },
+  {
+   "id": "pl_50p85_21p55",
+   "grid_node": {
+    "lat": 50.85,
+    "lon": 21.55
+   },
+   "lat": 50.85,
+   "lon": 21.55,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:17:49+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "260608_2",
+   "voivodeship": "świętokrzyskie",
+   "county": "powiat opatowski",
+   "commune": "Wojciechowice"
+  },
+  {
+   "id": "pl_50p79_22p89",
+   "grid_node": {
+    "lat": 50.85,
+    "lon": 22.95
+   },
+   "lat": 50.79,
+   "lon": 22.89,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:17:50+00:00",
+   "n_tries": 2,
+   "teryt_gmina": "062012_2",
+   "voivodeship": "lubelskie",
+   "county": "powiat zamojski",
+   "commune": "Sułów"
+  },
+  {
+   "id": "pl_50p85_23p65",
+   "grid_node": {
+    "lat": 50.85,
+    "lon": 23.65
+   },
+   "lat": 50.85,
+   "lon": 23.65,
+   "iung_code": 4,
+   "iung_retrieved_at": "2026-11-21T15:17:50+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "060406_2",
+   "voivodeship": "lubelskie",
+   "county": "powiat hrubieszowski",
+   "commune": "Trzeszczany"
+  },
+  {
+   "id": "pl_51p49_15p19",
+   "grid_node": {
+    "lat": 51.55,
+    "lon": 15.25
+   },
+   "lat": 51.49,
+   "lon": 15.19,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:17:51+00:00",
+   "n_tries": 2,
+   "teryt_gmina": "081004_3",
+   "voivodeship": "lubuskie",
+   "county": "powiat żagański",
+   "commune": "Iłowa"
+  },
+  {
+   "id": "pl_51p55_15p95",
+   "grid_node": {
+    "lat": 51.55,
+    "lon": 15.95
+   },
+   "lat": 51.55,
+   "lon": 15.95,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:17:52+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "021606_2",
+   "voivodeship": "dolnośląskie",
+   "county": "powiat polkowicki",
+   "commune": "Radwanice"
+  },
+  {
+   "id": "pl_51p49_16p71",
+   "grid_node": {
+    "lat": 51.55,
+    "lon": 16.65
+   },
+   "lat": 51.49,
+   "lon": 16.71,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:17:53+00:00",
+   "n_tries": 4,
+   "teryt_gmina": "022202_2",
+   "voivodeship": "dolnośląskie",
+   "county": "powiat wołowski",
+   "commune": "Wińsko"
+  },
+  {
+   "id": "pl_51p55_18p05",
+   "grid_node": {
+    "lat": 51.55,
+    "lon": 18.05
+   },
+   "lat": 51.55,
+   "lon": 18.05,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:17:54+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "301806_3",
+   "voivodeship": "wielkopolskie",
+   "county": "powiat ostrzeszowski",
+   "commune": "Mikstat"
+  },
+  {
+   "id": "pl_51p49_20p15",
+   "grid_node": {
+    "lat": 51.55,
+    "lon": 20.15
+   },
+   "lat": 51.49,
+   "lon": 20.15,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:17:56+00:00",
+   "n_tries": 3,
+   "teryt_gmina": "101605_3",
+   "voivodeship": "łódzkie",
+   "county": "powiat tomaszowski",
+   "commune": "Inowłódz"
+  },
+  {
+   "id": "pl_51p55_20p85",
+   "grid_node": {
+    "lat": 51.55,
+    "lon": 20.85
+   },
+   "lat": 51.55,
+   "lon": 20.85,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:17:56+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "140103_2",
+   "voivodeship": "mazowieckie",
+   "county": "powiat białobrzeski",
+   "commune": "Radzanów"
+  },
+  {
+   "id": "pl_51p55_22p25",
+   "grid_node": {
+    "lat": 51.55,
+    "lon": 22.25
+   },
+   "lat": 51.55,
+   "lon": 22.25,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:17:57+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "060808_2",
+   "voivodeship": "lubelskie",
+   "county": "powiat lubartowski",
+   "commune": "Michów"
+  },
+  {
+   "id": "pl_52p19_15p31",
+   "grid_node": {
+    "lat": 52.25,
+    "lon": 15.25
+   },
+   "lat": 52.19,
+   "lon": 15.31,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:17:59+00:00",
+   "n_tries": 4,
+   "teryt_gmina": "080803_2",
+   "voivodeship": "lubuskie",
+   "county": "powiat świebodziński",
+   "commune": "Skąpe"
+  },
+  {
+   "id": "pl_52p25_16p65",
+   "grid_node": {
+    "lat": 52.25,
+    "lon": 16.65
+   },
+   "lat": 52.25,
+   "lon": 16.65,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:00+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "302114_3",
+   "voivodeship": "wielkopolskie",
+   "county": "powiat poznański",
+   "commune": "Stęszew"
+  },
+  {
+   "id": "pl_52p25_18p05",
+   "grid_node": {
+    "lat": 52.25,
+    "lon": 18.05
+   },
+   "lat": 52.25,
+   "lon": 18.05,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:01+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "301001_3",
+   "voivodeship": "wielkopolskie",
+   "county": "powiat koniński",
+   "commune": "Golina"
+  },
+  {
+   "id": "pl_52p25_19p45",
+   "grid_node": {
+    "lat": 52.25,
+    "lon": 19.45
+   },
+   "lat": 52.25,
+   "lon": 19.45,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:01+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "100209_2",
+   "voivodeship": "łódzkie",
+   "county": "powiat kutnowski",
+   "commune": "Oporów"
+  },
+  {
+   "id": "pl_52p25_20p85",
+   "grid_node": {
+    "lat": 52.25,
+    "lon": 20.85
+   },
+   "lat": 52.25,
+   "lon": 20.85,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:18:02+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "143207_2",
+   "voivodeship": "mazowieckie",
+   "county": "powiat warszawski zachodni",
+   "commune": "Stare Babice"
+  },
+  {
+   "id": "pl_52p25_22p95",
+   "grid_node": {
+    "lat": 52.25,
+    "lon": 22.95
+   },
+   "lat": 52.25,
+   "lon": 22.95,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:18:03+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "141005_2",
+   "voivodeship": "mazowieckie",
+   "county": "powiat łosicki",
+   "commune": "Sarnaki"
+  },
+  {
+   "id": "pl_53p01_15p19",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 15.25
+   },
+   "lat": 53.01,
+   "lon": 15.19,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:07+00:00",
+   "n_tries": 7,
+   "teryt_gmina": "321001_3",
+   "voivodeship": "zachodniopomorskie",
+   "county": "powiat myśliborski",
+   "commune": "Barlinek"
+  },
+  {
+   "id": "pl_52p95_16p65",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 16.65
+   },
+   "lat": 52.95,
+   "lon": 16.65,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:09+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "300202_2",
+   "voivodeship": "wielkopolskie",
+   "county": "powiat czarnkowsko-trzcianecki",
+   "commune": "Czarnków"
+  },
+  {
+   "id": "pl_52p95_18p05",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 18.05
+   },
+   "lat": 52.95,
+   "lon": 18.05,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:10+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "040709_2",
+   "voivodeship": "kujawsko-pomorskie",
+   "county": "powiat inowrocławski",
+   "commune": "Złotniki Kujawskie"
+  },
+  {
+   "id": "pl_52p89_18p81",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 18.75
+   },
+   "lat": 52.89,
+   "lon": 18.81,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:11+00:00",
+   "n_tries": 4,
+   "teryt_gmina": "040102_1",
+   "voivodeship": "kujawsko-pomorskie",
+   "county": "powiat aleksandrowski",
+   "commune": "Ciechocinek (miasto)"
+  },
+  {
+   "id": "pl_52p89_20p09",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 20.15
+   },
+   "lat": 52.89,
+   "lon": 20.09,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:14+00:00",
+   "n_tries": 2,
+   "teryt_gmina": "143705_2",
+   "voivodeship": "mazowieckie",
+   "county": "powiat żuromiński",
+   "commune": "Siemiątkowo"
+  },
+  {
+   "id": "pl_52p95_20p85",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 20.85
+   },
+   "lat": 52.95,
+   "lon": 20.85,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:18:14+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "142205_2",
+   "voivodeship": "mazowieckie",
+   "county": "powiat przasnyski",
+   "commune": "Krasne"
+  },
+  {
+   "id": "pl_52p89_21p55",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 21.55
+   },
+   "lat": 52.89,
+   "lon": 21.55,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:15+00:00",
+   "n_tries": 3,
+   "teryt_gmina": "141504_2",
+   "voivodeship": "mazowieckie",
+   "county": "powiat ostrołęcki",
+   "commune": "Goworowo"
+  },
+  {
+   "id": "pl_52p95_22p25",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 22.25
+   },
+   "lat": 52.95,
+   "lon": 22.25,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:15+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "201401_1",
+   "voivodeship": "podlaskie",
+   "county": "powiat zambrowski",
+   "commune": "Zambrów (miasto)"
+  },
+  {
+   "id": "pl_52p89_23p59",
+   "grid_node": {
+    "lat": 52.95,
+    "lon": 23.65
+   },
+   "lat": 52.89,
+   "lon": 23.59,
+   "iung_code": 4,
+   "iung_retrieved_at": "2026-11-21T15:18:17+00:00",
+   "n_tries": 2,
+   "teryt_gmina": "200508_2",
+   "voivodeship": "podlaskie",
+   "county": "powiat hajnowski",
+   "commune": "Narew"
+  },
+  {
+   "id": "pl_53p65_14p49",
+   "grid_node": {
+    "lat": 53.65,
+    "lon": 14.55
+   },
+   "lat": 53.65,
+   "lon": 14.49,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:19+00:00",
+   "n_tries": 5,
+   "teryt_gmina": "321104_3",
+   "voivodeship": "zachodniopomorskie",
+   "county": "powiat policki",
+   "commune": "Police"
+  },
+  {
+   "id": "pl_53p65_15p25",
+   "grid_node": {
+    "lat": 53.65,
+    "lon": 15.25
+   },
+   "lat": 53.65,
+   "lon": 15.25,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:19+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "320404_3",
+   "voivodeship": "zachodniopomorskie",
+   "county": "powiat goleniowski",
+   "commune": "Nowogard"
+  },
+  {
+   "id": "pl_53p65_16p65",
+   "grid_node": {
+    "lat": 53.65,
+    "lon": 16.65
+   },
+   "lat": 53.65,
+   "lon": 16.65,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:18:20+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "321506_2",
+   "voivodeship": "zachodniopomorskie",
+   "county": "powiat szczecinecki",
+   "commune": "Szczecinek"
+  },
+  {
+   "id": "pl_53p59_17p99",
+   "grid_node": {
+    "lat": 53.65,
+    "lon": 18.05
+   },
+   "lat": 53.59,
+   "lon": 17.99,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:21+00:00",
+   "n_tries": 2,
+   "teryt_gmina": "041601_2",
+   "voivodeship": "kujawsko-pomorskie",
+   "county": "powiat tucholski",
+   "commune": "Cekcyn"
+  },
+  {
+   "id": "pl_53p59_19p39",
+   "grid_node": {
+    "lat": 53.65,
+    "lon": 19.45
+   },
+   "lat": 53.59,
+   "lon": 19.39,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:22+00:00",
+   "n_tries": 2,
+   "teryt_gmina": "280703_2",
+   "voivodeship": "warmińsko-mazurskie",
+   "county": "powiat iławski",
+   "commune": "Iława"
+  },
+  {
+   "id": "pl_53p65_20p85",
+   "grid_node": {
+    "lat": 53.65,
+    "lon": 20.85
+   },
+   "lat": 53.65,
+   "lon": 20.85,
+   "iung_code": 3,
+   "iung_retrieved_at": "2026-11-21T15:18:23+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "281704_3",
+   "voivodeship": "warmińsko-mazurskie",
+   "county": "powiat szczycieński",
+   "commune": "Pasym"
+  },
+  {
+   "id": "pl_53p59_22p19",
+   "grid_node": {
+    "lat": 53.65,
+    "lon": 22.25
+   },
+   "lat": 53.59,
+   "lon": 22.19,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:18:26+00:00",
+   "n_tries": 2,
+   "teryt_gmina": "281601_3",
+   "voivodeship": "warmińsko-mazurskie",
+   "county": "powiat piski",
+   "commune": "Biała Piska"
+  },
+  {
+   "id": "pl_53p65_22p95",
+   "grid_node": {
+    "lat": 53.65,
+    "lon": 22.95
+   },
+   "lat": 53.65,
+   "lon": 22.95,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:26+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "200107_2",
+   "voivodeship": "podlaskie",
+   "county": "powiat augustowski",
+   "commune": "Sztabin"
+  },
+  {
+   "id": "pl_54p35_16p65",
+   "grid_node": {
+    "lat": 54.35,
+    "lon": 16.65
+   },
+   "lat": 54.35,
+   "lon": 16.65,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:28+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "321306_2",
+   "voivodeship": "zachodniopomorskie",
+   "county": "powiat sławieński",
+   "commune": "Sławno"
+  },
+  {
+   "id": "pl_54p35_18p05",
+   "grid_node": {
+    "lat": 54.35,
+    "lon": 18.05
+   },
+   "lat": 54.35,
+   "lon": 18.05,
+   "iung_code": 2,
+   "iung_retrieved_at": "2026-11-21T15:18:29+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "220501_2",
+   "voivodeship": "pomorskie",
+   "county": "powiat kartuski",
+   "commune": "Chmielno"
+  },
+  {
+   "id": "pl_54p29_20p21",
+   "grid_node": {
+    "lat": 54.35,
+    "lon": 20.15
+   },
+   "lat": 54.29,
+   "lon": 20.21,
+   "iung_code": 1,
+   "iung_retrieved_at": "2026-11-21T15:18:34+00:00",
+   "n_tries": 4,
+   "teryt_gmina": "280204_2",
+   "voivodeship": "warmińsko-mazurskie",
+   "county": "powiat braniewski",
+   "commune": "Lelkowo"
+  },
+  {
+   "id": "pl_54p35_22p95",
+   "grid_node": {
+    "lat": 54.35,
+    "lon": 22.95
+   },
+   "lat": 54.35,
+   "lon": 22.95,
+   "iung_code": 4,
+   "iung_retrieved_at": "2026-11-21T15:18:35+00:00",
+   "n_tries": 1,
+   "teryt_gmina": "201206_2",
+   "voivodeship": "podlaskie",
+   "county": "powiat suwalski",
+   "commune": "Rutka-Tartak"
+  }
+ ],
+ "selection_stats": {
+  "nodes": 112,
+  "outside_or_nodata": 28,
+  "non_arable": 3,
+  "arable": 81,
+  "dropped_near_excluded": 0,
+  "min_dist_km": 25.0,
+  "selected": 50
+ }
+}

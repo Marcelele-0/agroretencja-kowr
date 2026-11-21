@@ -12,6 +12,11 @@ Steps (resumable: every HTTP response is cached in ``data/cache``):
 6. ``data/MANIFEST.json`` with URLs, retrieval timestamps, date ranges and quality checks.
 
 Usage:  uv run --group train python ml/rl_irrigator/scripts/fetch_training_data.py
+
+Spatial hold-out set (E6, clean test on locations never used in training or model selection):
+the grid shifted by half a step (0.35 deg, ~40-45 km from every training node), points closer
+than ``--min-dist-km`` to a training point dropped, forecasts only for the test years:
+    uv run --group train python ml/rl_irrigator/scripts/fetch_training_data.py         --out-dir ml/rl_irrigator/data/holdout --grid-offset 0.35         --exclude-manifest ml/rl_irrigator/data/MANIFEST.json --min-dist-km 25 --forecast-years 2025 2026
 """
 
 from __future__ import annotations
@@ -53,14 +58,11 @@ ARCHIVE_START = dt.date(2016, 1, 1)
 FORECAST_YEARS = (2024, 2025, 2026)
 FORECAST_SEASON = ((3, 15), (10, 31))
 
-WEATHER_DIR = DATA_DIR / "weather"
-FORECAST_DIR = DATA_DIR / "forecasts"
-SOILS_DIR = DATA_DIR / "soils"
 
 
-def grid_nodes() -> list[tuple[float, float]]:
-    lons = np.round(np.arange(LON_RANGE[0], LON_RANGE[1] + 1e-9, STEP), 2)
-    lats = np.round(np.arange(LAT_RANGE[0], LAT_RANGE[1] + 1e-9, STEP), 2)
+def grid_nodes(offset: float = 0.0) -> list[tuple[float, float]]:
+    lons = np.round(np.arange(LON_RANGE[0] + offset, LON_RANGE[1] + 1e-9, STEP), 2)
+    lats = np.round(np.arange(LAT_RANGE[0] + offset, LAT_RANGE[1] + 1e-9, STEP), 2)
     return [(float(la), float(lo)) for la in lats for lo in lons]
 
 
@@ -81,7 +83,7 @@ def region_of(client: HttpClient, lat: float, lon: float) -> dict[str, str]:
     return {}
 
 
-def select_points(client: HttpClient) -> tuple[list[dict], dict[str, int]]:
+def select_points(client: HttpClient, offset: float = 0.0) -> tuple[list[dict], dict[str, int]]:
     offsets = [(0.0, 0.0)] + [
         (dy * NEIGHBOUR_OFFSET, dx * NEIGHBOUR_OFFSET)
         for dy in (-1, 0, 1)
@@ -89,7 +91,7 @@ def select_points(client: HttpClient) -> tuple[list[dict], dict[str, int]]:
         if (dy, dx) != (0, 0)
     ]
     points: list[dict] = []
-    nodes = grid_nodes()
+    nodes = grid_nodes(offset)
     stats = {"nodes": len(nodes), "outside_or_nodata": 0, "non_arable": 0, "arable": 0}
     for i, (nlat, nlon) in enumerate(nodes):
         tried: list[dict] = []
@@ -126,11 +128,24 @@ def select_points(client: HttpClient) -> tuple[list[dict], dict[str, int]]:
     return points, stats
 
 
+def _xy_km(points: list[dict]) -> np.ndarray:
+    return np.array([[p["lon"] * np.cos(np.radians(52.0)) * 111.0, p["lat"] * 111.0] for p in points])
+
+
+def exclude_near(points: list[dict], others: list[dict], min_km: float) -> tuple[list[dict], int]:
+    """Drop points closer than ``min_km`` to any of ``others`` (e.g. the training points)."""
+    if not others or not points:
+        return points, 0
+    d = np.sqrt(((_xy_km(points)[:, None, :] - _xy_km(others)[None, :, :]) ** 2).sum(axis=2)).min(axis=1)
+    keep = [p for p, di in zip(points, d) if di >= min_km]
+    return keep, len(points) - len(keep)
+
+
 def spatial_subsample(points: list[dict], n: int) -> list[dict]:
     """Deterministic farthest-point sampling -> ``n`` points spread evenly over Poland."""
     if len(points) <= n:
         return points
-    xy = np.array([[p["lon"] * np.cos(np.radians(52.0)) * 111.0, p["lat"] * 111.0] for p in points])
+    xy = _xy_km(points)
     centroid = xy.mean(axis=0)
     chosen = [int(np.argmin(((xy - centroid) ** 2).sum(axis=1)))]
     dist = ((xy - xy[chosen[0]]) ** 2).sum(axis=1)
@@ -151,10 +166,18 @@ def main() -> None:
     ap.add_argument("--end", type=dt.date.fromisoformat, default=dt.date.today() - dt.timedelta(days=5))
     ap.add_argument("--skip-forecasts", action="store_true")
     ap.add_argument("--max-points", type=int, default=50)
+    ap.add_argument("--out-dir", type=Path, default=DATA_DIR, help="dataset directory (default: data/)")
+    ap.add_argument("--grid-offset", type=float, default=0.0, help="shift of the 0.7 deg grid (hold-out: 0.35)")
+    ap.add_argument("--exclude-manifest", type=Path, default=None, help="drop points near the points of this MANIFEST")
+    ap.add_argument("--min-dist-km", type=float, default=25.0)
+    ap.add_argument("--forecast-years", type=int, nargs="+", default=list(FORECAST_YEARS))
+    ap.add_argument("--split-note", default=None, help="split description stored in the MANIFEST")
     args = ap.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    for d in (WEATHER_DIR, FORECAST_DIR, SOILS_DIR):
+    out_dir = args.out_dir.resolve()
+    weather_dir, forecast_dir, soils_dir = out_dir / "weather", out_dir / "forecasts", out_dir / "soils"
+    for d in (weather_dir, forecast_dir, soils_dir):
         d.mkdir(parents=True, exist_ok=True)
 
     # Conservative pacing: an Open-Meteo 10-year request weighs ~60 "calls" (600/min, 5000/h limits).
@@ -170,8 +193,13 @@ def main() -> None:
     )
     started = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
 
-    points_file = SOILS_DIR / "points.json"
-    points, iung_stats = select_points(client)
+    points_file = soils_dir / "points.json"
+    points, iung_stats = select_points(client, args.grid_offset)
+    if args.exclude_manifest is not None:
+        others = json.loads(args.exclude_manifest.read_text(encoding="utf-8"))["points"]
+        points, n_drop = exclude_near(points, others, args.min_dist_km)
+        iung_stats["dropped_near_excluded"] = n_drop
+        iung_stats["min_dist_km"] = args.min_dist_km
     points = spatial_subsample(points, args.max_points)
     iung_stats["selected"] = len(points)
     for p in points:
@@ -183,7 +211,7 @@ def main() -> None:
     for i, p in enumerate(points):
         series, src = fetch_archive(client, p["lat"], p["lon"], ARCHIVE_START, args.end)
         df = pd.DataFrame({"date": series.dates, "precip": series.precip, "et0": series.et0})
-        df.to_parquet(WEATHER_DIR / f"{p['id']}.parquet", index=False)
+        df.to_parquet(weather_dir / f"{p['id']}.parquet", index=False)
         years = df["date"].dt.year
         annual = df.groupby(years)[["precip", "et0"]].sum(min_count=300)
         entry = {
@@ -205,7 +233,7 @@ def main() -> None:
         if not args.skip_forecasts:
             frames = []
             fc_src = []
-            for year in FORECAST_YEARS:
+            for year in args.forecast_years:
                 s, e = season_window(year)
                 e = min(e, args.end)
                 if e <= s:
@@ -214,7 +242,7 @@ def main() -> None:
                 frames.append(pd.DataFrame({"date": dates, **{f"f{k + 1}": f[:, k] for k in range(f.shape[1])}}))
                 fc_src.append({"url": fsrc.url, "retrieved_at": fsrc.retrieved_at})
             fdf = pd.concat(frames, ignore_index=True)
-            fdf.to_parquet(FORECAST_DIR / f"{p['id']}.parquet", index=False)
+            fdf.to_parquet(forecast_dir / f"{p['id']}.parquet", index=False)
             entry.update(
                 {
                     "forecast_file": f"forecasts/{p['id']}.parquet",
@@ -236,7 +264,9 @@ def main() -> None:
         "fetch_started_utc": started,
         "fetch_finished_utc": finished,
         "script": "ml/rl_irrigator/scripts/fetch_training_data.py",
-        "split": {"train": "2016-2023", "validation": "2024", "test": "2025-2026"},
+        "split": {"note": args.split_note} if args.split_note else {"train": "2016-2023", "validation": "2024", "test": "2025-2026"},
+        "grid_offset_deg": args.grid_offset,
+        "excluded_near": str(args.exclude_manifest) if args.exclude_manifest else None,
         "sources": {
             "weather_archive": {
                 "url": ARCHIVE_URL,
@@ -249,7 +279,7 @@ def main() -> None:
                 "url": PREVIOUS_RUNS_URL,
                 "model": FORECAST_MODEL,
                 "variables": [f"precipitation_previous_day{k}" for k in range(1, 8)],
-                "seasons": [f"{y}-03-15..{y}-10-31" for y in FORECAST_YEARS],
+                "seasons": [f"{y}-03-15..{y}-10-31" for y in args.forecast_years],
                 "license": LICENSES["open-meteo"],
             },
             "soil_category": {"url": IUNG_WMS_URL, "layer": "Susza:katgl_landuse2024", "license": LICENSES["iung"]},
@@ -260,7 +290,7 @@ def main() -> None:
         "n_points": len(manifest_points),
         "points": manifest_points,
     }
-    (DATA_DIR / "MANIFEST.json").write_text(json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8")
+    (out_dir / "MANIFEST.json").write_text(json.dumps(manifest, indent=1, ensure_ascii=False), encoding="utf-8")
     log.info("MANIFEST.json written: %d points", len(manifest_points))
     client.close()
 

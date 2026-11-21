@@ -44,3 +44,20 @@ def test_noisy_forecast_properties() -> None:
     corr = np.corrcoef(f[rainy], fut[rainy])[0, 1]
     assert 0.3 < corr < 0.99  # informative but not clairvoyant
     assert np.mean(f[~rainy & (fut == 0)] > 0) > 0.05  # some false alarms
+
+
+def test_fao_small_doses_and_forecast_skip(small_batch) -> None:
+    from kowr_rl.baselines import make_fao_small
+    from kowr_rl.simulator import SimState
+
+    pol = make_fao_small({"threshold_frac": 0.9, "dose_mm": 10, "skip_lead_days": 2, "skip_if_forecast_mm": 5.0})
+    res = simulate(small_batch, pol, record=True)
+    irr = np.nan_to_num(res.traces["irr"])
+    assert set(np.unique(irr)) <= {0.0, 10.0}
+    # a 2-day forecast of >= 5 mm suppresses the dose even when the soil is dry
+    b = small_batch.subset([0])
+    b.forecast[:] = 0.0
+    b.forecast[0, 60, :2] = [3.0, 2.0]
+    dry = np.array([0.95 * b.taw[0]])
+    assert pol(SimState(60, dry, b.budget.copy(), b))[0] == 0.0
+    assert pol(SimState(61, dry, b.budget.copy(), b))[0] == 10.0

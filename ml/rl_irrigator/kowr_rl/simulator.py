@@ -33,7 +33,6 @@ from .config import CropParams, PreSeason, load_pre_season, load_rl_config
 from .data import DailySeries
 
 N_LEADS = 7
-N_OBS = 13
 OBS_NAMES = (
     "season_progress",
     "kc",
@@ -48,7 +47,14 @@ OBS_NAMES = (
     "p_table",
     "ky",
     "raw_minus_dr_over_taw",
+    # v2 (E6): appended, so v1 policies (13 inputs) keep working on the first 13 features
+    "forecast_1d_scaled",
+    "forecast_2d_scaled",
+    "etc_remaining_est_scaled",
+    "budget_over_remaining_etc",
 )
+N_OBS = len(OBS_NAMES)
+N_OBS_V1 = 13
 
 
 def default_actions() -> np.ndarray:
@@ -150,6 +156,7 @@ class SeasonBatch:
     dr0: np.ndarray
     budget: np.ndarray
     etc_season_est: np.ndarray
+    kc_rem: np.ndarray  # (B, T) share of the seasonal Kc sum still ahead on day t (known in advance)
     dev_start: np.ndarray  # (B,) first day of the development stage
     late_start: np.ndarray  # (B,) first day of the late stage
     start_dates: np.ndarray  # (B,) datetime64[D]
@@ -201,6 +208,7 @@ def build_batch(specs: list[SeasonSpec], pre: PreSeason | None = None, horizon: 
     e7 = np.zeros(shape)
     fut = np.zeros((B, T, N_LEADS))
     fc = np.zeros((B, T, N_LEADS))
+    kc_rem = np.zeros(shape)
     length = np.zeros(B, dtype=np.int64)
     dr0 = np.zeros(B)
     etc_est = np.zeros(B)
@@ -223,6 +231,8 @@ def build_batch(specs: list[SeasonSpec], pre: PreSeason | None = None, horizon: 
         precip[b, :L] = p_all[core]
         et0[b, :L] = e_all[core]
         kc[b, :L] = crop.kc_curve()
+        rev = np.cumsum(kc[b, :L][::-1])[::-1]
+        kc_rem[b, :L] = rev / max(rev[0], 1e-9)
         stage[b, :L] = crop.stage_index()
         valid[b, :L] = True
         cs = np.concatenate([[0.0], np.cumsum(p_all[: n_pre + L])])
@@ -259,6 +269,7 @@ def build_batch(specs: list[SeasonSpec], pre: PreSeason | None = None, horizon: 
         dr0=dr0,
         budget=np.array([s.budget for s in specs], dtype=np.float64),
         etc_season_est=etc_est,
+        kc_rem=kc_rem,
         dev_start=dev_start,
         late_start=late_start,
         start_dates=starts,
@@ -293,6 +304,7 @@ def observation(
     budget = batch.budget[r]
     p_tab = batch.p_tab[r]
     raw = adjusted_p(p_tab, kc * et0_7 / 7.0) * taw
+    etc_rem = batch.etc_season_est[r] * batch.kc_rem[r, t_arr]  # climatological ETc still ahead
     obs = np.stack(
         [
             t_arr / batch.length[r],
@@ -308,6 +320,10 @@ def observation(
             p_tab,
             batch.ky[r],
             (raw - dr) / taw,
+            f[:, 0] / cfg["forecast_day_scale_mm"],
+            f[:, 1] / cfg["forecast_day_scale_mm"],
+            etc_rem / cfg["etc_scale_mm"],
+            np.clip(budget_left / np.maximum(etc_rem, 10.0), 0.0, 3.0),
         ],
         axis=1,
     )

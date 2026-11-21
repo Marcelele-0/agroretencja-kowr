@@ -26,13 +26,13 @@ from .config import load_rl_config
 from .simulator import SeasonBatch, build_batch, simulate
 
 
-def make_env(rank: int, seed: int, reward_cfg: dict[str, float]):
+def make_env(rank: int, seed: int, reward_cfg: dict[str, float], low_budget_prob: float | None = None):
     def _init():
         from stable_baselines3.common.monitor import Monitor
 
         from .env import KowrIrrigationEnv
 
-        env = KowrIrrigationEnv("train", reward_cfg=reward_cfg)
+        env = KowrIrrigationEnv("train", reward_cfg=reward_cfg, low_budget_prob=low_budget_prob)
         env = Monitor(env, info_keywords=("yield_rel", "water_mm", "dp_mm"))
         env.reset(seed=seed * 10_000 + rank)
         return env
@@ -100,6 +100,10 @@ def make_validation_callback(val_batch: SeasonBatch, eval_freq: int, out_dir: Pa
                 flush=True,
             )
 
+        def _on_training_start(self) -> None:
+            # the warm-started policy is a checkpoint candidate too (PPO may not improve on it)
+            self._evaluate()
+
         def _on_step(self) -> bool:
             if self.num_timesteps - self.last >= eval_freq:
                 self.last = self.num_timesteps
@@ -122,6 +126,7 @@ def behavior_cloning(
     epochs: int = 6,
     seed: int = 0,
     teacher: str = "fao_rule",
+    low_budget_prob: float | None = None,
 ) -> dict[str, float]:
     """Warm start: imitate a baseline (actor, masked cross-entropy) and fit its returns (critic).
 
@@ -134,27 +139,34 @@ def behavior_cloning(
     from .baselines import baseline_policies
     from .config import load_crops
     from .dataset import load_points, make_spec
+    from .env import sample_budget
     from .forecast import noisy_forecast
     from .policy import OBS_HIGH, OBS_LOW
-    from .simulator import SimState, action_mask, balance_step, daily_reward, default_actions, legalize
+    from .simulator import (
+        N_OBS,
+        SimState,
+        action_mask,
+        balance_step,
+        daily_reward,
+        default_actions,
+        legalize,
+    )
 
     cfg = load_rl_config()
     rng = np.random.default_rng(seed)
     pts = load_points()
     crops = [load_crops()[c] for c in cfg["episode"]["crops"]]
     years = cfg["split"]["train_years"]
-    lo, hi = cfg["episode"]["budget_mm"]
-    step = cfg["episode"]["budget_step_mm"]
     specs = []
     for _ in range(n_seasons):
-        b = float(min(np.floor(rng.uniform(lo, hi + step) / step) * step, hi))
+        b = sample_budget(rng, cfg["episode"], low_budget_prob)
         specs.append(make_spec(pts[rng.integers(len(pts))], int(years[rng.integers(len(years))]), crops[rng.integers(len(crops))], int(rng.integers(1, 5)), b))
     batch = build_batch(specs)
     batch.forecast = noisy_forecast(batch.fut, rng)
     actions = default_actions()
     pol = baseline_policies()[teacher]
     B, T = batch.size, batch.horizon
-    obs_buf = np.zeros((B, T, 13), dtype=np.float32)
+    obs_buf = np.zeros((B, T, N_OBS), dtype=np.float32)
     act_buf = np.zeros((B, T), dtype=np.int64)
     mask_buf = np.zeros((B, T, len(actions)), dtype=bool)
     rew = np.zeros((B, T))
@@ -243,6 +255,14 @@ def main() -> None:
     ap.add_argument("--threads", type=int, default=4)
     ap.add_argument("--bc-seasons", type=int, default=0, help="behaviour-cloning warm start from the FAO rule (0 = off)")
     ap.add_argument("--bc-epochs", type=int, default=6)
+    ap.add_argument("--teacher", choices=["fao_rule", "fao_small", "oracle"], default="fao_rule",
+                    help="warm-start teacher: BC from the FAO rule, or DAgger from the perfect-foresight oracle (E6)")
+    ap.add_argument("--dagger-seasons", type=int, default=6000, help="seasons per DAgger round")
+    ap.add_argument("--dagger-betas", type=float, nargs="+", default=[1.0, 0.5, 0.2, 0.0])
+    ap.add_argument("--dagger-epochs", type=int, default=4)
+    ap.add_argument("--dagger-workers", type=int, default=None)
+    ap.add_argument("--low-budget-prob", type=float, default=None, help="override episode.low_budget_prob")
+    ap.add_argument("--lr-schedule", choices=["constant", "linear"], default="constant")
     args = ap.parse_args()
 
     torch.set_num_threads(args.threads)
@@ -256,7 +276,7 @@ def main() -> None:
     reference = {name: summarize(simulate(val, pol, reward_cfg=reward_cfg)) for name, pol in baseline_policies().items()}
     print(f"validation batch: {val.size} seasons ({time.perf_counter() - t0:.1f}s); reference:", json.dumps(reference), flush=True)
 
-    venv = SubprocVecEnv([make_env(i, args.seed, reward_cfg) for i in range(args.n_envs)], start_method="spawn")
+    venv = SubprocVecEnv([make_env(i, args.seed, reward_cfg, args.low_budget_prob) for i in range(args.n_envs)], start_method="spawn")
     venv = VecNormalize(venv, norm_obs=True, norm_reward=False, clip_obs=10.0, gamma=args.gamma)
     model = MaskablePPO(
         "MlpPolicy",
@@ -266,7 +286,7 @@ def main() -> None:
         gae_lambda=ppo["gae_lambda"],
         n_steps=args.n_steps,
         batch_size=args.batch_size,
-        learning_rate=args.lr,
+        learning_rate=(lambda f, lr=args.lr: lr * f) if args.lr_schedule == "linear" else args.lr,
         ent_coef=args.ent_coef,
         n_epochs=ppo["n_epochs"],
         clip_range=ppo["clip_range"],
@@ -276,9 +296,25 @@ def main() -> None:
         tensorboard_log=str(MODULE_ROOT / "runs"),
     )
     cb = make_validation_callback(val, args.eval_freq, out_dir, reward_cfg, reference)
-    if args.bc_seasons > 0:
+    if args.teacher == "oracle":
+        from .dagger import dagger_warm_start
+        from .policy import SB3BatchPolicy
+
         t_bc = time.perf_counter()
-        bc = behavior_cloning(model, venv, reward_cfg, args.gamma, n_seasons=args.bc_seasons, epochs=args.bc_epochs, seed=args.seed)
+        dg = dagger_warm_start(
+            model, venv, reward_cfg, args.gamma, out_dir,
+            seasons_per_round=args.dagger_seasons, betas=tuple(args.dagger_betas), epochs=args.dagger_epochs,
+            seed=args.seed, low_budget_prob=args.low_budget_prob, workers=args.dagger_workers,
+        )
+        m0 = summarize(simulate(val, SB3BatchPolicy(model, venv), reward_cfg=reward_cfg))
+        print(f"[dagger] done in {time.perf_counter() - t_bc:.0f}s; validation after DAgger: {json.dumps(m0)}", flush=True)
+        (out_dir / "bc_summary.json").write_text(json.dumps({"dagger": dg, "val_after_bc": m0}, indent=1), encoding="utf-8")
+    elif args.bc_seasons > 0:
+        t_bc = time.perf_counter()
+        bc = behavior_cloning(
+            model, venv, reward_cfg, args.gamma, n_seasons=args.bc_seasons, epochs=args.bc_epochs, seed=args.seed,
+            low_budget_prob=args.low_budget_prob, teacher=args.teacher,
+        )
         from .policy import SB3BatchPolicy
 
         m0 = summarize(simulate(val, SB3BatchPolicy(model, venv), reward_cfg=reward_cfg))
@@ -290,7 +326,7 @@ def main() -> None:
     model.save(out_dir / "last_model.zip")
     venv.save(str(out_dir / "last_vecnormalize.pkl"))
     venv.close()
-    summary = {"run": args.run, "train_seconds": round(train_s, 1), "steps_per_s": round(args.timesteps / train_s), "best_val_reward": cb.best}
+    summary = {"run": args.run, "train_seconds": round(train_s, 1), "steps_per_s": round(args.timesteps / max(train_s, 1e-9)), "best_val_reward": cb.best}
     (out_dir / "train_summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     print("done:", json.dumps(summary), flush=True)
 

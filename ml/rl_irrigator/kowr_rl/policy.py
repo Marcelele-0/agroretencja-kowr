@@ -30,7 +30,7 @@ class SB3BatchPolicy:
         self.actions = default_actions() if actions is None else actions
 
     def __call__(self, state: SimState) -> np.ndarray:
-        obs = policy_obs(state)
+        obs = policy_obs(state)[:, : self.model.observation_space.shape[0]]
         if self.vecnorm is not None:
             obs = self.vecnorm.normalize_obs(obs)
         masks = action_mask(state.budget_left, self.actions)
@@ -78,6 +78,7 @@ class NumpyPolicy:
         self.obs_var = arrays.get("obs_var")
         self.clip_obs = float(arrays["clip_obs"]) if "clip_obs" in arrays else None
         self.eps = float(arrays["epsilon"]) if "epsilon" in arrays else 1e-8
+        self.n_in = int(self.layers[0][0].shape[1]) if self.layers else int(self.out[0].shape[1])
         act = self.meta["activation"]
         self._act = {"tanh": np.tanh, "relu": lambda x: np.maximum(x, 0.0)}[act]
 
@@ -87,7 +88,8 @@ class NumpyPolicy:
             return cls({k: z[k] for k in z.files})
 
     def normalize(self, obs: np.ndarray) -> np.ndarray:
-        obs = np.clip(np.asarray(obs, dtype=np.float64), OBS_LOW, OBS_HIGH)
+        # v1 policies were trained on the first 13 features; newer features are appended.
+        obs = np.clip(np.asarray(obs, dtype=np.float64)[:, : self.n_in], OBS_LOW, OBS_HIGH)
         if self.obs_mean is None:
             return obs
         x = (obs - self.obs_mean) / np.sqrt(self.obs_var + self.eps)
@@ -112,3 +114,51 @@ class NumpyPolicy:
     def __call__(self, state: SimState) -> np.ndarray:
         masks = action_mask(state.budget_left, self.actions)
         return self.actions[self.act(state.obs(), masks)]
+
+
+class EnsemblePolicy:
+    """Average of the action probabilities of several :class:`NumpyPolicy` members (argmax).
+
+    Stored as one ``.npz`` with keys prefixed ``m<k>_`` (see :func:`save_ensemble`);
+    :meth:`NumpyPolicy.load`-compatible interface (``act``, ``probabilities``, ``__call__``).
+    """
+
+    def __init__(self, members: list[NumpyPolicy], meta: dict[str, Any] | None = None) -> None:
+        if not members:
+            raise ValueError("empty ensemble")
+        self.members = members
+        self.actions = members[0].actions
+        self.meta = meta or {"members": [m.meta.get("run") for m in members]}
+
+    def probabilities(self, obs: np.ndarray, masks: np.ndarray) -> np.ndarray:
+        return np.mean([m.probabilities(obs, masks) for m in self.members], axis=0)
+
+    def act(self, obs: np.ndarray, masks: np.ndarray) -> np.ndarray:
+        return np.argmax(np.where(masks, self.probabilities(obs, masks), -np.inf), axis=1)
+
+    def __call__(self, state: SimState) -> np.ndarray:
+        masks = action_mask(state.budget_left, self.actions)
+        return self.actions[self.act(state.obs(), masks)]
+
+
+def save_ensemble(paths: list[Path | str], out: Path | str, meta: dict[str, Any] | None = None) -> Path:
+    arrays: dict[str, np.ndarray] = {}
+    for k, p in enumerate(paths):
+        with np.load(p, allow_pickle=False) as z:
+            arrays.update({f"m{k}_{name}": z[name] for name in z.files})
+    arrays["ensemble_meta_json"] = np.array(json.dumps({"n_members": len(paths), **(meta or {})}))
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(out, **arrays)
+    return out
+
+
+def load_policy(path: Path | str) -> NumpyPolicy | EnsemblePolicy:
+    """Load a single-network or an ensemble ``.npz``."""
+    with np.load(path, allow_pickle=False) as z:
+        arrays = {k: z[k] for k in z.files}
+    if "ensemble_meta_json" not in arrays:
+        return NumpyPolicy(arrays)
+    meta = json.loads(str(arrays["ensemble_meta_json"]))
+    members = [NumpyPolicy({k[len(f"m{i}_"):]: v for k, v in arrays.items() if k.startswith(f"m{i}_")}) for i in range(meta["n_members"])]
+    return EnsemblePolicy(members, meta)

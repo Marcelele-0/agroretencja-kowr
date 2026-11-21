@@ -79,12 +79,33 @@ def make_fao_forecast(cfg: dict[str, Any] | None = None) -> Policy:
     return policy
 
 
+def make_fao_small(cfg: dict[str, Any] | None = None) -> Policy:
+    """E6 heuristic: small doses slightly before the stress threshold, skipped before rain.
+
+    Irrigate ``dose_mm`` when Dr > ``threshold_frac`` * RAW_est, unless the forecast for the
+    next ``skip_lead_days`` days is >= ``skip_if_forecast_mm``. Small doses leave room in the
+    root zone for rain (less deep percolation than refilling to field capacity).
+    Parameters were fixed before any test-set evaluation (validation 2024, EXPERIMENTS.md E6).
+    """
+    c = cfg or load_rl_config()["baselines"]["fao_small"]
+    frac, dose = float(c["threshold_frac"]), float(c["dose_mm"])
+    lead, skip = int(c["skip_lead_days"]), float(c["skip_if_forecast_mm"])
+
+    def policy(state: SimState) -> np.ndarray:
+        d = np.where(state.dr > frac * state.raw_estimate(), dose, 0.0)
+        f = state.batch.forecast[:, state.t, :lead].sum(axis=1)
+        return np.where(f >= skip, 0.0, d)
+
+    return policy
+
+
 def baseline_policies() -> dict[str, Policy]:
     return {
         "none": no_irrigation,
         "calendar": make_calendar(),
         "fao_rule": make_fao_rule(),
         "fao_forecast": make_fao_forecast(),
+        "fao_small": make_fao_small(),
     }
 
 
@@ -157,11 +178,14 @@ class OraclePolicy:
             out[..., ai] = q
         return out
 
-    def __call__(self, state: SimState) -> np.ndarray:
+    def q_row(self, state: SimState) -> np.ndarray:
+        """(B, A) perfect-foresight action values in the current state (-inf = infeasible)."""
         b_idx = np.clip(np.floor(state.budget_left / self.step + 1e-9).astype(np.int64), 0, self.n_b - 1)
         q = self._q_values(state.t, state.dr[:, None], np.arange(self.n_b))[:, 0]  # (B, n_b, A)
-        q_row = q[np.arange(len(b_idx)), b_idx]  # (B, A)
-        return self.actions[np.argmax(q_row, axis=1)]
+        return q[np.arange(len(b_idx)), b_idx]
+
+    def __call__(self, state: SimState) -> np.ndarray:
+        return self.actions[np.argmax(self.q_row(state), axis=1)]
 
 
 def run_oracle(batch: SeasonBatch, *, chunk: int = 32, record: bool = False, **kw: Any) -> SimResult:

@@ -43,7 +43,7 @@ class RecommendRequest(_Location):
     date: dt.date = Field(description="Data analizy (ostatnie 10 lat, nie pozniej niz dzis)")
     budget_mm: float = Field(default=150.0, ge=0, le=1000, description="Budzet wody na sezon [mm] (np. pojemnosc zbiornika / limit poboru)")
     budget_used_mm: float = Field(default=0.0, ge=0, le=1000, description="Woda juz zuzyta w tym sezonie [mm]")
-    policy: Literal["default", "rl", "fao_rule", "fao_forecast", "calendar", "none"] = "default"
+    policy: Literal["default", "rl", "fao_rule", "fao_forecast", "fao_small", "calendar", "none"] = "default"
     irrigation_history: list[tuple[dt.date, float]] | None = Field(default=None, description="Opcjonalnie: [(data, mm), ...] dotychczasowych nawodnien")
     include_history: bool = Field(default=False, description="Dolacz 10-letnie porownanie strategii")
 

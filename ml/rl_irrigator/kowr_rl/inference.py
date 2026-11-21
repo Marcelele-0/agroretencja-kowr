@@ -37,7 +37,7 @@ from .data import (
     fetch_previous_runs,
 )
 from .forecast import align_archived_forecast, climatology_forecast, noisy_forecast
-from .policy import NumpyPolicy
+from .policy import EnsemblePolicy, NumpyPolicy, load_policy
 from .simulator import (
     N_LEADS,
     SeasonBatch,
@@ -60,6 +60,7 @@ STRATEGY_LABELS = {
     "calendar": "Kalendarz (stala dawka co N dni)",
     "fao_rule": "Regula FAO-56 (Dr > RAW)",
     "fao_forecast": "Regula FAO-56 + prognoza opadu",
+    "fao_small": "Regula FAO-56, male dawki 10 mm + prognoza opadu",
     "rl": "Agent RL (MaskablePPO)",
     "oracle": "Wyrocznia (znana pogoda, gorna granica)",
 }
@@ -98,9 +99,9 @@ def get_client() -> HttpClient:
 
 
 @lru_cache(maxsize=2)
-def load_rl_policy(path: str = str(RL_WEIGHTS)) -> NumpyPolicy | None:
+def load_rl_policy(path: str = str(RL_WEIGHTS)) -> NumpyPolicy | EnsemblePolicy | None:
     p = Path(path)
-    return NumpyPolicy.load(p) if p.exists() else None
+    return load_policy(p) if p.exists() else None
 
 
 def get_policy(name: str) -> tuple[str, Any]:

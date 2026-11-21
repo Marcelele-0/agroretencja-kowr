@@ -159,3 +159,26 @@ Uzupełniam na bieżąco: data, decyzja, powód.
 - 2026-11-21 (M3/E0): szum prognozy skalibrowany na ECMWF 2024, zależny od wyprzedzenia, zamiast lognormal σ = 0,4 z promptu, który był zbyt optymistyczny.
 - 2026-11-21 (M4): własny, deterministyczny callback walidacyjny na całym zbiorze 2024 (3200 sezonów) zamiast `EvalCallback`. Opcjonalny start PPO od klonu reguły FAO (behavior cloning).
 - 2026-11-21 (M5, ustalone PRZED uruchomieniem testu): kryterium gotowości zaostrzone o istotność. „Mniej wody” oznacza, że cały 95% CI różnicy wody RL − FAO jest < 0 (przy średniej różnicy plonu ≥ −1 pkt proc.), a „wyższy plon” oznacza, że cały 95% CI różnicy plonu jest > 0 **i** średnio nie zużywa więcej wody niż FAO. To ostatnie dodałem po próbie na walidacji, gdzie E1 „wygrywał” plonem tylko dlatego, że przy dużym budżecie zużywał więcej wody niż FAO.
+- 2026-11-21 (M5): pierwszy test (E5_s3) dał werdykt „niegotowy” (remis przy 50 mm). `default_policy: fao_rule`.
+
+---
+
+## 5. E6: doszlifowanie agenta (prośba użytkownika, 21.11.2026)
+
+Cel: sprawdzić, czy agent może pokonać regułę FAO przy **każdym** poziomie budżetu, zwłaszcza przy 50 mm.
+
+**Uzasadnienie z walidacji, nie z testu:** słabe miejsca E5 widać już na walidacji 2024. Przy 50 mm ziemniak na glebach 1–2 traci −0,23 pkt proc., a kukurydza na glebie 1 −0,13. Diagnoza: wyrocznia używa dawek po 10 mm, które zostawiają w glebie miejsce na deszcz, a FAO i E5 uzupełniają do pełna dawkami 25–30 mm.
+
+**Kandydaci (wszyscy trenowani tylko na latach 2016–2023):**
+- E6a: E5 + cechy obserwacji v2 (prognoza na dzień 1 i 2, szacowane ETc do końca sezonu, budżet/ETc) + 30% epizodów z budżetem 20–100 mm.
+- E6b/c: start od wyroczni (DAgger). Pierwsza wersja z imitacją akcji nie działała (student przestał podlewać). Wersja z żalem wyroczni (AggreVaTe) podlewała za mało (walidacja: plon 0,927 przy 91 mm).
+- E6d/e: start od nowej reguły `fao_small` (10 mm przy Dr > 0,9 RAW, pominięcie przy prognozie ≥ 5 mm na 2 dni; parametry ustalone przed siatką, siatka tylko potwierdziła płaskie plateau), potem PPO.
+- Na wierzchu: uśrednienie ziaren (ensemble), jeśli poprawia walidację.
+
+**Wybór modelu (tylko walidacja 2024, `scripts/compare_val.py`):** spośród konfiguracji, które przy każdym z czterech budżetów mają ΔY ≥ 0 i ΔW ≤ 0 względem FAO (średnie), wygrywa ta z najwyższą nagrodą walidacyjną. Jeśli żadna nie spełnia warunku, wygrywa najwyższa nagroda. Konfiguracja dostaje 3 ziarna.
+
+**Test (ustalone przed jakąkolwiek ewaluacją E6 na latach 2025–2026):**
+1. **Czysty test:** zestaw holdout `data/holdout/`, czyli 50 nowych punktów rolnych z siatki przesuniętej o 0,35° (≥ 25 km od każdego punktu treningowego, w praktyce ok. 40 km), lata 2025–2026, prawdziwe prognozy ECMWF. Te lokalizacje nie były używane ani w treningu, ani przy wyborze modelu. Zastrzeżenie: lata są te same co w pierwszym teście, więc pogoda 2025–2026 jako całość była już raz oglądana.
+2. **Stary test** (50 punktów treningowych, 2025–2026): raportowany dla ciągłości, ale oznaczony jako już widziany.
+3. **Reguła decyzyjna bez zmian** (istotność przy każdym budżecie, jak w M5). Stosowana na czystym teście. Jeśli RL ją spełnia, `default_policy: rl`. W przeciwnym razie `default_policy: fao_rule` (jak w prompcie), a `fao_small` i RL są dostępne jako opcje.
+4. RL raportuję także względem `fao_small` i `fao_forecast`, żeby było widać, czy agent bije najlepszą prostą regułę, a nie tylko FAO.
