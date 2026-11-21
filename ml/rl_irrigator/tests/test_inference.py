@@ -226,3 +226,19 @@ def test_api_accepts_frontend_crop_codes(mock_client, monkeypatch) -> None:
     r = c.post("/rl/recommend", json={"lat": 52.1, "lon": 18.2, "crop": "kapusta_wloska", "date": "2024-06-20"})
     assert r.status_code == 422
     assert "zboza_ozime" in c.get("/rl/health").json()["crop_codes_accepted"]
+
+
+def test_plan_14_days_with_scenarios(mock_client) -> None:
+    out = inf.recommend(52.1, 18.2, "kukurydza", "2024-07-10", 150, 0, plan_days=14, client=mock_client, today=TODAY)
+    assert out["status"] == "ok", out.get("message")
+    assert len(out["recommendation"]["plan_7d"]) == 7
+    p14 = out["recommendation"]["plan_14d"]
+    assert len(p14["days"]) == 14
+    assert [d["confidence"] for d in p14["days"]][:3] == ["wysoka"] * 3 and p14["days"][-1]["confidence"] == "niska"
+    assert p14["days"][0]["dose_mm"] == out["recommendation"]["dose_today_mm"]
+    probs = [d["irrigation_probability"] for d in p14["days"] if d["irrigation_probability"] is not None]
+    assert probs and all(0.0 <= x <= 1.0 for x in probs)
+    w = p14["water_need_mm"]
+    assert w is None or (0 <= w["p10_mm"] <= w["expected_mm"] + 1e-9 <= w["p90_mm"] + 2e-9)
+    assert p14["total_plan_mm"] <= 150 + 1e-9
+    assert "plan_14d" not in inf.recommend(52.1, 18.2, "kukurydza", "2024-07-10", 150, 0, client=mock_client, today=TODAY)["recommendation"]

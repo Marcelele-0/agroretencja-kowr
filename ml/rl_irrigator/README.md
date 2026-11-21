@@ -39,6 +39,14 @@ curl -X POST http://127.0.0.1:8001/rl/recommend -H "Content-Type: application/js
 
 Pełne przykłady odpowiedzi są w [`examples/`](examples/).
 
+**Plan na 14 dni:** `"plan_days": 14` w zapytaniu dodaje `recommendation.plan_14d`:
+- dawki na każdy dzień;
+- prawdopodobieństwo podlewania ze scenariuszy pogody z 10 lat;
+- zakres zapotrzebowania na wodę (P10–P90);
+- pewność każdego dnia.
+
+Plan liczy się codziennie od nowa, a wiążąca jest dawka na dziś. Badanie: [`reports/plan14.md`](reports/plan14.md).
+
 **Integracja z backendem zespołu** (`src/backend/main.py`, Tor C):
 
 ```python

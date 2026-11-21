@@ -211,3 +211,17 @@ RL − FAO: łącznie +0,12 pkt proc. [+0,05; +0,19] i −8,5 mm [−9,9; −7,3
 
 **Te same lata na punktach treningowych:** +0,12 pkt proc. [+0,06; +0,19] i −8,5 mm [−10,0; −7,2], istotnie przy każdym budżecie.
 
+
+---
+
+## E8: plan nawadniania na 14 dni (21.11.2026)
+
+Pełny raport: [`reports/plan14.md`](reports/plan14.md).
+
+- **Trafność prognoz ECMWF** (prawdziwe archiwalne, wyprzedzenia 1–7): przewaga nad klimatologią spada liniowo z 0,49–0,54 (dzień 1) do 0,05 (dzień 7).
+- **Plan kroczący na 14 dni** (holdout 2025–2026, 241 600 planów):
+  - dni podlewania trafione w 62% (dzień 2), 41% (dzień 3) i 34% (dzień 4);
+  - z tolerancją ±1 dzień: 87% w dniu 2 i 60% w dniu 7;
+  - zakres zapotrzebowania na wodę w 14 dni (scenariusze z 10 lat) obejmuje rzeczywistość w 92% przypadków.
+- **Agent E8 z 14-dniowym oknem prognozy** (15 upraw, 6 mln kroków, 3 ziarna): nagroda walidacyjna −0,1241 wobec −0,1243 dla E7, czyli tyle samo. Także przy syntetycznej prognozie z informacją na dni 8–14 (−0,1240 wobec −0,1244). Wdrożony zostaje E6f_s2.
+- **API:** `plan_days=14` dodaje `recommendation.plan_14d` (dawki, prawdopodobieństwo podlewania, zakres wody, pewność każdego dnia).

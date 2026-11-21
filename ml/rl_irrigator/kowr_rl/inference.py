@@ -261,12 +261,12 @@ def _season_spec(
 # ======================================================================================
 # Plan simulation
 # ======================================================================================
-def _forecast_rows(batch: SeasonBatch, t_date: int, issued: np.ndarray, past_rng: np.random.Generator) -> None:
+def _forecast_rows(batch: SeasonBatch, t_date: int, issued: np.ndarray, past_rng: np.random.Generator, days: int = 7) -> None:
     """Fill batch.forecast: synthetic for past days, issued forecast (shifted) for plan days."""
     batch.forecast = noisy_forecast(batch.fut, past_rng)
     L = int(batch.length[0])
     width = batch.forecast.shape[2]
-    for k in range(min(N_LEADS + 1, L - t_date)):
+    for k in range(min(max(N_LEADS, days) + 1, L - t_date)):
         row = issued[k : k + width]
         if len(row) < width:
             row = np.concatenate([row, np.zeros(width - len(row))])
@@ -317,6 +317,75 @@ def _run_plan(
     return {"plan": plan, "state0": state0, "past_irrigation_mm": past_irr}
 
 
+# Confidence of plan day k (1-based), from the E8 test (reports/plan14_holdout_prev7.json):
+# Brier skill of the irrigation-day probability vs the base rate 0.43 / 0.27 on days 2 / 3,
+# 0.10-0.17 on days 4-7 and below 0.1 from day 8 on.
+PLAN_DAY_CONFIDENCE = {**dict.fromkeys(range(1, 4), "wysoka"), **dict.fromkeys(range(4, 8), "srednia"), **dict.fromkeys(range(8, 15), "niska")}
+
+
+def _analog_arrays(obs: DailySeries, start: dt.date, n: int, skip_year: int) -> tuple[np.ndarray, np.ndarray]:
+    """(Y, 1, n) precipitation and ET0 of the same calendar days in the other archive years."""
+    dates = np.asarray(obs.dates, dtype="datetime64[D]")
+    P, E = [], []
+    for y in range(ARCHIVE_START.year, skip_year + 1):
+        if y == skip_year:
+            continue
+        try:
+            d0 = np.datetime64(start.replace(year=y), "D")
+        except ValueError:
+            continue
+        want = d0 + np.arange(n)
+        idx = np.clip(np.searchsorted(dates, want), 0, len(dates) - 1)
+        if not (dates[idx] == want).all():
+            continue
+        p, e = np.asarray(obs.precip)[idx], np.asarray(obs.et0)[idx]
+        if np.isfinite(p).all() and np.isfinite(e).all():
+            P.append(p)
+            E.append(e)
+    return np.asarray(P)[:, None, :], np.asarray(E)[:, None, :]
+
+
+def _long_plan(batch: SeasonBatch, pol: Any, state0: SimState, t_date: int, date: dt.date, long_plan: list[dict[str, Any]],
+               issued_p: np.ndarray, fmode: str, obs: DailySeries, days: int) -> dict[str, Any]:
+    """E8: plan for up to 14 days + irrigation probability from analog-year scenarios."""
+    from .plan import scenario_plans
+
+    n_fc = {"live_ecmwf": 14, "archived_ecmwf": N_LEADS}.get(fmode, 0)
+    season_start = date - dt.timedelta(days=t_date)
+    T = batch.horizon + N_FC
+    ana_p, ana_e = _analog_arrays(obs, season_start, T, date.year)
+    out_days = []
+    prob = np.full(days, np.nan)
+    water = None
+    if len(ana_p):
+        issued = np.full((1, days + N_FC), np.nan)
+        issued[0, : min(n_fc, len(issued_p))] = issued_p[: min(n_fc, days + N_FC)]
+        sp = scenario_plans(batch, pol, t_date, state0.dr, state0.budget_left, ana_p, ana_e, days,
+                            forecast_days=n_fc, precip_issued=issued)[:, 0]  # (Y, days)
+        prob = (sp > 0).mean(axis=0)
+        tot = sp.sum(axis=1)
+        water = {"expected_mm": _r(tot.mean()), "p10_mm": _r(np.percentile(tot, 10)), "p90_mm": _r(np.percentile(tot, 90)),
+                 "n_scenarios": int(len(tot))}
+    for k, d in enumerate(long_plan[:days]):
+        out_days.append({
+            "day": k + 1,
+            "date": (date + dt.timedelta(days=k)).isoformat(),
+            "dose_mm": d["dose_mm"],
+            "irrigation_probability": None if not np.isfinite(prob[k]) else _r(prob[k], 2),
+            "precip_assumed_mm": d["precip_assumed_mm"],
+            "confidence": PLAN_DAY_CONFIDENCE.get(k + 1, "niska"),
+        })
+    return {
+        "days": out_days,
+        "total_plan_mm": float(sum(d["dose_mm"] for d in long_plan[:days])),
+        "water_need_mm": water,
+        "forecast_days_used": n_fc,
+        "method": "Plan: ta sama polityka dzien po dniu na pogodzie zakladanej dzis (prognoza, dalej klimatologia). "
+                  "Prawdopodobienstwo i zakres wody: scenariusze z pogody tych samych dni w innych latach archiwum.",
+        "advice": "Wiazaca jest dawka na dzis; plan aktualizuje sie codziennie wraz z nowa prognoza.",
+    }
+
+
 # ======================================================================================
 # recommend()
 # ======================================================================================
@@ -332,10 +401,16 @@ def recommend(
     parcel_id: str | None = None,
     irrigation_history: list[tuple[str, float]] | None = None,
     include_history: bool = False,
+    plan_days: int = 7,
     client: HttpClient | None = None,
     today: dt.date | None = None,
 ) -> dict[str, Any]:
-    """7-day irrigation recommendation for a point (or parcel) in Poland on ``date``."""
+    """7-day irrigation recommendation for a point (or parcel) in Poland on ``date``.
+
+    ``plan_days`` = 8..14 adds ``recommendation.plan_14d`` (E8): the daily plan continued to
+    ``plan_days`` days, the probability of an irrigation day from analog-year weather scenarios after
+    the forecast horizon, the range of the water need and the confidence of every plan day.
+    """
     t_start = time.perf_counter()
     client = client or get_client()
     today = today or _today()
@@ -419,7 +494,8 @@ def recommend(
     batch = build_batch([spec])
     t_date = (date - season_start).days
     rng = np.random.default_rng(abs(hash((round(lat, 3), round(lon, 3), date.year))) % 2**32)
-    _forecast_rows(batch, t_date, issued_p, rng)
+    plan_days = int(min(max(plan_days, 7), 14))
+    _forecast_rows(batch, t_date, issued_p, rng, plan_days)
     history = None
     if irrigation_history:
         history = {}
@@ -427,7 +503,9 @@ def recommend(
             k = (dt.date.fromisoformat(d_s) - season_start).days
             if 0 <= k < t_date:
                 history[k] = history.get(k, 0.0) + float(mm)
-    run = _run_plan(batch, pol, t_date, budget_used_mm, budget_left, history)
+    run = _run_plan(batch, pol, t_date, budget_used_mm, budget_left, history, days=plan_days)
+    long_plan = run["plan"]
+    run = {**run, "plan": long_plan[:7]}
 
     # scenarios (uncertainty of the forecast): no rain / forecast / 1.5 x forecast
     scen = {}
@@ -504,6 +582,10 @@ def recommend(
     if pname == "rl" and rl_status != "domyslny":
         limitations.insert(0, "Uzyto agenta RL oznaczonego jako eksperymentalny - na tescie nie spelnil kryterium gotowosci.")
 
+    plan_14d = None
+    if plan_days > 7:
+        plan_14d = _long_plan(batch, pol, run["state0"], t_date, date, long_plan, issued_p, fmode, obs, plan_days)
+
     result = finish(
         "ok",
         text,
@@ -518,6 +600,7 @@ def recommend(
             "window": [d["date"] for d in plan if d["dose_mm"] > 0],
             "scenarios_7d_mm": scen,
             "alternative": alt,
+            **({"plan_14d": plan_14d} if plan_14d else {}),
         },
         rationale={
             "soil_water_storage_pct_taw": _r(storage_pct),
