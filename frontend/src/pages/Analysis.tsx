@@ -224,33 +224,32 @@ function Skeleton({ lines }: { lines: string[] }) {
 }
 
 function Portfolio({ rows, activeId, onShow, onRemove }: { rows: PortfolioRow[]; activeId: string; onShow: (id: string) => void; onRemove: (id: string) => void }) {
+  const today = todayIso();
   return (
     <section className="rs-section" aria-label="Porównanie działek">
       <h2 className="ar-section-title">Twoje działki</h2>
-      <div className="ar-card rs-table">
-        <table>
-          <thead><tr><th>Działka</th><th>Uprawa</th><th>Pow.</th><th>Gleba</th><th>Stan wody</th><th>Susza wg IUNG</th><th><span className="ar-sr">Akcje</span></th></tr></thead>
-          <tbody>
-            {rows.map((r) => {
-              const p = r.parcel.status === "ready" ? r.parcel.data : null;
-              const on = r.id === activeId;
-              return (
-                <tr key={r.id} aria-current={on ? "true" : undefined}>
-                  <td><b>{p ? `${p.number}, ${p.region}` : r.id}</b>{p ? <span className="rs-table__sub">{p.commune}</span> : null}</td>
-                  <td>{cropInfo(r.crop).label}</td>
-                  <td>{p ? `${ha(p.areaHa)} ha` : "…"}</td>
-                  <td>{r.land ? (r.land.kind === "mineral" ? `kat. ${r.land.category}` : r.land.kind === "nonAgri" ? r.land.label.toLowerCase() : "brak danych") : "…"}</td>
-                  <td>{r.local ? <WaterBalance size="sm" value={r.local.stage} /> : r.error ?? (r.land?.kind === "nonAgri" ? "poza zakresem" : "…")}</td>
-                  <td>{r.local ? (r.local.knownCount ? `${r.local.droughtCount} z ${r.local.knownCount} okien` : "brak progu") : ""}</td>
-                  <td className="rs-table__act">
-                    {on ? <span className="ar-muted">wyświetlana</span> : <Button variant="light" size="sm" onClick={() => onShow(r.id)}>Pokaż</Button>}
-                    <Button variant="icon" size="sm" icon="minus" label={`Usuń działkę ${p?.number ?? r.id} z porównania`} onClick={() => onRemove(r.id)} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="rs-pcards">
+        {rows.map((r) => {
+          const p = r.parcel.status === "ready" ? r.parcel.data : null;
+          const on = r.id === activeId;
+          const nonAgri = r.land?.kind === "nonAgri";
+          return (
+            <div key={r.id} className={`rs-pc${on ? " is-on" : ""}`} role="button" tabIndex={on ? -1 : 0} aria-current={on ? "true" : undefined}
+              aria-label={p ? `Działka ${p.number}, ${p.region}${on ? ", wyświetlana" : ", pokaż analizę"}` : r.id}
+              onClick={() => !on && onShow(r.id)} onKeyDown={(e) => { if (!on && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onShow(r.id); } }}>
+              <div className="rs-pc__head">
+                <b>{p ? `Działka ${p.number}, ${p.region}` : r.id}</b>
+                <span>{cropInfo(r.crop).label} · {p ? `${ha(p.areaHa)} ha` : "…"}{r.land?.kind === "mineral" ? ` · gleba kat. ${r.land.category}` : ""}</span>
+              </div>
+              {r.local ? <WaterBalance size="sm" value={r.local.stage} /> : <span className="ar-muted">{nonAgri ? "Poza zakresem: grunt nierolny" : r.error ?? "Wczytuję…"}</span>}
+              {r.local ? <StateTimeline compact days={r.local.timeline} selected={r.local.date} today={today} /> : null}
+              {r.local ? <span className="rs-pc__foot">{r.local.knownCount ? `Susza wg IUNG: ${r.local.droughtCount} z ${r.local.knownCount} okien` : "Brak progu IUNG dla tej uprawy"}</span> : null}
+              <span className="rs-pc__remove" onClick={(e) => e.stopPropagation()}>
+                <Button variant="icon" size="sm" icon="minus" label={`Usuń działkę ${p?.number ?? r.id} z porównania`} onClick={() => onRemove(r.id)} />
+              </span>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -276,29 +275,35 @@ function Assessment({ local, onPickDate }: { local: LocalResult; onPickDate: (d:
           </ul>
         </div>
       ) : null}
-      <div className="ar-card">
+      <div className="ar-card rs-hero">
         <WaterBalance value={local.stage} caption={local.caption} />
+        <div className="rs-status">
+          {local.stage !== null ? <RiskChip level={local.risk.level} side={local.risk.side} veto={local.risk.veto} vetoReason={local.risk.vetoReason} /> : null}
+          <ConfidenceBadge level={local.confidence.level} detail={local.confidence.detail} />
+        </div>
         <Why local={local} />
       </div>
-      <div className="rs-status">
-        {local.stage !== null ? <RiskChip level={local.risk.level} side={local.risk.side} veto={local.risk.veto} vetoReason={local.risk.vetoReason} /> : null}
-        <ConfidenceBadge level={local.confidence.level} detail={local.confidence.detail} />
+      <div className="ar-card">
+        <StateTimeline title={local.timeline.some((d) => d.forecast) ? "Stan wody: ostatnie 45 dni i prognoza" : "Stan wody dzień po dniu"} days={local.timeline} selected={local.date} today={todayIso()} onPick={onPickDate} summary={timelineSummary(local)} />
       </div>
       <div className="rs-metrics">
         <MetricTile icon="drop" label="Opad 30 dni" value={mm(local.metrics.p30)} unit="mm" />
         <MetricTile icon="sun" label="Parowanie ET₀ 30 dni" value={mm(local.metrics.et030)} unit="mm" />
         <MetricTile icon="gauge" label="KBW 60 dni" value={mm(local.kbw60)} unit="mm" />
       </div>
-      <div className="ar-card"><StateTimeline days={local.timeline} selected={local.date} today={todayIso()} onPick={onPickDate} summary={timelineSummary(local)} /></div>
-      <div className="ar-card"><KbwWindows title={`Sezon ${local.season} w oknach IUNG`} windows={local.windows} active={local.active} thresholdLabel={thLabel} /></div>
-      <div className="ar-card">
+      <details className="ar-card rs-more">
+        <summary>Okna suszy IUNG w sezonie {local.season}: {local.knownCount ? `susza w ${local.droughtCount} z ${local.knownCount}` : "brak progu"}</summary>
+        <KbwWindows title={`Sezon ${local.season} w oknach IUNG`} windows={local.windows} active={local.active} thresholdLabel={thLabel} />
+      </details>
+      <details className="ar-card rs-more">
+        <summary>{formatDayMonth(local.date)} w ostatnich 10 latach: susza w {local.years.filter((x) => x.value !== null && x.value <= -3).length} z {local.years.length}</summary>
         <YearCompare title={mode === "day" ? `${formatDayMonth(local.date)} w latach ${span}` : `${monthName(m)} (stan na koniec miesiąca) w latach ${span}`} years={ys} highlightYear={y}>
           <div className="ar-form__chips">
             <Pill pressed={mode === "day"} onClick={() => setMode("day")}>Ten dzień</Pill>
             <Pill pressed={mode === "month"} onClick={() => setMode("month")}>Cały miesiąc</Pill>
           </div>
         </YearCompare>
-      </div>
+      </details>
     </>
   );
 }

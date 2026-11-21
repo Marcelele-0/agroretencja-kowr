@@ -120,20 +120,20 @@ export function CauseBreakdown({ causes }: { causes: { key: string; pct: number;
 }
 
 /** Daily water state on the −5…+5 scale: bars go down (drought) or up (excess) from 0; forecast days are dimmed with a dashed edge. */
-export function StateTimeline({ days, selected, today, onPick, title, summary }: {
-  days: { date: string; value: number | null; forecast: boolean }[]; selected: string; today: string; onPick?: (date: string) => void; title?: string; summary?: ReactNode;
+export function StateTimeline({ days, selected, today, onPick, title, summary, compact }: {
+  days: { date: string; value: number | null; forecast: boolean }[]; selected: string; today: string; onPick?: (date: string) => void; title?: string; summary?: ReactNode; compact?: boolean;
 }) {
   const label = (d: string) => { const [, m, dd] = d.split("-"); return `${Number(dd)}.${Number(m)}`; };
   const aria = days.map((d) => `${d.date}: ${d.value === null ? "brak" : signed(d.value)}${d.forecast ? " (prognoza)" : ""}`).join(", ");
   const hasForecast = days.some((d) => d.forecast);
   return (
-    <figure className="rs-st" style={{ "--n": days.length } as CSSProperties}>
-      <figcaption className="ar-kbw__head">
+    <figure className={cx("rs-st", compact && "rs-st--compact")} style={{ "--n": days.length } as CSSProperties}>
+      {compact ? null : <figcaption className="ar-kbw__head">
         <span className="ar-kbw__title">{title ?? "Stan wody dzień po dniu"}</span>
         {summary ? <span className="ar-kbw__sum">{summary}</span> : null}
-      </figcaption>
+      </figcaption>}
       <div className="rs-st__wrap">
-        <div className="rs-st__y" aria-hidden="true"><span>+5</span><span>0</span><span>−5</span></div>
+        {compact ? null : <div className="rs-st__y" aria-hidden="true"><span>nadmiar</span><span>0</span><span>susza</span></div>}
         <div className="rs-st__plot" role="img" aria-label={`${title ?? "Stan wody dzień po dniu"}. ${aria}`}>
           <span className="rs-st__zero" aria-hidden="true" />
           {days.map((d) => {
@@ -148,12 +148,12 @@ export function StateTimeline({ days, selected, today, onPick, title, summary }:
           })}
         </div>
       </div>
-      <div className="rs-st__x" aria-hidden="true">{days.map((d, i) => <span key={d.date}>{i % 7 === 0 || d.date === selected ? label(d.date) : ""}</span>)}</div>
-      <div className="ar-kbw__legend">
+      {compact ? null : <div className="rs-st__x" aria-hidden="true">{days.map((d, i) => <span key={d.date}>{d.date === today ? "dziś" : i % 7 === 0 || d.date === selected ? label(d.date) : ""}</span>)}</div>}
+      {compact ? null : <div className="ar-kbw__legend">
         <span className="ar-kbw__key"><span className="ar-kbw__sw ar-b-m3" />Obserwacja</span>
         {hasForecast ? <span className="ar-kbw__key"><span className="ar-kbw__sw rs-st__sw-fc" />Prognoza</span> : null}
         <span className="ar-kbw__key"><span className="ar-kbw__sw ar-kbw__sw--on" />Wybrany dzień{onPick ? " (kliknij inny dzień)" : ""}</span>
-      </div>
+      </div>}
     </figure>
   );
 }

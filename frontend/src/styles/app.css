@@ -147,17 +147,42 @@ a { color: inherit; }
 
 /* ---------- StateTimeline: daily water state on the −5…+5 scale ---------- */
 .rs-st { display: grid; gap: 8px; margin: 0; min-width: 0; }
-.rs-st__wrap { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; }
-.rs-st__y { display: flex; flex-direction: column; justify-content: space-between; font: 500 10px/1 var(--font-mono); color: var(--ink-muted); text-align: right; }
-.rs-st__plot { position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1px; height: 150px; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); background: linear-gradient(to bottom, transparent calc(50% - .5px), var(--hairline) calc(50% - .5px), var(--hairline) calc(50% + .5px), transparent calc(50% + .5px)); }
+.rs-st__wrap { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px; }
+.rs-st--compact .rs-st__wrap { grid-template-columns: minmax(0, 1fr); }
+.rs-st__y { display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; line-height: 1; color: var(--ink-muted); text-align: right; }
+.rs-st__plot { position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1px; height: 190px; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); background: linear-gradient(to bottom, transparent calc(50% - .5px), var(--hairline) calc(50% - .5px), var(--hairline) calc(50% + .5px), transparent calc(50% + .5px)); }
 .rs-st__zero { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--line-strong); pointer-events: none; }
 .rs-st__day { position: relative; display: block; min-width: 0; height: 100%; margin: 0; padding: 0; border: 0; background: none; cursor: default; }
 button.rs-st__day { cursor: pointer; }
 button.rs-st__day:hover { background: var(--hairline); }
 .rs-st__bar { position: absolute; left: 12%; right: 12%; border-radius: 2px; }
-.rs-st__day--fc .rs-st__bar { opacity: .55; outline: 1px dashed var(--ink); outline-offset: -1px; }
+.rs-st__day--fc { background: var(--surface-sunk); }
+.rs-st__day--fc .rs-st__bar { opacity: .6; outline: 1px dashed var(--ink); outline-offset: -1px; }
+.rs-st--compact .rs-st__plot { height: 56px; border: 0; }
+.rs-st--compact .rs-st__day--fc { background: none; }
+.rs-st--compact .rs-st__day--fc .rs-st__bar { outline: 0; opacity: .45; }
+.rs-st--compact .rs-st__day--today::after { top: 0; bottom: 0; }
+.rs-st--compact .rs-st__day--on { outline-width: 1px; }
 .rs-st__day--today::after { content: ""; position: absolute; top: -6px; bottom: -6px; right: -1px; border-right: 1.5px dashed var(--ink-muted); }
 .rs-st__day--on { outline: 1.5px solid var(--ink); outline-offset: 0; border-radius: 3px; }
-.rs-st__x { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1px; margin-left: 28px; font: 500 10px/1 var(--font-mono); color: var(--ink-muted); white-space: nowrap; }
+.rs-st__x { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1px; margin-left: 58px; font: 500 10px/1 var(--font-mono); color: var(--ink-muted); white-space: nowrap; }
 .rs-st__x span { overflow: visible; }
 .rs-st__sw-fc { background: var(--dry-3); opacity: .55; outline: 1px dashed var(--ink); outline-offset: -1px; }
+
+/* ---------- Parcel cards: one small chart per parcel ---------- */
+.rs-pcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.rs-pc { position: relative; display: grid; gap: 10px; align-content: start; min-width: 0; padding: 14px 14px 12px; border: 1px solid var(--hairline); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.rs-pc:hover { border-color: var(--line-strong); }
+.rs-pc.is-on { border-color: var(--field); box-shadow: inset 0 0 0 1px var(--field); cursor: default; }
+.rs-pc__head { display: grid; gap: 2px; padding-right: 36px; }
+.rs-pc__head b { font-size: 14px; font-weight: 600; }
+.rs-pc__head span, .rs-pc__foot { color: var(--ink-muted); font-size: 12px; }
+.rs-pc__remove { position: absolute; top: 10px; right: 10px; }
+.rs-pc__remove .ar-btn--icon { border: 1px solid var(--hairline); box-shadow: none; }
+
+/* ---------- Hero and collapsible details ---------- */
+.rs-hero { gap: 16px; }
+.rs-hero .rs-status { padding-top: 14px; border-top: 1px solid var(--hairline); }
+.rs-more { gap: 12px; }
+.rs-more > summary { cursor: pointer; font-weight: 600; font-size: 14px; list-style-position: inside; }
+.rs-more[open] > summary { margin-bottom: 4px; }
