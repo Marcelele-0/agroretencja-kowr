@@ -1,62 +1,91 @@
 # Rusałka: frontend
 
-Aplikacja webowa Rusałki: mapa działek, ocena suszy według metody IUNG-PIB i plan działań. Działa w przeglądarce komputera i telefonu, bez instalacji.
+Aplikacja webowa Rusałki: mapa działek, ocena suszy według metody IUNG-PIB i plan działań dla każdej wybranej działki. Działa w przeglądarce komputera i telefonu, bez instalacji.
 
 ## Uruchomienie
 
 ```bash
 pnpm install
-pnpm dev          # http://localhost:5173
+pnpm dev          # http://localhost:5173 (z pośrednikiem pogody /om)
 pnpm build        # typecheck + statyczny build w dist/
+pnpm preview      # serwuje dist/ na :4173 z tym samym pośrednikiem pogody
 pnpm test         # testy jednostkowe (vitest)
 pnpm test:live    # test na prawdziwych usługach: ULDK, IUNG, Open-Meteo
 pnpm iung:progi   # pobiera na nowo tabelę progów IUNG do src/data/iung-progi.json
 ```
 
-`dist/` to statyczna strona. Każdy hosting statyczny ją obsłuży. Serwer musi zwracać `index.html` dla ścieżek `/analiza` i `/metoda`.
+- `dist/` to statyczna strona. Serwer musi zwracać `index.html` dla ścieżek `/analiza` i `/metoda`.
+- `pnpm dev` i `pnpm preview` pośredniczą w zapytaniach do Open-Meteo (`/om/archive`, `/om/forecast`). Dzięki temu limit Open-Meteo (ok. 600 zapytań na minutę z jednego adresu) liczy się dla serwera, a nie dla sieci użytkownika.
+- Bez pośrednika (zwykły hosting statyczny) przeglądarka sama przechodzi na zapytania bezpośrednie.
+
+## Ekrany
+
+| Ścieżka | Co robi |
+| --- | --- |
+| `/` | Mapa Polski z ortofotomapą i granicami działek. Lewy panel: wyszukiwarka, lista wybranych działek z uprawą przy każdej, data i jeden przycisk „Analizuj”. Kliknięcie działki dodaje ją do listy, ponowne kliknięcie usuwa. Las, woda i zabudowa nie trafiają na listę. |
+| `/analiza?dzialki=id~uprawa,…&aktywna=id&data=RRRR-MM-DD` | Lewy panel z danymi, mapa na resztę ekranu. Pasek daty, lista działek w stałej kolejności (stan wody i wykres 60 dni), pod nią szczegóły wybranej działki w ramce w kolorze jej stanu. Kliknięcie działki na mapie wybiera ją z listy. |
+| `/metoda` | Metoda IUNG, skala stanu wody z liczbami dla ekspertów, ograniczenia. |
+
+Stare linki z `dzialka`, `uprawa` i `inne` nadal działają.
 
 ## Co liczy przeglądarka
 
-Wszystkie usługi wysyłają `Access-Control-Allow-Origin: *`, więc frontend odpytuje je bezpośrednio:
+Wszystkie usługi wysyłają `Access-Control-Allow-Origin: *`:
 
 | Usługa | Dane |
 | --- | --- |
-| GUGiK ULDK | granica działki (EPSG:2180), gmina, obręb, powierzchnia z granic |
-| GUGiK ortofotomapa (WMTS z cache, ostry WMS od zoomu 16) i KIEG (WMS) | podkład mapy, granice i numery działek od zoomu 15 |
+| GUGiK ULDK | granica działki (zapytanie z `srid=4326`), gmina, obręb, powierzchnia z granic |
+| GUGiK ortofotomapa | WMTS z cache 30 dni, ostry WMS od zoomu 16 |
+| GUGiK KIEG (WMS) | granice i numery działek od zoomu 15; powyżej ok. 1,8 m/px usługa zwraca pusty obraz |
 | IUNG-PIB `Susza:katgl_landuse2024` | kategoria gleby I–IV, wykrycie lasu, wody i zabudowy |
-| IUNG-PIB progi SMSR | krytyczne KBW dla 14 upraw × 4 gleb × 14 okien (`src/data/iung-progi.json`) |
-| Open-Meteo (archiwum ERA5 i prognoza) | dzienny opad i ET₀: sezon daty analizy i 60 dni przed tą samą datą w 10 latach (ok. 10 małych zapytań z cache w `localStorage`), prognoza na 7 dni |
+| IUNG-PIB progi SMSR | krytyczne KBW: 14 upraw × 4 kategorie gleby × 14 okien (`src/data/iung-progi.json`) |
+| Open-Meteo (archiwum ERA5 i prognoza) | dzienny opad i ET₀: sezon daty analizy, 105 dni przed nią, 60 dni przed tą samą datą w 10 latach, prognoza 15 dni. Około 11 małych zapytań, archiwum w cache `localStorage` |
 
-Z tych danych `src/analysis/local.ts` liczy:
-- KBW w 14 oknach IUNG i werdykt suszy;
-- stan wody od −5 do +5, ryzyko i pewność;
+`src/analysis/local.ts` liczy z tych danych:
+- KBW w 14 oknach IUNG i werdykt suszy dla uprawy i gleby;
+- stan wody (skala −5…+5; w interfejsie tylko słowo i grafika), ryzyko i pewność;
+- stan dzień po dniu: 45 dni przed datą i prognoza na kolejne dni;
 - ten sam dzień albo miesiąc w 10 latach;
 - przyczyny: klimat na tle średniej z 10 lat i gleba;
-- wyjaśnienie wyniku: opad, parowanie, KBW, próg i reguła stopnia;
-- „co jeśli”: zatrzymana woda i mniejsze parowanie przeliczone na tych samych danych;
-- porównanie kilku działek (`&inne=id1,id2`, przycisk na mapie analizy);
+- wyjaśnienie wyniku: opad, parowanie, KBW, próg i reguła;
+- listę działań posortowaną według zysku wody i symulację wybranych działań;
 - prognozę opadu na 7 dni i poradę o nawadnianiu dla bieżącej daty.
 
-Skala od −5 do +5 wynika tymczasowo z KBW i progu IUNG. Backend zastąpi ją bilansem FAO-56.
+Ta skala jest tymczasowa. Docelowo stan wody liczy backend ze wzoru (bilans FAO-56, Sentinel-2/ML, gleba, teren). Frontend pokazuje wtedy wynik backendu.
 
 ## Podpięcia backendu
 
-Adres backendu podaje `VITE_API_URL` (wzór w `.env.example`). Puste pole wyłącza podpięcia. Kontrakty są w `src/api/contract.ts`.
+`VITE_API_URL` (wzór w `.env.example`) włącza podpięcia. Kontrakty są w `src/api/contract.ts`.
 
 | Endpoint | Gdzie w interfejsie | Bez backendu |
 | --- | --- | --- |
-| `POST /api/analyze` | stan wody ze wzoru (`assessment.water_state`, `water_state_timeline`), składowe wzoru (`assessment.components`), przyczyny w %, ranking retencji z efektami, strefy na mapie, źródła (`audit.sources`) | stan wody z KBW i progu IUNG, przyczyny klimat i gleba, katalog działań bez liczb |
-| `POST /rl/recommend` (gałąź `feat/RL`) | karta nawadniania z dawką i planem 7 dni | porada z prognozy Open-Meteo |
-| `POST /rl/compare` (gałąź `feat/RL`) | tabela strategii nawadniania z 10 sezonów (strata plonu, woda, przesiąk, dni stresu) | brak tabeli |
+| `POST /api/analyze` | stan wody (`assessment.water_state`, `water_state_timeline`), składowe wzoru (`assessment.components`), przyczyny w %, ranking działań, strefy na mapie (`map_layers.zones`), źródła (`audit.sources`) | stan wody z KBW i progu IUNG, przyczyny klimat i gleba, działania z założeniami symulacji |
+| `POST /rl/recommend` (`ml/rl_irrigator`) | decyzja o nawadnianiu, dawka dziś, plan 7 dni | porada z prognozy Open-Meteo |
+| `POST /rl/compare` (`ml/rl_irrigator`) | strategie nawadniania z 10 sezonów: strata plonu, woda, przesiąk, dni stresu | brak tabeli |
 | `GET /api/report.pdf` | przycisk „Pobierz raport PDF” | druk strony do PDF |
 
-W trybie deweloperskim `&fixtures` w adresie analizy wczytuje próbkę odpowiedzi backendu (`src/api/fixtures.ts`). Build produkcyjny nie zawiera próbki.
+Moduł RL obsługuje kukurydzę, ziemniaka, pszenicę ozimą i buraka cukrowego. Dla innych upraw sekcja RL się nie pokazuje.
+
+W trybie deweloperskim `&fixtures` w adresie analizy wczytuje próbkę odpowiedzi backendu (`src/api/fixtures.ts`). Build produkcyjny jej nie zawiera.
 
 ## Struktura
 
-- `src/styles/`: `tokens.css` i `rusalka.css` z design systemu Rusałka (nie edytuj ręcznie), `app.css` (układ ekranów).
-- `src/ds/`: komponenty design systemu w TSX.
-- `src/lib/`: klienty usług, geometria, daty, KBW.
-- `src/analysis/`: obliczenia i hook `useAnalysis`.
-- `src/pages/`: mapa (`/`), analiza (`/analiza?dzialka=…&uprawa=…&data=…`), metoda (`/metoda`).
+- `src/styles/`: `tokens.css` i `rusalka.css` z design systemu Rusałka (nie edytuj ręcznie), `app.css` (układ ekranów i elementy aplikacji).
+- `src/ds/`: komponenty design systemu w TSX (`WaterBalance`, `StateTimeline`, `KbwWindows`, `YearCompare`, `DateBar`, …).
+- `src/lib/`: klienty usług, geometria, daty, KBW, katalog działań.
+- `src/analysis/`: obliczenia (`local.ts`) i hooki `useAnalysis`, `usePortfolio`.
+- `src/pages/`: `MapHome`, `Analysis`, `Method`.
+- `src/map/ParcelMap.tsx`: MapLibre z ortofotomapą, KIEG i działkami w kolorach stanu wody.
 - `public/img/`: zdjęcia z licencjami w `CREDITS.md`.
+
+## Testy
+
+`pnpm test` sprawdza:
+- parsery ULDK i WKT;
+- powierzchnię działki;
+- sezon i 14 okien IUNG;
+- tabelę progów;
+- KBW i skalę stanu wody;
+- zakresy pobierania pogody.
+
+`pnpm test:live` przechodzi prawdziwą działkę od numeru do wyniku. Pomiar z 21.11.2026: ok. 0,8 s.

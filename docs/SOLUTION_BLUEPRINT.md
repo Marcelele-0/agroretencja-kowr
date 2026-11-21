@@ -1,9 +1,10 @@
-# AgroRetencja KOWR — Blueprint Rozwiązania
+# Rusałka (dawniej AgroRetencja KOWR): Blueprint Rozwiązania
 
 > **Wyzwanie:** HackNation 2026 — KOWR: *Zatrzymaj wodę, chroń plony – Inteligentne wsparcie gospodarowania wodą w rolnictwie*  
 > **Standard dokumentacji:** ASD-STE100 (krótkie zdania, strona czynna, zero zbędnych opisów)  
 > **Status IP (§ 5 Regulaminu KOWR):** Czysty kod pisany od zera wyłącznie pod zadanie konkursowe KOWR.  
-> **Konsultacje z mentorami (21.11.2026):** Ustalenia i ich wpływ na priorytety opisuje [sekcja 8](#8-ustalenia-z-konsultacji-z-mentorami-kowr-21112026).
+> **Konsultacje z mentorami (21.11.2026):** Ustalenia i ich wpływ na priorytety opisuje [sekcja 8](#8-ustalenia-z-konsultacji-z-mentorami-kowr-21112026).  
+> **Stan wdrożenia i decyzje (21.11.2026):** [sekcja 9](#9-stan-wdrożenia-i-decyzje-21112026). Nazwa produktu to **Rusałka**.
 
 ---
 
@@ -296,3 +297,38 @@ Strony źródłowe: `susza.iung.pulawy.pl` — `/system/`, `/progi/`, `/kategori
 2. Jaki format mają prywatne dane referencyjne jury?
 3. Czy jury testuje daty spoza sezonu 21.III–30.IX?
 4. Jakie kody warstwy `katgl_landuse2024` mają łąki i pastwiska?
+
+---
+
+## 9. Stan wdrożenia i decyzje (21.11.2026)
+
+> **Zasada:** Koncepcja z sekcji 1–8 obowiązuje. Ta sekcja opisuje, co już działa, i decyzje, które zmieniają szczegóły.
+
+### 9.1. Decyzje
+
+| Decyzja | Uzasadnienie |
+| :--- | :--- |
+| Nazwa produktu: **Rusałka** (w kodzie `rusalka`). | Decyzja zespołu. „AgroRetencja” zostaje tylko w nazwie katalogu repozytorium. |
+| Interfejs pokazuje **stan wody** na skali 11 stopni: susza skrajna … optimum … zalanie. Rolnik widzi słowo i grafikę, bez liczb. | Skala obejmuje suszę i nadmiar wody. Liczby −5…+5 zostają w API i na stronie „Jak liczymy”. |
+| Stan wody liczy **backend** ze wzoru: bilans FAO-56, Sentinel-2/ML, gleba, teren, weto IUNG. Wynik trafia w polu `assessment.water_state`. | `WaterScore 0–100` z sekcji 3.2 może zostać składową wewnętrzną. Interfejs pokazuje jeden stan wody. |
+| Do czasu backendu frontend liczy stan wody tymczasowo z KBW 60 dni i progu IUNG. | Serwis działa na prawdziwych danych bez makiet (sekcja 8.1). |
+| Start od mapy. Wybór wielu działek, każda z własną uprawą. Lista działek w stałej kolejności. | Sposób pracy oczekiwany przez jury (sekcja 8.3). |
+| Brak widoku 3D terenu. | Zespół ocenił go jako mało przydatny dla rolnika. Darmowy model terenu ma ok. 30 m. |
+| Działania w jednej liście posortowanej według zysku wody, z symulacją wybranych działań. Urządzenia wodne mają oznaczenie „Wymaga zgody Wód Polskich”. | Prostota obsługi i ustalenie z sekcji 8.1, pkt 5. |
+
+### 9.2. Co działa (gałąź `main`)
+
+- Frontend `frontend/` (React, MapLibre) z mapą GUGiK i działkami z ULDK. Opis: `frontend/README.md`.
+- 14 okien KBW i progi IUNG SMSR dla 14 upraw i 4 kategorii gleby.
+- Stan dzień po dniu z prognozą i porównanie 10 lat.
+- Przyczyny klimat i gleba, wyjaśnienie wyniku, symulacja działań, porada o nawadnianiu z prognozy.
+- Podpięcia do `/api/analyze`, `/rl/recommend`, `/rl/compare`, `/api/report.pdf`. Kontrakt: `frontend/src/api/contract.ts`.
+
+### 9.3. W toku
+
+| Obszar | Kto | Stan |
+| :--- | :--- | :--- |
+| Wzór stanu wody i źródła składowe (backend `/api/analyze`) | Asia | w toku |
+| Moduł nawadniania RL (`ml/rl_irrigator`, `/rl/recommend`, `/rl/compare`) | Piotr | gotowy na gałęzi `feat/RL`, do scalenia z backendem |
+| Frontend | Marcel | działa na `main`; po scaleniu backendu pokaże jego wynik |
+
