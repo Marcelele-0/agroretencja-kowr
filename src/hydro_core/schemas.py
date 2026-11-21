@@ -53,6 +53,7 @@ class DataMode(str, Enum):
     LIVE = "live"
     PRE_FETCHED = "pre_fetched"
     FALLBACK = "fallback"
+    MISSING = "brak_danych"
 
 
 class ParcelGeometry(BaseModel):
@@ -71,6 +72,17 @@ class ParcelGeometry(BaseModel):
     parcel_number: str | None = None
 
 
+class ParcelCandidate(BaseModel):
+    """One match returned when searching parcels by precinct name and parcel number."""
+
+    parcel_id: str
+    voivodeship: str | None = None
+    county: str | None = None
+    commune: str | None = None
+    region: str | None = None
+    parcel_number: str | None = None
+
+
 class SourceAuditEntry(BaseModel):
     """Audit record for one open data source used in the parcel analysis."""
 
@@ -82,6 +94,40 @@ class SourceAuditEntry(BaseModel):
     observation_date: str
     spatial_resolution: str
     license: str
+    fetch_time_s: float | None = Field(default=None, ge=0.0)
+    attribution: str | None = None
+    message: str | None = None
+
+
+class WeatherStationContext(BaseModel):
+    """Nearest IMGW-PIB station used to check the model grid for the parcel."""
+
+    station_code: str
+    station_name: str
+    distance_km: float = Field(..., ge=0.0)
+    station_elevation_m: float | None = None
+    parcel_elevation_m: float | None = None
+    elevation_diff_m: float | None = None
+    observed_air_temp_c: float | None = None
+    observed_at: str | None = None
+    lapse_corrected_temp_c: float | None = None
+    is_far: bool = False
+
+
+class KbwPeriodResult(BaseModel):
+    """Climatic water balance for one IUNG six-dekad period compared with the legal threshold."""
+
+    period_index: int = Field(..., ge=0, le=13)
+    label: str
+    start: date
+    end: date
+    kbw_mm: float | None = None
+    threshold_mm: float | None = None
+    margin_mm: float | None = None
+    is_drought: bool | None = None
+    is_complete: bool
+    missing_days: int = Field(default=0, ge=0)
+    note: str | None = None
 
 
 class DataConfidence(BaseModel):
@@ -132,7 +178,8 @@ class YearlyDroughtPoint(BaseModel):
 
     year: int
     drought_days: int = Field(..., ge=0)
-    min_kbw_60: float
+    min_kbw_margin_mm: float | None = None
+    kbw_drought_periods: int = Field(default=0, ge=0)
     yield_loss_pct: float = Field(..., ge=0.0, le=100.0)
 
 
@@ -142,10 +189,15 @@ class WaterAssessmentSummary(BaseModel):
     analysis_date: date
     crop: CropCode
     iung_category: IungSoilCategory
+    soil_source_layer: str
     taw_mm: float = Field(..., gt=0.0)
     raw_mm: float = Field(..., ge=0.0)
     dr_mm: float = Field(..., ge=0.0)
-    kbw_60_mm: float
+    kbw_mm: float | None = None
+    kbw_threshold_mm: float | None = None
+    kbw_period_label: str | None = None
+    kbw_periods: list[KbwPeriodResult] = Field(default_factory=list)
+    weather_station: WeatherStationContext | None = None
     mean_slope_deg: float = Field(..., ge=0.0)
     mean_twi: float
     ndmi_value: float | None = None

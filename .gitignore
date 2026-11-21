@@ -13,8 +13,10 @@ build/
 *.egg-info/
 
 # Environment & secrets
+# Environment & secrets
 .env
 .env.*
+.env.example
 *.key
 
 # Frontend
