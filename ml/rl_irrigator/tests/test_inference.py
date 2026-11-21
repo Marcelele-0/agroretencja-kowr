@@ -188,3 +188,41 @@ def test_api_router(mock_client, monkeypatch) -> None:
     assert r.status_code == 200 and r.json()["status"] == "ok"
     r = c.post("/rl/recommend", json={"crop": "kukurydza", "date": "2024-07-15"})
     assert r.status_code == 422
+
+
+FRONTEND_CROPS = (
+    "zboza_ozime", "zboza_jare", "kukurydza_ziarno", "kukurydza_kiszonka", "rzepak", "ziemniak", "burak_cukrowy",
+    "straczkowe", "warzywa", "chmiel", "tyton", "drzewa_owocowe", "krzewy_owocowe", "truskawki", "uzytki_zielone",
+)
+SCHEMAS_CROPS = ("pszenica_ozima", "pszenica_jara", "kukurydza", "rzepak_ozimy", "burak_cukrowy", "ziemniak", "uzytki_zielone")
+
+
+def test_every_frontend_and_schema_crop_is_supported() -> None:
+    from kowr_rl.config import load_crops, resolve_crop
+
+    crops = load_crops()
+    for code in FRONTEND_CROPS + SCHEMAS_CROPS:
+        key = resolve_crop(code)
+        assert key in crops, code
+        c = crops[key]
+        # inside the window of archived ECMWF forecasts (15 III - 31 X) and after the 1 III spin-up
+        assert (c.season_start(2025).month, c.season_start(2025).day) >= (3, 15), code
+        assert (c.season_end(2025).month, c.season_end(2025).day) <= (10, 31), code
+        assert 0.1 <= c.p <= 0.8 and 0.5 <= c.ky <= 1.5 and c.kc_mid >= c.kc_ini
+    assert resolve_crop("kapusta_wloska") is None
+
+
+def test_api_accepts_frontend_crop_codes(mock_client, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    from kowr_rl.api import app
+
+    monkeypatch.setattr(inf, "_today", lambda: TODAY)
+    c = TestClient(app)
+    for code in ("zboza_ozime", "truskawki", "pszenica_jara"):
+        r = c.post("/rl/recommend", json={"lat": 52.1, "lon": 18.2, "crop": code, "date": "2024-06-20", "budget_mm": 150})
+        assert r.status_code == 200, r.text
+        assert r.json()["status"] in ("ok", "out_of_season"), r.json().get("message")
+    r = c.post("/rl/recommend", json={"lat": 52.1, "lon": 18.2, "crop": "kapusta_wloska", "date": "2024-06-20"})
+    assert r.status_code == 422
+    assert "zboza_ozime" in c.get("/rl/health").json()["crop_codes_accepted"]

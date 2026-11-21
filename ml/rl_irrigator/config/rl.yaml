@@ -23,7 +23,9 @@ episode:
   # where the agent was weakest on validation 2024). 0 = plain uniform sampling (E1-E5).
   low_budget_prob: 0.0
   low_budget_mm: [20, 100]
-  crops: [kukurydza, ziemniak, pszenica_ozima, burak_cukrowy]
+  # E7: all 15 crops of crops.yaml (the frontend's IUNG-PIB SMSR groups); E1-E6 used the first 4.
+  crops: [kukurydza, ziemniak, pszenica_ozima, burak_cukrowy, zboza_jare, kukurydza_kiszonka, rzepak, straczkowe,
+          warzywa, chmiel, tyton, drzewa_owocowe, krzewy_owocowe, truskawki, uzytki_zielone]
   soil_categories: [1, 2, 3, 4]
 
 reward:

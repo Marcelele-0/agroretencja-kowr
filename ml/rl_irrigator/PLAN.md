@@ -188,3 +188,29 @@ Cel: sprawdzić, czy agent może pokonać regułę FAO przy **każdym** poziomie
 - **Ensemble** trzech ziaren `@dom` wdrażam tylko wtedy, gdy na walidacji też dominuje i ma nagrodę ≥ najlepszego pojedynczego ziarna. W przeciwnym razie wdrażam najlepsze ziarno.
 - **Wybór (walidacja, przed testem):** E6f_s1@dom −0,1344, **E6f_s2@dom −0,1328**, E6f_s3@dom −0,1350 (to praktycznie klon `fao_small` sprzed PPO). Ensemble 3 ziaren −0,1342, a s1+s2 −0,1333, czyli gorzej od najlepszego ziarna, więc ensemble odpada. Dodatkowo E6g_s1 (`c_w` = 3e-4, lr malejący liniowo) dominuje FAO, ale ma nagrodę −0,1337. **Do testu idzie E6f_s2@dom** (2,8 mln kroków). Na walidacji, względem FAO: plon +0,07 / +0,11 / +0,13 / +0,14 pkt proc., woda −0,9 / −3,4 / −8,5 / −17,1 mm przy 50 / 100 / 150 / 250 mm.
 - **Wynik testu E6 (czysty test, holdout):** RL − FAO łącznie +0,23 pkt proc. [+0,14; +0,33] i −6,0 mm [−7,3; −5,1]. Istotnie wyższy plon **i** istotnie mniej wody przy każdym budżecie (50 / 100 / 150 / 250 mm: +0,12 / +0,26 / +0,28 / +0,27 pkt proc.; −0,9 / −3,9 / −8,2 / −11,2 mm). Stary test daje to samo (+0,23 pkt proc., −5,6 mm, każdy budżet OK). Zgodnie z punktem 3 protokołu ustawiam `default_policy: rl`. Wagi E6f_s2@dom są w `artifacts/models/ppo_irrigator_weights.npz`.
+
+---
+
+## 6. E7: agent dla wszystkich 15 upraw frontendu (prośba użytkownika, 21.11.2026)
+
+**Cel:** jedna polityka dla 15 upraw z frontendu (grupy SMSR IUNG-PIB oraz użytki zielone). Nowe parametry FAO-56/33 są w `config/crops.yaml`, a aliasy obsługują kody frontendu i `schemas.CropCode`.
+
+**Punkt wyjścia (walidacja 2024, 12 000 sezonów):** E6f_s2@dom uczony na 4 uprawach daje nagrodę −0,1240 (FAO −0,1291) przy plonie 0,9398 / 94,3 mm (FAO 0,9395 / 102,7 mm). Dominuje FAO w 8 z 15 upraw. Najsłabiej wypadają rzepak, tytoń, chmiel, pszenica ozima i truskawki przy 250 mm.
+
+**Konfiguracja E7:** E6f bez zmian:
+- start od reguły `fao_small` (15 000 sezonów);
+- `c_w` = 5e-4, `c_p` = 3e-4, lr 3e-4, ent 0,001;
+- 30% epizodów z budżetem 20–100 mm.
+
+Różnice: wszystkie 15 upraw w epizodach i 6 mln kroków, 3 ziarna.
+
+**Wybór (tylko walidacja 2024, wszystkie 15 upraw, ustalone przed treningiem):**
+1. **Checkpoint.** Preferowany jest `@domc`, czyli najlepsza nagroda wśród checkpointów, które mają ΔY ≥ 0 i ΔW ≤ 0 względem FAO przy każdym budżecie **i** dla każdej uprawy (uśrednione po budżetach). Jeśli żadne ziarno go nie ma, wybieram `@dom` (warunek tylko dla budżetów).
+2. **Ziarno.** Wygrywa najwyższa nagroda walidacyjna.
+3. **Wdrożenie.** E7 zastępuje E6f_s2 tylko wtedy, gdy na walidacji z 15 uprawami ma wyższą nagrodę i spełnia warunek z punktu 1. Inaczej zostaje E6f_s2.
+
+**Test:** jak w E6, z regułą decyzyjną bez zmian:
+- **czysty test:** holdout (50 nowych lokalizacji, lata 2025–2026) z 15 uprawami;
+- **powtórka:** punkty treningowe w latach 2025–2026.
+
+Raportuję też wynik dla każdej uprawy.

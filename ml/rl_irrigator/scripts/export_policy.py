@@ -27,12 +27,13 @@ def _member(run: str) -> dict:
     d = MODELS_DIR / name
     hist = json.loads((d / "val_history.json").read_text(encoding="utf-8"))
     h = hist["history"]
-    if ckpt == "dom":
-        h = [x for x in h if x.get("dominant")] or h
+    if ckpt in ("dom", "domc"):
+        flag = "dominant" if ckpt == "dom" else "dominant_all_crops"
+        h = [x for x in h if x.get(flag)] or h
     best = max(h, key=lambda x: x["reward"])
     return {
         "run": run,
-        "checkpoint": "best_dominant" if ckpt == "dom" else "best",
+        "checkpoint": {"dom": "best_dominant", "domc": "best_domcrops"}.get(ckpt, "best"),
         "validation_best": best,
         "train_config": json.loads((d / "run_config.json").read_text(encoding="utf-8")),
         "reference": hist["reference"],

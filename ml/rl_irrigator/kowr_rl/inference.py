@@ -23,7 +23,16 @@ import numpy as np
 
 from . import ARTIFACT_MODELS_DIR, __version__
 from .baselines import baseline_policies, run_oracle
-from .config import STAGE_LABELS_PL, STAGES, CropParams, load_crops, load_rl_config, load_soils
+from .config import (
+    STAGE_LABELS_PL,
+    STAGES,
+    CropParams,
+    accepted_crop_codes,
+    load_crops,
+    load_rl_config,
+    load_soils,
+    resolve_crop,
+)
 from .data import (
     PREVIOUS_RUNS_START,
     DailySeries,
@@ -344,8 +353,9 @@ def recommend(
         out["timing_s"] = round(time.perf_counter() - t_start, 3)
         return out
 
-    if crop not in crops:
-        return finish("invalid_input", f"Nieznana uprawa '{crop}'. Dostepne: {', '.join(crops)}")
+    crop_key = resolve_crop(crop)
+    if crop_key is None:
+        return finish("invalid_input", f"Nieznana uprawa '{crop}'. Dostepne: {', '.join(accepted_crop_codes())}")
     if date > today or date < ARCHIVE_START:
         return finish("invalid_input", f"Data analizy musi byc z zakresu {ARCHIVE_START} - {today}.")
     if budget_mm < 0 or budget_used_mm < 0:
@@ -363,7 +373,7 @@ def recommend(
     if not _in_poland(lat, lon):
         return finish("outside_poland", "Punkt lezy poza Polska - modul dziala tylko dla Polski.")
 
-    c = crops[crop]
+    c = crops[crop_key]
     season_start, season_end = c.season_start(date.year), c.season_end(date.year)
     in_season = season_start <= date <= season_end
     need_live = date >= today - dt.timedelta(days=60)
@@ -560,15 +570,16 @@ def compare_strategies(
     crops = load_crops()
     out: dict[str, Any] = {"module": "kowr_rl", "version": __version__, "input": {"lat": lat, "lon": lon, "parcel_id": parcel_id, "crop": crop, "budget_mm": budget_mm}}
     sources: list[SourceRecord] = []
-    if crop not in crops:
-        return {**out, "status": "invalid_input", "message": f"Nieznana uprawa '{crop}'"}
+    crop_key = resolve_crop(crop)
+    if crop_key is None:
+        return {**out, "status": "invalid_input", "message": f"Nieznana uprawa '{crop}'. Dostepne: {', '.join(accepted_crop_codes())}"}
     if parcel_id:
         parcel, psrc = fetch_parcel(client, parcel_id)
         sources.append(psrc)
         lat, lon = parcel.centroid_lat, parcel.centroid_lon
     if lat is None or lon is None or not _in_poland(lat, lon):
         return {**out, "status": "outside_poland", "message": "Podaj punkt w Polsce."}
-    c = crops[crop]
+    c = crops[crop_key]
     if _prefetched is not None:
         code, obs, sources = _prefetched[0], _prefetched[1], list(_prefetched[2])
     else:

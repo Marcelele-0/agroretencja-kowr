@@ -60,12 +60,13 @@ def ensure_npz(run: str) -> Path:
     """Export ``models/<run>/best_model.zip`` (+ VecNormalize) to ``policy.npz`` if needed.
 
     ``<run>@dom`` uses the E6 checkpoint ``best_dominant_model.zip`` (best validation reward
-    among checkpoints with yield >= FAO and water <= FAO at every budget level).
+    among checkpoints with yield >= FAO and water <= FAO at every budget level); ``<run>@domc``
+    the E7 checkpoint ``best_domcrops_model.zip`` (the same, and also for every crop).
     """
     run, _, ckpt = run.partition("@")
     d = MODELS_DIR / run
-    prefix = "best_dominant" if ckpt == "dom" else "best"
-    npz = d / ("policy_dominant.npz" if ckpt == "dom" else "policy.npz")
+    prefix = {"dom": "best_dominant", "domc": "best_domcrops"}.get(ckpt, "best")
+    npz = d / {"dom": "policy_dominant.npz", "domc": "policy_domcrops.npz"}.get(ckpt, "policy.npz")
     zip_path = d / f"{prefix}_model.zip"
     if npz.exists() and npz.stat().st_mtime >= zip_path.stat().st_mtime:
         return npz
@@ -78,8 +79,9 @@ def ensure_npz(run: str) -> Path:
     model = MaskablePPO.load(zip_path, device="cpu")
     venv = VecNormalize.load(str(d / f"{prefix}_vecnormalize.pkl"), DummyVecEnv([lambda: KowrIrrigationEnv("val")]))
     hist = json.loads((d / "val_history.json").read_text(encoding="utf-8"))["history"]
-    if ckpt == "dom":
-        hist = [h for h in hist if h.get("dominant")] or hist
+    if ckpt in ("dom", "domc"):
+        flag = "dominant" if ckpt == "dom" else "dominant_all_crops"
+        hist = [h for h in hist if h.get(flag)] or hist
     best = max(hist, key=lambda h: h["reward"])
     meta = {"run": run, "checkpoint": prefix, "val": best, "exported_at": dt.datetime.now().isoformat(timespec="seconds")}
     export_npz(model, venv, npz, meta=meta)
@@ -90,8 +92,9 @@ def best_run(runs: list[str]) -> str:
     def score(r: str) -> float:
         name, _, ckpt = r.partition("@")
         h = json.loads((MODELS_DIR / name / "val_history.json").read_text(encoding="utf-8"))["history"]
-        if ckpt == "dom":
-            h = [x for x in h if x.get("dominant")] or h
+        if ckpt in ("dom", "domc"):
+            flag = "dominant" if ckpt == "dom" else "dominant_all_crops"
+            h = [x for x in h if x.get(flag)] or h
         return max(x["reward"] for x in h)
 
     return max(runs, key=score)

@@ -93,3 +93,181 @@ crops:
       sowing: "PL practice: sowing early/mid April (assumption 10 IV); harvest ~7 X"
       p: "FAO-56 Tab. 22: 0.55"
       ky: "FAO-56 Tab. 24 (FAO-33): 1.0"
+
+  # --- E7 (21.11.2026): crops of the IUNG-PIB drought monitor (SMSR) used by the frontend ---------
+  # Same sources as above; rows marked "assumption" have no direct FAO-56/33 value and need the
+  # mentor's check. Seasons stay within 15 III - 31 X (window of the archived ECMWF forecasts).
+  zboza_jare:
+    label_pl: "Zboza jare (jeczmien, pszenica jara)"
+    kc_ini: 0.30
+    kc_mid: 1.15
+    kc_end: 0.25
+    stages_days: {ini: 15, dev: 25, mid: 50, late: 30}  # 120 d
+    sowing_month_day: [4, 1]
+    p: 0.55
+    ky: 1.15
+    max_root_depth_m: [1.0, 1.5]
+    source:
+      kc: "FAO-56 Tab. 12, Barley / Spring wheat: 0.3 / 1.15 / 0.25"
+      stages_days: "FAO-56 Tab. 11, Barley/Oats/Wheat (Central India) 15/25/50/30 = 120 d"
+      sowing: "PL practice: spring sowing late III - mid IV (assumption 1 IV); harvest ~end VII"
+      p: "FAO-56 Tab. 22: 0.55"
+      ky: "FAO-56 Tab. 24 (FAO-33): spring wheat 1.15"
+  kukurydza_kiszonka:
+    label_pl: "Kukurydza na kiszonke"
+    kc_ini: 0.30
+    kc_mid: 1.20
+    kc_end: 0.60
+    stages_days: {ini: 30, dev: 40, mid: 50, late: 30}  # 150 d
+    sowing_month_day: [4, 25]
+    p: 0.55
+    ky: 1.25
+    max_root_depth_m: [1.0, 1.7]
+    source:
+      kc: "FAO-56 Tab. 12, Maize field: 0.3 / 1.20 / 0.60"
+      stages_days: "As maize grain, late stage shortened to 30 d: silage harvest at ~1/2 milk line, early/mid IX (assumption)"
+      p: "FAO-56 Tab. 22: 0.55"
+      ky: "FAO-56 Tab. 24 (FAO-33): maize 1.25"
+  rzepak:
+    label_pl: "Rzepak ozimy (od wznowienia wegetacji)"
+    kc_ini: 0.35
+    kc_mid: 1.10
+    kc_end: 0.35
+    stages_days: {ini: 20, dev: 35, mid: 45, late: 25}  # 125 d
+    sowing_month_day: [3, 20]  # spring regrowth (sown in autumn)
+    p: 0.60
+    ky: 1.00
+    max_root_depth_m: [1.0, 2.0]
+    source:
+      kc: "FAO-56 Tab. 12, Canola (rapeseed): 0.35 / 1.0-1.15 / 0.35 -> mid 1.10"
+      stages_days: "Assumption for PL: regrowth ~20 III, flowering ~V, harvest ~mid/late VII: 20/35/45/25 = 125 d"
+      p: "FAO-56 Tab. 22, Canola: 0.60"
+      ky: "No FAO-33 value for rapeseed; assumption 1.0"
+  straczkowe:
+    label_pl: "Rosliny straczkowe (groch, bobik na nasiona)"
+    kc_ini: 0.40
+    kc_mid: 1.15
+    kc_end: 0.30
+    stages_days: {ini: 20, dev: 30, mid: 35, late: 25}  # 110 d
+    sowing_month_day: [4, 5]
+    p: 0.40
+    ky: 1.15
+    max_root_depth_m: [0.6, 1.0]
+    source:
+      kc: "FAO-56 Tab. 12, Legumes Kc ini 0.4; Peas / Faba bean: mid 1.15, end 0.30 (dry seed)"
+      stages_days: "FAO-56 Tab. 11, Peas (Europe) 15/25/35/15 extended for dry-seed harvest: 20/30/35/25 = 110 d (assumption)"
+      p: "FAO-56 Tab. 22: peas 0.35, faba bean 0.45 -> 0.40"
+      ky: "FAO-56 Tab. 24 (FAO-33): peas 1.15"
+  warzywa:
+    label_pl: "Warzywa gruntowe (kapustne)"
+    kc_ini: 0.70
+    kc_mid: 1.05
+    kc_end: 0.95
+    stages_days: {ini: 30, dev: 40, mid: 50, late: 20}  # 140 d
+    sowing_month_day: [5, 10]  # planting of seedlings
+    p: 0.45
+    ky: 0.95
+    max_root_depth_m: [0.5, 0.8]
+    source:
+      kc: "FAO-56 Tab. 12, Cabbage: 0.7 / 1.05 / 0.95 (representative field vegetable)"
+      stages_days: "Assumption for PL late cabbage: planting ~10 V, harvest ~end IX: 30/40/50/20 = 140 d"
+      p: "FAO-56 Tab. 22, Cabbage: 0.45"
+      ky: "FAO-56 Tab. 24 (FAO-33): cabbage 0.95"
+  chmiel:
+    label_pl: "Chmiel"
+    kc_ini: 0.30
+    kc_mid: 1.05
+    kc_end: 0.85
+    stages_days: {ini: 25, dev: 40, mid: 60, late: 15}  # 140 d
+    sowing_month_day: [4, 15]  # spring sprouting
+    p: 0.50
+    ky: 1.00
+    max_root_depth_m: [1.0, 1.2]
+    source:
+      kc: "FAO-56 Tab. 12, Hops: 0.3 / 1.05 / 0.85"
+      stages_days: "FAO-56 Tab. 11, Hops (Spain) 25/40/80/10 shortened for PL harvest ~end VIII: 25/40/60/15 = 140 d"
+      p: "FAO-56 Tab. 22, Hops: 0.50"
+      ky: "No FAO-33 value for hops; assumption 1.0"
+  tyton:
+    label_pl: "Tyton"
+    kc_ini: 0.35
+    kc_mid: 1.10
+    kc_end: 0.80
+    stages_days: {ini: 20, dev: 30, mid: 40, late: 25}  # 115 d
+    sowing_month_day: [5, 15]  # transplanting
+    p: 0.50
+    ky: 0.90
+    max_root_depth_m: [0.5, 1.0]
+    source:
+      kc: "FAO Crop Water Information, Tobacco: Kc 0.3-0.4 / 1.0-1.2 / 0.75-0.85 -> 0.35 / 1.10 / 0.80 (assumption)"
+      stages_days: "Assumption for PL: transplanting ~15 V, harvest VIII-IX: 20/30/40/25 = 115 d"
+      p: "Assumption 0.50 (no FAO-56 Tab. 22 row)"
+      ky: "FAO-56 Tab. 24 (FAO-33): tobacco 0.90"
+  drzewa_owocowe:
+    label_pl: "Drzewa owocowe (sad jabloniowy)"
+    kc_ini: 0.50
+    kc_mid: 1.20
+    kc_end: 0.95
+    stages_days: {ini: 20, dev: 70, mid: 90, late: 30}  # 210 d
+    sowing_month_day: [4, 1]  # bud break
+    p: 0.50
+    ky: 1.00
+    max_root_depth_m: [1.0, 2.0]
+    source:
+      kc: "FAO-56 Tab. 12, Apples/Cherries/Pears, active ground cover, killing frost: 0.50 / 1.20 / 0.95 (grass alleys)"
+      stages_days: "FAO-56 Tab. 11, Apple/Cherry/Pear (California, March) 20/70/90/30 = 210 d, shifted to bud break ~1 IV"
+      p: "FAO-56 Tab. 22, Apples: 0.50"
+      ky: "No FAO-33 value for apples; assumption 1.0"
+  krzewy_owocowe:
+    label_pl: "Krzewy owocowe (porzeczka, malina)"
+    kc_ini: 0.30
+    kc_mid: 1.05
+    kc_end: 0.50
+    stages_days: {ini: 20, dev: 50, mid: 75, late: 40}  # 185 d
+    sowing_month_day: [4, 5]
+    p: 0.50
+    ky: 1.00
+    max_root_depth_m: [0.6, 1.2]
+    source:
+      kc: "FAO-56 Tab. 12, Berries (bushes): 0.30 / 1.05 / 0.50"
+      stages_days: "Assumption for PL: leafing ~5 IV, harvest VII-VIII, leaf fall X: 20/50/75/40 = 185 d"
+      p: "FAO-56 Tab. 22, Berries: 0.50"
+      ky: "No FAO-33 value; assumption 1.0"
+  truskawki:
+    label_pl: "Truskawki"
+    kc_ini: 0.40
+    kc_mid: 0.85
+    kc_end: 0.75
+    stages_days: {ini: 20, dev: 30, mid: 60, late: 40}  # 150 d
+    sowing_month_day: [4, 10]
+    p: 0.20
+    ky: 1.00
+    max_root_depth_m: [0.2, 0.3]
+    source:
+      kc: "FAO-56 Tab. 12, Strawberries: 0.40 / 0.85 / 0.75"
+      stages_days: "Assumption for PL: regrowth ~10 IV, harvest VI, renovation VII-VIII: 20/30/60/40 = 150 d"
+      p: "FAO-56 Tab. 22, Strawberries: 0.20 (shallow roots)"
+      ky: "No FAO-33 value; assumption 1.0"
+  uzytki_zielone:
+    label_pl: "Laki i pastwiska"
+    kc_ini: 0.40
+    kc_mid: 0.95
+    kc_end: 0.85
+    stages_days: {ini: 10, dev: 20, mid: 150, late: 20}  # 200 d
+    sowing_month_day: [4, 1]  # spring regrowth
+    p: 0.60
+    ky: 1.00
+    max_root_depth_m: [0.5, 1.5]
+    source:
+      kc: "FAO-56 Tab. 12, Grazing pasture, rotated grazing: 0.40 / 0.85-1.05 / 0.85 -> mid 0.95"
+      stages_days: "Assumption for PL: regrowth ~1 IV, growth until mid X: 10/20/150/20 = 200 d"
+      p: "FAO-56 Tab. 22, Grazing pasture: 0.60"
+      ky: "No FAO-33 value for grass; assumption 1.0 (alfalfa 1.1)"
+
+# Other crop codes accepted by recommend() / the API: the frontend (IUNG-PIB SMSR groups) and the
+# shared contract src/hydro_core/schemas.py (CropCode).
+aliases:
+  zboza_ozime: pszenica_ozima
+  kukurydza_ziarno: kukurydza
+  pszenica_jara: zboza_jare
+  rzepak_ozimy: rzepak

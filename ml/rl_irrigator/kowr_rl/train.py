@@ -69,12 +69,15 @@ def make_validation_callback(val_batch: SeasonBatch, eval_freq: int, out_dir: Pa
 
     fao_res = simulate(val_batch, baseline_policies()["fao_rule"], reward_cfg=reward_cfg)
     budgets = sorted(set(val_batch.budget.tolist()))
+    crop_of = np.array([m["crop"] for m in val_batch.meta])
+    crops = sorted(set(crop_of.tolist()))
 
     class ValidationCallback(BaseCallback):
         def __init__(self) -> None:
             super().__init__()
             self.best = -np.inf
             self.best_dom = -np.inf
+            self.best_domc = -np.inf
             self.last = 0
             self.history: list[dict[str, Any]] = []
 
@@ -94,10 +97,22 @@ def make_validation_callback(val_batch: SeasonBatch, eval_freq: int, out_dir: Pa
                 }
             m["per_budget_vs_fao"] = per_b
             m["dominant"] = bool(all(v["d_yield_pp"] >= 0 and v["d_water_mm"] <= 0 for v in per_b.values()))
+            # E7: the same per crop (pooled over budgets) -> "dominant for every crop"
+            per_c = {}
+            for c in crops:
+                k = crop_of == c
+                per_c[c] = {
+                    "d_yield_pp": float(100 * (res.yield_rel[k] - fao_res.yield_rel[k]).mean()),
+                    "d_water_mm": float((res.water_mm[k] - fao_res.water_mm[k]).mean()),
+                }
+            m["per_crop_vs_fao"] = per_c
+            m["n_crops_dominant"] = int(sum(v["d_yield_pp"] >= 0 and v["d_water_mm"] <= 0 for v in per_c.values()))
+            m["dominant_all_crops"] = bool(m["dominant"] and m["n_crops_dominant"] == len(crops))
             m["timesteps"] = int(self.num_timesteps)
             m["eval_s"] = round(time.perf_counter() - t0, 2)
             for k, v in m.items():
-                self.logger.record(f"val/{k}", v)
+                if isinstance(v, (int, float)):
+                    self.logger.record(f"val/{k}", v)
             for name, ref in reference.items():
                 self.logger.record(f"val/d_yield_vs_{name}", m["yield"] - ref["yield"])
                 self.logger.record(f"val/d_water_vs_{name}", m["water_mm"] - ref["water_mm"])
@@ -113,6 +128,12 @@ def make_validation_callback(val_batch: SeasonBatch, eval_freq: int, out_dir: Pa
                 self.model.save(out_dir / "best_dominant_model.zip")
                 self.model.get_vec_normalize_env().save(str(out_dir / "best_dominant_vecnormalize.pkl"))
             m["best_dominant"] = bool(dom_improved)
+            domc_improved = m["dominant_all_crops"] and m["reward"] > self.best_domc
+            if domc_improved:
+                self.best_domc = m["reward"]
+                self.model.save(out_dir / "best_domcrops_model.zip")
+                self.model.get_vec_normalize_env().save(str(out_dir / "best_domcrops_vecnormalize.pkl"))
+            m["best_dominant_all_crops"] = bool(domc_improved)
             self.history.append(m)
             (out_dir / "val_history.json").write_text(json.dumps({"reference": reference, "history": self.history}, indent=1), encoding="utf-8")
             fao = reference.get("fao_rule", {})
@@ -120,6 +141,7 @@ def make_validation_callback(val_batch: SeasonBatch, eval_freq: int, out_dir: Pa
                 f"[val] {m['timesteps']:>9,d} steps  reward={m['reward']:+.4f}  yield={m['yield']:.4f} "
                 f"(FAO {fao.get('yield', float('nan')):.4f})  water={m['water_mm']:.1f} mm (FAO {fao.get('water_mm', float('nan')):.1f})"
                 f"  dp={m['dp_mm']:.1f}{'  *best*' if improved else ''}{'  *best-dominant*' if dom_improved else ''}"
+                f"{'  *best-dom-all-crops*' if domc_improved else ''}  crops>=FAO: {m['n_crops_dominant']}/{len(crops)}"
                 f"  dY/dW per budget: " + " ".join(f"{v['d_yield_pp']:+.2f}/{v['d_water_mm']:+.1f}" for v in per_b.values()),
                 flush=True,
             )
@@ -356,6 +378,7 @@ def main() -> None:
         "steps_per_s": round(args.timesteps / max(train_s, 1e-9)),
         "best_val_reward": cb.best,
         "best_dominant_val_reward": cb.best_dom if np.isfinite(cb.best_dom) else None,
+        "best_dominant_all_crops_val_reward": cb.best_domc if np.isfinite(cb.best_domc) else None,
     }
     (out_dir / "train_summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     print("done:", json.dumps(summary), flush=True)
