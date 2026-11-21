@@ -1,0 +1,95 @@
+# Crop parameters for the FAO-56 daily water balance and FAO-33 yield response.
+#
+# STATUS: DO WERYFIKACJI Z MENTOREM (dr inz. T. Bolewski, dr hab. D. Gozdowski).
+# Values verified 2026-11-21 against the FAO-56 online edition:
+#   Tab. 11 / Tab. 12 : https://www.fao.org/4/x0490e/x0490e0b.htm
+#   Tab. 22 / Tab. 24 : https://www.fao.org/4/x0490e/x0490e0e.htm
+# Ky (Tab. 24 = FAO-33, Doorenbos & Kassam 1979) was read from a page summary, not verbatim text.
+# Sowing dates and stage lengths are adapted to Polish conditions (assumption, see `source`).
+#
+# Kc curve (FAO-56 eq. 66): Kc_ini during `ini`, linear to Kc_mid during `dev`,
+# Kc_mid during `mid`, linear to Kc_end during `late`.
+# p is adjusted daily with FAO-56 Tab. 22 footnote: p = p_tab + 0.04 (5 - ETc), clipped [0.1, 0.8].
+
+verification_status: "do_weryfikacji_z_mentorem"
+
+pre_season:
+  # Soil-water spin-up before the crop season (Dr = 0, i.e. field capacity after winter).
+  start_month_day: [3, 1]
+  kc: 0.30
+  p: 0.55
+  source: "Assumption: soil at field capacity on 1 March (winter recharge); Kc 0.3 ~ FAO-56 Tab. 12 'Cereals' Kc ini (bare/early cover evaporation)"
+
+crops:
+  kukurydza:
+    label_pl: "Kukurydza na ziarno"
+    kc_ini: 0.30
+    kc_mid: 1.20
+    kc_end: 0.60
+    stages_days: {ini: 30, dev: 40, mid: 50, late: 50}  # 170 d
+    sowing_month_day: [4, 25]
+    p: 0.55
+    ky: 1.25
+    max_root_depth_m: [1.0, 1.7]
+    source:
+      kc_ini: "FAO-56 Tab. 12, group value 'Cereals' Kc ini 0.3 (no crop-specific cell for maize)"
+      kc_mid: "FAO-56 Tab. 12, Maize field (grain): 1.20"
+      kc_end: "FAO-56 Tab. 12, Maize field (grain): 0.60 (harvest at high grain moisture, fn. 11); 0.35 only for field drying to ~18%. PL harvest typically at 25-35% moisture -> 0.60"
+      stages_days: "FAO-56 Tab. 11, Maize (grain), April planting, Idaho USA: 30/40/50/50 = 170 d (continental climate analogue)"
+      sowing: "PL practice: 20 IV - 5 V (assumption 25 IV); harvest ~12 X"
+      p: "FAO-56 Tab. 22: 0.55"
+      ky: "FAO-56 Tab. 24 (FAO-33): 1.25"
+  ziemniak:
+    label_pl: "Ziemniak (sredniopozny)"
+    kc_ini: 0.50
+    kc_mid: 1.15
+    kc_end: 0.75
+    stages_days: {ini: 30, dev: 35, mid: 50, late: 30}  # 145 d
+    sowing_month_day: [4, 20]
+    p: 0.35
+    ky: 1.10
+    max_root_depth_m: [0.4, 0.6]
+    source:
+      kc_ini: "FAO-56 Tab. 12, group value 'Roots and tubers' Kc ini 0.5"
+      kc_mid: "FAO-56 Tab. 12, Potato: 1.15"
+      kc_end: "FAO-56 Tab. 12, Potato: 0.75 (0.40 for long-season potatoes with vine kill, fn. 4)"
+      stages_days: "FAO-56 Tab. 11, Potato, April planting, Europe: 30/35/50/30 = 145 d"
+      sowing: "PL practice: planting mid/late April (assumption 20 IV); harvest ~12 IX"
+      p: "FAO-56 Tab. 22: 0.35"
+      ky: "FAO-56 Tab. 24 (FAO-33): 1.10"
+  pszenica_ozima:
+    label_pl: "Pszenica ozima (od wznowienia wegetacji)"
+    kc_ini: 0.40
+    kc_mid: 1.15
+    kc_end: 0.30
+    stages_days: {ini: 20, dev: 45, mid: 40, late: 20}  # 125 d
+    sowing_month_day: [3, 25]  # spring regrowth, not sowing (sown in autumn)
+    p: 0.55
+    ky: 1.05
+    max_root_depth_m: [1.5, 1.8]
+    source:
+      kc_ini: "FAO-56 Tab. 12, Winter wheat with frozen soils: 0.4 (0.7 with non-frozen soils)"
+      kc_mid: "FAO-56 Tab. 12, Winter wheat: 1.15"
+      kc_end: "FAO-56 Tab. 12, Winter wheat: 0.25-0.4 (higher value for hand harvest, fn. 10) -> 0.30"
+      stages_days: "No FAO-56 Tab. 11 row starts at spring regrowth (Idaho row 160/75/75/25 includes winter dormancy). Assumption for PL: regrowth ~25 III, heading ~early VI, harvest ~28 VII: 20/45/40/20 = 125 d"
+      sowing: "Season starts at spring regrowth (wznowienie wegetacji), PL ~20 III - 5 IV"
+      p: "FAO-56 Tab. 22: 0.55"
+      ky: "FAO-56 Tab. 24 (FAO-33): winter wheat 1.05 (spring wheat 1.15)"
+  burak_cukrowy:
+    label_pl: "Burak cukrowy"
+    kc_ini: 0.35
+    kc_mid: 1.20
+    kc_end: 0.70
+    stages_days: {ini: 50, dev: 40, mid: 50, late: 40}  # 180 d
+    sowing_month_day: [4, 10]
+    p: 0.55
+    ky: 1.00
+    max_root_depth_m: [0.7, 1.2]
+    source:
+      kc_ini: "FAO-56 Tab. 12, Sugar beet: 0.35"
+      kc_mid: "FAO-56 Tab. 12, Sugar beet: 1.20"
+      kc_end: "FAO-56 Tab. 12, Sugar beet: 0.70 (up to 1.0 with rain/irrigation in the last month, fn. 5)"
+      stages_days: "FAO-56 Tab. 11, Sugarbeet, April planting, Idaho USA: 50/40/50/40 = 180 d"
+      sowing: "PL practice: sowing early/mid April (assumption 10 IV); harvest ~7 X"
+      p: "FAO-56 Tab. 22: 0.55"
+      ky: "FAO-56 Tab. 24 (FAO-33): 1.0"
