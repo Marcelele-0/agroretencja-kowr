@@ -74,3 +74,16 @@ export function unionBbox(boxes: BBox[]): BBox | null {
   if (!boxes.length) return null;
   return boxes.reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);
 }
+
+/** Point-in-polygon (even–odd rule, holes included) for lon/lat geometry. */
+export function containsPoint(g: AreaGeometry, [x, y]: Position): boolean {
+  const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+  let inside = false;
+  for (const rings of polys) for (const r of rings) {
+    for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+      const [xi, yi] = r[i]!, [xj, yj] = r[j]!;
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+  }
+  return inside;
+}

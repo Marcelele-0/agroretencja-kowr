@@ -12,6 +12,7 @@ import { riskFromStage } from "../lib/kbw";
 import type { LandUse } from "../lib/iung";
 import type { SourceEntry } from "../lib/sources";
 import { parcelByPoint } from "../lib/uldk";
+import { containsPoint } from "../lib/geo";
 import { ParcelMap, type MapParcel, type MapZone } from "../map/ParcelMap";
 import { dec, ha, mm, timePl } from "./shared";
 
@@ -101,6 +102,11 @@ export function Analysis() {
     }
   };
   const show = (id: string) => write(items, id);
+  /** A click on the map selects the listed parcel under the cursor. */
+  const pickListed = (lon: number, lat: number) => {
+    const hit = portfolio.find((r) => r.parcel.status === "ready" && containsPoint(r.parcel.data.geometry, [lon, lat]));
+    if (hit && hit.id !== activeId) show(hit.id);
+  };
   const setCropOf = (id: string, c: CropCode) => write(items.map((x) => (x.id === id ? { ...x, crop: c } : x)), activeId);
   const remove = (id: string) => {
     const next = items.filter((x) => x.id !== id);
@@ -161,7 +167,7 @@ export function Analysis() {
       <div className="rs-grid">
         <aside className="rs-side">
           <ParcelMap className="rs-side__map" parcels={mapParcels} bbox={parcel?.bbox} zones={zones} padding={{ top: 70, bottom: 40 }}
-            onPick={addMode ? addAt : null} overlay={overlay} legend={<MapLegend parcels={mapParcels} />} />
+            onPick={addMode ? addAt : pickListed} overlay={overlay} />
         </aside>
 
         <main className="rs-main">
@@ -169,36 +175,45 @@ export function Analysis() {
             <h2 className="ar-section-title">Twoje działki</h2>
             <CropDateForm className="rs-recalc" hideCrop hideSubmit crop={crop} date={date} onCrop={() => undefined} onSubmit={() => undefined} onDate={(d) => write(items, activeId, { data: d })} />
           </div>
-          <ol className="rs-plist">
+          <ol className="rs-plist" aria-label="Wybierz działkę">
             {portfolio.map((r) => {
               const p = r.parcel.status === "ready" ? r.parcel.data : null;
               const on = r.id === activeId;
               const stage = stageOf(r);
-              const rl2 = on ? local : r.local;
               return (
                 <li key={r.id} className={`rs-pitem${on ? " is-on" : ""}`} style={{ "--state": stateVar(stage) } as CSSProperties}>
-                  <div className="rs-pitem__row" role={on ? undefined : "button"} tabIndex={on ? undefined : 0} aria-expanded={on}
-                    onClick={() => !on && show(r.id)} onKeyDown={(e) => { if (!on && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); show(r.id); } }}>
+                  <div className="rs-pitem__row" role="button" tabIndex={0} aria-pressed={on}
+                    onClick={() => show(r.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(r.id); } }}>
                     <div className="rs-pitem__name">
                       <b>{p ? `Działka ${p.number}, ${p.region}` : r.id}</b>
-                      <span>{p ? `gm. ${p.commune} · ${ha(p.areaHa)} ha` : "…"}{r.land?.kind === "mineral" ? ` · gleba kat. ${r.land.category}` : ""}</span>
+                      <span>{cropInfo(r.crop).label}{p ? ` · ${ha(p.areaHa)} ha` : ""}{r.land?.kind === "mineral" ? ` · gleba kat. ${r.land.category}` : ""}</span>
                     </div>
-                    <div className="rs-pitem__crop" onClick={(e) => on && e.stopPropagation()}>
-                      {on ? <CropSelect value={r.crop} onChange={(c) => setCropOf(r.id, c)} label={`Uprawa na działce ${p?.number ?? r.id}`} /> : <span>{cropInfo(r.crop).label}</span>}
-                    </div>
-                    <div className="rs-pitem__state">{rl2 ? <WaterBalance size="sm" value={stage} /> : <span className="ar-muted">{r.land?.kind === "nonAgri" ? "grunt nierolny" : r.error ?? "…"}</span>}</div>
-                    {!on && r.local ? <div className="rs-pitem__mini"><StateTimeline compact days={r.local.timeline} selected={r.local.date} today={todayIso()} /></div> : null}
+                    <div className="rs-pitem__state">{r.local || (on && local) ? <WaterBalance size="sm" value={stage} /> : <span className="ar-muted">{r.land?.kind === "nonAgri" ? "grunt nierolny" : r.error ?? "…"}</span>}</div>
+                    {r.local ? <div className="rs-pitem__mini"><StateTimeline compact days={r.local.timeline} selected={r.local.date} today={todayIso()} /></div> : <span />}
                     {items.length > 1 ? (
                       <span className="rs-pitem__remove" onClick={(e) => e.stopPropagation()}>
                         <Button variant="icon" size="sm" icon="minus" label={`Usuń działkę ${p?.number ?? r.id} z listy`} onClick={() => remove(r.id)} />
                       </span>
                     ) : null}
                   </div>
-                  {on ? <div className="rs-pitem__body">{body}</div> : null}
                 </li>
               );
             })}
           </ol>
+
+          <section className="rs-detail" aria-label="Wybrana działka" style={{ "--state": stateVar(local?.stage) } as CSSProperties}>
+            <div className="rs-detail__head">
+              <div>
+                <h2 className="ar-section-title">{parcel ? `Działka ${parcel.number}, ${parcel.region}` : parcelId}</h2>
+                {parcel ? <p className="ar-muted rs-detail__sub">gm. {parcel.commune}, pow. {parcel.county} · {ha(parcel.areaHa)} ha · {parcel.id}</p> : null}
+              </div>
+              <label className="rs-detail__crop"><span className="ar-form__label">Uprawa</span>
+                <CropSelect value={crop} onChange={(c) => setCropOf(activeId, c)} label={`Uprawa na działce ${parcel?.number ?? parcelId}`} />
+              </label>
+            </div>
+            {body}
+          </section>
+
           <section id="raport" className="rs-section">
             <h2 className="ar-section-title">Źródła danych</h2>
             <Sources sources={st.sources} backend={backend} elapsed={st.elapsedMs} />
@@ -208,21 +223,6 @@ export function Analysis() {
       </div>
       <FloatingNav className="rs-fnav" items={NAV.filter((n) => n.id !== "nawadnianie" || showIrr)} active={active} onChange={go} />
     </div>
-  );
-}
-
-function MapLegend({ parcels }: { parcels: (MapParcel & { label?: string })[] }) {
-  if (!parcels.length) return null;
-  return (
-    <>
-      <b>Stan wody</b>
-      {parcels.map((p) => (
-        <span key={p.id} className="rs-legend__row">
-          <i className={`rs-legend__sw ${p.value === null || p.value === undefined ? "" : `ar-b-${p.value < 0 ? `m${-p.value}` : p.value > 0 ? `p${p.value}` : "0"}`}`} aria-hidden="true" />
-          <span>Dz. {p.label}: {p.value === null || p.value === undefined ? "…" : `${signed(p.value)} ${BAL[String(p.value)]!.toLowerCase()}`}</span>
-        </span>
-      ))}
-    </>
   );
 }
 
