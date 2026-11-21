@@ -230,5 +230,27 @@ button.rs-st__day:hover { background: var(--hairline); }
 .rs-datebar__date input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; }
 .rs-datebar__date:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
 .rs-datebar__picks { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
-.rs-listtitle { margin-top: 4px; }
+.rs-listtitle { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 4px; border-top: 1px solid var(--hairline); }
+.rs-listtitle .ar-section-title { border-top: 0; }
+.rs-listtitle__link { font-size: 13px; font-weight: 600; color: var(--ink); text-underline-offset: 3px; }
 @media (max-width: 560px) { .rs-datebar__date { font-size: 24px; } .rs-datebar__picks { margin-left: 0; } }
+
+/* ---------- Analysis on large screens: data in a left panel, the map fills the rest (like the start screen) ---------- */
+@media (min-width: 1024px) {
+  .rs-analysis { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100vh; overflow: hidden; }
+  .rs-ahead { padding: 10px 20px; }
+  .rs-grid { grid-template-columns: clamp(440px, 36vw, 620px) minmax(0, 1fr); gap: 0; max-width: none; min-height: 0; margin: 0; padding: 0; }
+  .rs-main { grid-column: 1; grid-row: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; gap: 20px; padding: 18px 20px 56px; border-right: 1px solid var(--hairline); background: var(--ground); }
+  .rs-side { grid-column: 2; grid-row: 1; position: relative; top: 0; height: 100%; min-height: 0; }
+  .rs-side__map { height: 100%; border-radius: 0; }
+  .rs-detail { padding: 16px 14px 18px; }
+  .rs-detail .ar-section-title, .rs-listtitle { font-size: 24px; }
+  .rs-cards { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  /* Panel row: name on the first line, state and the 60-day chart on the second, remove at the right. */
+  .rs-pitem__row { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "name name rm" "state mini rm"; gap: 6px 12px; }
+  .rs-pitem__name { grid-area: name; }
+  .rs-pitem__state { grid-area: state; }
+  .rs-pitem__mini { grid-area: mini; }
+  .rs-pitem__remove { grid-area: rm; align-self: start; }
+  .rs-datebar__date { font-size: 26px; }
+}

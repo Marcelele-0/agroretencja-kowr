@@ -3,7 +3,7 @@ import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse, RlSource } from "../api/contract";
 import { computeLocal, longestDrought, soilCause, withLevers, type Levers, type LocalResult } from "../analysis/local";
-import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
+import { landForCalc, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
 import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, signed, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, cropOf as cropInfo, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
@@ -11,7 +11,6 @@ import { addDays, formatDayMonth, formatLong, isIso, monthName, parts, todayIso,
 import { riskFromStage } from "../lib/kbw";
 import type { LandUse } from "../lib/iung";
 import type { SourceEntry } from "../lib/sources";
-import { parcelByPoint } from "../lib/uldk";
 import { containsPoint } from "../lib/geo";
 import { ParcelMap, type MapParcel, type MapZone } from "../map/ParcelMap";
 import { dec, ha, mm, timePl } from "./shared";
@@ -57,8 +56,6 @@ export function Analysis() {
   const portfolio = usePortfolio(stableItems, date);
 
   const [active, setActive] = useState("ocena");
-  const [addMode, setAddMode] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
   const write = (next: { id: string; crop: CropCode }[], nextActive: string, extra: Record<string, string> = {}) => {
@@ -92,16 +89,6 @@ export function Analysis() {
   const pdf = parcel && backendCrop(crop) ? reportPdfUrl({ parcel_id: parcel.id, crop: backendCrop(crop)!, analysis_date: date }) : null;
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  const addAt = async (lon: number, lat: number) => {
-    setAddError(null);
-    try {
-      const p = await parcelByPoint(lon, lat);
-      if (items.some((x) => x.id === p.id)) return;
-      write([...items, { id: p.id, crop }], activeId);
-    } catch (e) {
-      setAddError(message(e));
-    }
-  };
   const show = (id: string) => write(items, id);
   /** A click on the map selects the listed parcel under the cursor. */
   const pickListed = (lon: number, lat: number) => {
@@ -115,13 +102,6 @@ export function Analysis() {
     write(next, id === activeId ? next[Math.max(0, items.findIndex((x) => x.id === id) - 1)]!.id : activeId);
   };
   const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-
-  const overlay = (
-    <>
-      <Pill tone="glass" pressed={addMode} onClick={() => { setAddMode((v) => !v); setAddError(null); }}>{addMode ? "Zakończ dodawanie" : "Dodaj działkę"}</Pill>
-      {addMode ? <p className="rs-map__hint">{addError ?? "Kliknij działkę na mapie."}</p> : null}
-    </>
-  );
 
   const body = (
     <>
@@ -168,12 +148,15 @@ export function Analysis() {
       <div className="rs-grid">
         <aside className="rs-side">
           <ParcelMap className="rs-side__map" parcels={mapParcels} bbox={parcel?.bbox} zones={zones} padding={{ top: 70, bottom: 40 }}
-            onPick={addMode ? addAt : pickListed} overlay={overlay} />
+            onPick={pickListed} />
         </aside>
 
         <main className="rs-main">
           <DateBar className="rs-recalc" date={date} onDate={(d) => write(items, activeId, { data: d })} />
-          <h2 className="ar-section-title rs-listtitle">Twoje działki</h2>
+          <div className="rs-listtitle">
+            <h2 className="ar-section-title">Twoje działki</h2>
+            <Link className="rs-listtitle__link" to={`/?dzialki=${encodeURIComponent(key)}`}>Zmień wybór</Link>
+          </div>
           <ol className="rs-plist" aria-label="Wybierz działkę">
             {portfolio.map((r) => {
               const p = r.parcel.status === "ready" ? r.parcel.data : null;
