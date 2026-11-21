@@ -1,4 +1,4 @@
-import type { AnalysisResponse } from "./contract";
+import type { AnalysisResponse, RlCompareResponse } from "./contract";
 
 /**
  * Development-only sample of the backend answer, to build the server-fed sections before the backend exists.
@@ -17,4 +17,14 @@ export const BACKEND_FIXTURE: AnalysisResponse = {
     ],
     what_if_default: { baseline_yield_loss_pct: 31, scenario_yield_loss_pct: 18, delta_reserve_days: 9, saved_water_mm: 49, reference_dry_year: 2018 },
   },
+};
+
+/** Development-only sample of POST /rl/compare (shape of feat/RL examples/compare_kukurydza_wielkopolska.json). */
+export const RL_COMPARE_FIXTURE: RlCompareResponse = {
+  status: "ok", default_policy: "rl",
+  strategies: [
+    { strategy: "none", label: "Bez nawadniania", avg_yield_loss_pct: 30.2, avg_water_mm: 0, avg_deep_percolation_mm: 41.2, avg_stress_days: 74.6, worst_year: 2019 },
+    { strategy: "fao_rule", label: "Reguła FAO-56 (Dr > RAW)", avg_yield_loss_pct: 9.8, avg_water_mm: 150, avg_deep_percolation_mm: 55.1, avg_stress_days: 21.3 },
+    { strategy: "rl", label: "Agent RL (PPO)", avg_yield_loss_pct: 8.9, avg_water_mm: 132, avg_deep_percolation_mm: 47.9, avg_stress_days: 18.7 },
+  ],
 };

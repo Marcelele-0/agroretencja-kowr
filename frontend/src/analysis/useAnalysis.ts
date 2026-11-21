@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { backendEnabled, postAnalyze, postRlRecommend } from "../api/backend";
-import type { AnalysisResponse, RlRecommendResponse } from "../api/contract";
+import { backendEnabled, postAnalyze, postRlCompare, postRlRecommend } from "../api/backend";
+import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse } from "../api/contract";
 import { backendCrop, type CropCode } from "../lib/crops";
 import { inSeason, todayIso, type Iso } from "../lib/dates";
 import { isAbort, SourceError } from "../lib/http";
@@ -19,6 +19,7 @@ export interface AnalysisState {
   local: LocalResult | null;
   backend: Res<AnalysisResponse>;
   rl: Res<RlRecommendResponse>;
+  rlCompare: Res<RlCompareResponse>;
   sources: SourceEntry[];
   elapsedMs: number | null;
 }
@@ -50,6 +51,7 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
   const [weather, setWeather] = useState<{ key: string; res: Res<DailySeries> }>({ key: "", res: LOADING });
   const [backend, setBackend] = useState<Res<AnalysisResponse>>(LOADING);
   const [rl, setRl] = useState<Res<RlRecommendResponse>>(LOADING);
+  const [rlCompare, setRlCompare] = useState<Res<RlCompareResponse>>(LOADING);
   const t0 = useRef(performance.now());
   const [elapsedMs, setElapsed] = useState<number | null>(null);
 
@@ -91,8 +93,13 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
       setBackend(LOADING);
       postAnalyze({ parcel_id: p.id, crop: bc, analysis_date: q.date }, ctl.signal).then((data) => setBackend({ status: "ready", data }), (e) => !isAbort(e) && setBackend({ status: "error", message: message(e) }));
     } else if (import.meta.env.DEV && new URLSearchParams(location.search).has("fixtures")) {
-      import("../api/fixtures").then((m) => { if (!ctl.signal.aborted) setBackend({ status: "ready", data: m.BACKEND_FIXTURE }); });
+      import("../api/fixtures").then((m) => { if (!ctl.signal.aborted) { setBackend({ status: "ready", data: m.BACKEND_FIXTURE }); setRlCompare({ status: "ready", data: m.RL_COMPARE_FIXTURE }); } });
     } else setBackend(OFF);
+    // The 10-season strategy comparison does not depend on the date: it also helps out of season.
+    if (backendEnabled && bc && RL_CROPS.has(bc)) {
+      setRlCompare(LOADING);
+      postRlCompare({ parcel_id: p.id, crop: bc }, ctl.signal).then((data) => setRlCompare({ status: "ready", data }), (e) => !isAbort(e) && setRlCompare({ status: "error", message: message(e) }));
+    } else if (!(import.meta.env.DEV && new URLSearchParams(location.search).has("fixtures"))) setRlCompare(OFF);
     if (backendEnabled && bc && RL_CROPS.has(bc) && inSeason(q.date)) {
       setRl(LOADING);
       postRlRecommend({ parcel_id: p.id, crop: bc, date: q.date }, ctl.signal).then((data) => setRl({ status: "ready", data }), (e) => !isAbort(e) && setRl({ status: "error", message: message(e) }));
@@ -117,7 +124,7 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
     ];
   }, [p, w, landAt]);
 
-  return { parcel, land, weather: w, local, backend, rl, sources, elapsedMs };
+  return { parcel, land, weather: w, local, backend, rl, rlCompare, sources, elapsedMs };
 }
 
 export interface PortfolioRow { id: string; crop: CropCode; parcel: Res<Parcel>; land: LandUse | null; local: LocalResult | null; error: string | null }

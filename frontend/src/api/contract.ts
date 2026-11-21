@@ -22,6 +22,8 @@ export interface AnalysisResponse {
     /** Daily water state around the analysis date; `forecast` = after today. */
     water_state_timeline?: { date: string; value: number; forecast: boolean }[];
     confidence?: { level: "wysoka" | "srednia" | "ograniczona"; resolution_warnings?: string[]; missing_factors?: string[] };
+    /** Components of the backend formula, shown in "Skąd ten wynik": e.g. FAO-56 balance, Sentinel-2 NDMI, soil, terrain. */
+    components?: { key: string; label: string; value: string; weight?: number; source?: string; detail?: string }[];
   };
   causes?: CauseAttribution;
   retention?: RetentionPlan;
@@ -30,6 +32,11 @@ export interface AnalysisResponse {
   audit?: { sources: SourceAuditEntry[]; execution_time_s: number };
 }
 
+/** POST /rl/compare (feat/RL): 10 seasons of the parcel, each irrigation strategy simulated. */
+export interface RlStrategy { strategy: string; label: string; avg_yield_loss_pct: number; avg_water_mm: number; avg_deep_percolation_mm: number; avg_stress_days: number; worst_year?: number; yield_gain_pp_per_100mm?: number | null }
+export interface RlSource { name: string; url: string; retrieved_at: string; mode: string; license: string; detail?: string }
+export interface RlCompareResponse { status: string; message?: string; default_policy?: string; strategies?: RlStrategy[]; notes?: string[]; limitations?: string[]; sources?: RlSource[] }
+
 export interface RlRecommendRequest { parcel_id?: string; lat?: number; lon?: number; crop: string; date: string; budget_mm?: number; budget_used_mm?: number }
 export interface RlRecommendResponse {
   status: "ok" | "out_of_season" | "not_arable" | "outside_poland" | string;
@@ -37,4 +44,5 @@ export interface RlRecommendResponse {
   recommendation?: { action_now: string; dose_today_mm: number; total_7d_mm: number; plan_7d: { day: number; date: string; dose_mm: number; precip_assumed_mm: number; stress_expected: boolean }[] };
   policy?: { used: string; label: string };
   limitations?: string[];
+  sources?: RlSource[];
 }

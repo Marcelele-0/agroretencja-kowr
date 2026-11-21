@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
-import type { AnalysisResponse, RlRecommendResponse } from "../api/contract";
+import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse, RlSource } from "../api/contract";
 import { computeLocal, longestDrought, soilCause, withLevers, type Levers, type LocalResult } from "../analysis/local";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
 import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, signed, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
@@ -72,7 +72,8 @@ export function Analysis() {
   const local = useMemo(() => withBackend(st.local, backend), [st.local, backend]);
   const rl = st.rl.status === "ready" ? st.rl.data : null;
   const weatherFailed = st.weather.status === "error" ? st.weather.message : null;
-  const showIrr = !!local && !local.offSeason && (rl?.status === "ok" || !!local.irrigation);
+  const rlCompare = st.rlCompare.status === "ready" ? st.rlCompare.data : null;
+  const showIrr = !!local && ((!local.offSeason && (rl?.status === "ok" || !!local.irrigation)) || !!rlCompare?.strategies?.length);
 
   useEffect(() => {
     const els = NAV.map((n) => document.getElementById(n.id)).filter((e): e is HTMLElement => !!e);
@@ -129,7 +130,7 @@ export function Analysis() {
       {st.parcel.status !== "error" && land?.kind !== "nonAgri" ? (
         <>
           <section id="ocena" className="rs-section">
-            {local ? <Assessment local={local} onPickDate={(d) => write(items, activeId, { data: d })} /> : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
+            {local ? <Assessment local={local} components={backend?.assessment?.components} onPickDate={(d) => write(items, activeId, { data: d })} /> : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
           </section>
           <section id="przyczyny" className="rs-section">
             <h3 className="ar-section-title">{causesTitle(local)}</h3>
@@ -148,7 +149,7 @@ export function Analysis() {
           {local && showIrr ? (
             <section id="nawadnianie" className="rs-section">
               <h3 className="ar-section-title">Nawadnianie</h3>
-              <Irrigation local={local} rl={rl} />
+              <Irrigation local={local} rl={rl} compare={rlCompare} />
             </section>
           ) : null}
         </>
@@ -214,7 +215,7 @@ export function Analysis() {
 
           <section id="raport" className="rs-section">
             <h2 className="ar-section-title">Źródła danych</h2>
-            <Sources sources={st.sources} backend={backend} elapsed={st.elapsedMs} />
+            <Sources sources={st.sources} backend={backend} rlSources={[...(rl?.sources ?? []), ...(rlCompare?.sources ?? [])]} elapsed={st.elapsedMs} />
           </section>
           {import.meta.env.DEV ? <DevHooks st={st} /> : null}
         </main>
@@ -268,7 +269,7 @@ function Skeleton({ lines }: { lines: string[] }) {
   return <div className="rs-skel" aria-busy="true" aria-label="Wczytuję dane">{lines.map((l) => <div key={l} className="ar-card rs-skel__card"><span className="rs-skel__bar" /><span className="rs-skel__bar rs-skel__bar--short" /></div>)}</div>;
 }
 
-function Assessment({ local, onPickDate }: { local: LocalResult; onPickDate: (d: Iso) => void }) {
+function Assessment({ local, onPickDate, components }: { local: LocalResult; onPickDate: (d: Iso) => void; components?: NonNullable<AnalysisResponse["assessment"]>["components"] }) {
   const [mode, setMode] = useState<"day" | "month">("day");
   const ys = mode === "day" ? local.years : local.yearsMonth;
   const [y, m] = parts(local.date);
@@ -294,7 +295,7 @@ function Assessment({ local, onPickDate }: { local: LocalResult; onPickDate: (d:
           {local.stage !== null ? <RiskChip level={local.risk.level} side={local.risk.side} veto={local.risk.veto} vetoReason={local.risk.vetoReason} /> : null}
           <ConfidenceBadge level={local.confidence.level} detail={local.confidence.detail} />
         </div>
-        <Why local={local} />
+        <Why local={local} components={components} />
       </div>
       <div className="ar-card">
         <StateTimeline title={local.timeline.some((d) => d.forecast) ? "Stan wody: ostatnie 45 dni i prognoza" : "Stan wody dzień po dniu"} days={local.timeline} selected={local.date} today={todayIso()} onPick={onPickDate} summary={timelineSummary(local)} />
@@ -322,8 +323,17 @@ function Assessment({ local, onPickDate }: { local: LocalResult; onPickDate: (d:
 }
 
 /** Explanation: the exact numbers and the rule that produced the water state. */
-function Why({ local }: { local: LocalResult }) {
+function Why({ local, components }: { local: LocalResult; components?: NonNullable<AnalysisResponse["assessment"]>["components"] }) {
   const e = local.explanation;
+  if (components?.length) {
+    return (
+      <details className="rs-why">
+        <summary>Skąd ten wynik</summary>
+        <table><tbody>{components.map((c) => <tr key={c.key}><td>{c.label}{c.weight !== undefined ? ` (waga ${dec(c.weight * 100, 0)}%)` : ""}</td><td><b>{c.value}</b>{c.detail ? <span className="ar-muted"> · {c.detail}</span> : null}{c.source ? <span className="ar-muted"> · {c.source}</span> : null}</td></tr>)}</tbody></table>
+        <p className="ar-muted rs-why__note">Wynik z modelu serwera. <Link to="/metoda">Jak liczymy</Link></p>
+      </details>
+    );
+  }
   if (!e) return null;
   const rainGap = e.pMean !== null ? e.pMean - e.p60 : null;
   const etGap = e.etMean !== null ? e.et060 - e.etMean : null;
@@ -448,24 +458,54 @@ function WhatIf({ base, st, crop, date, picked, onPick }: { base: LocalResult; s
   );
 }
 
-function Irrigation({ local, rl }: { local: LocalResult; rl: RlRecommendResponse | null }) {
+function Irrigation({ local, rl, compare }: { local: LocalResult; rl: RlRecommendResponse | null; compare: RlCompareResponse | null }) {
   const fc = local.forecast;
   const strip = fc ? (
     <div className="rs-fc" aria-label="Prognoza opadu na 7 dni">
       {fc.days.map((d) => <div key={d.date} className="rs-fc__day"><span className="rs-fc__mm">{dec(d.p, 0)}</span><span className="rs-fc__d">{new Date(`${d.date}T12:00:00`).toLocaleDateString("pl-PL", { weekday: "short", day: "numeric" })}</span></div>)}
     </div>
   ) : null;
-  if (rl?.status === "ok" && rl.recommendation) {
+  let card: JSX.Element | null = null;
+  if (!local.offSeason && rl?.status === "ok" && rl.recommendation) {
     const r = rl.recommendation;
-    return <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={r.action_now} text={rl.message}><p className="ar-card__text">Dawka dziś: {dec(r.dose_today_mm, 0)} mm · w 7 dni: {dec(r.total_7d_mm, 0)} mm.</p>{strip}</PhotoCard>;
+    card = (
+      <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={r.action_now} text={rl.message}>
+        <p className="ar-card__text">Dawka dziś: {dec(r.dose_today_mm, 0)} mm · w 7 dni: {dec(r.total_7d_mm, 0)} mm{rl.policy ? ` · ${rl.policy.label}` : ""}.</p>
+        <div className="rs-fc" aria-label="Plan nawadniania na 7 dni">
+          {r.plan_7d.map((d) => <div key={d.date} className="rs-fc__day"><span className="rs-fc__mm">{dec(d.dose_mm, 0)}</span><span className="rs-fc__d">{new Date(`${d.date}T12:00:00`).toLocaleDateString("pl-PL", { weekday: "short", day: "numeric" })}</span></div>)}
+        </div>
+        <p className="ar-muted rs-why__note">Liczby to dawka w mm na dzień; plan zakłada prognozę opadu ECMWF.</p>
+      </PhotoCard>
+    );
+  } else if (!local.offSeason && local.irrigation) {
+    card = <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={local.irrigation.title} text={local.irrigation.text}>{strip}</PhotoCard>;
   }
-  const h = local.irrigation!;
-  return <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={h.title} text={h.text}>{strip}</PhotoCard>;
+  const strategies = compare?.strategies ?? [];
+  return (
+    <>
+      {card}
+      {strategies.length ? (
+        <div className="ar-card rs-table">
+          <h4 className="rs-subtitle">Strategie nawadniania w 10 sezonach tej działki</h4>
+          <table>
+            <thead><tr><th>Strategia</th><th>Strata plonu</th><th>Woda</th><th>Przesiąk</th><th>Dni stresu</th></tr></thead>
+            <tbody>{strategies.map((x) => (
+              <tr key={x.strategy} aria-current={x.strategy === compare?.default_policy ? "true" : undefined}>
+                <td><b>{x.label}</b></td><td>{dec(x.avg_yield_loss_pct, 1)}%</td><td>{dec(x.avg_water_mm, 0)} mm</td><td>{dec(x.avg_deep_percolation_mm, 0)} mm</td><td>{dec(x.avg_stress_days, 0)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+          <p className="ar-muted rs-why__note">Średnie z symulacji FAO-56/33 dla 10 sezonów tej działki. Wyróżniony wiersz to strategia domyślna.</p>
+        </div>
+      ) : null}
+    </>
+  );
 }
 
-function Sources({ sources, backend, elapsed }: { sources: SourceEntry[]; backend: AnalysisResponse | null; elapsed: number | null }) {
+function Sources({ sources, backend, rlSources, elapsed }: { sources: SourceEntry[]; backend: AnalysisResponse | null; rlSources: RlSource[]; elapsed: number | null }) {
   const rows = [...sources.map((s) => [s.name, s.what, timePl(s.retrievedAt), s.resolution, s.license] as const),
-    ...(backend?.audit?.sources ?? []).map((s) => [s.source_name, s.category, timePl(new Date(s.retrieved_at)), s.spatial_resolution, s.license] as const)];
+    ...(backend?.audit?.sources ?? []).map((s) => [s.source_name, s.category, timePl(new Date(s.retrieved_at)), s.spatial_resolution, s.license] as const),
+    ...rlSources.filter((x, i, a) => a.findIndex((y) => y.name === x.name) === i).map((s) => [s.name, "moduł nawadniania (RL)", timePl(new Date(s.retrieved_at)), s.detail ?? "", s.license] as const)];
   if (!rows.length) return <Skeleton lines={["Źródła"]} />;
   return (
     <div className="ar-card rs-table">

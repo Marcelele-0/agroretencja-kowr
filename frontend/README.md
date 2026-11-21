@@ -45,8 +45,9 @@ Adres backendu podaje `VITE_API_URL` (wzór w `.env.example`). Puste pole wyłą
 
 | Endpoint | Gdzie w interfejsie | Bez backendu |
 | --- | --- | --- |
-| `POST /api/analyze` | przyczyny w %, ranking retencji z efektami, strefy na mapie, audyt źródeł | przyczyny klimat i gleba, katalog działań bez liczb |
+| `POST /api/analyze` | stan wody ze wzoru (`assessment.water_state`, `water_state_timeline`), składowe wzoru (`assessment.components`), przyczyny w %, ranking retencji z efektami, strefy na mapie, źródła (`audit.sources`) | stan wody z KBW i progu IUNG, przyczyny klimat i gleba, katalog działań bez liczb |
 | `POST /rl/recommend` (gałąź `feat/RL`) | karta nawadniania z dawką i planem 7 dni | porada z prognozy Open-Meteo |
+| `POST /rl/compare` (gałąź `feat/RL`) | tabela strategii nawadniania z 10 sezonów (strata plonu, woda, przesiąk, dni stresu) | brak tabeli |
 | `GET /api/report.pdf` | przycisk „Pobierz raport PDF” | druk strony do PDF |
 
 W trybie deweloperskim `&fixtures` w adresie analizy wczytuje próbkę odpowiedzi backendu (`src/api/fixtures.ts`). Build produkcyjny nie zawiera próbki.
