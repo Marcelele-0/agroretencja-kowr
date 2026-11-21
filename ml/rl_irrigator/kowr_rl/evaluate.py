@@ -146,8 +146,13 @@ def fig_strategies(summary: dict[str, dict[str, Any]], order: list[str], path: P
         ys = np.arange(len(order))[::-1]
         for y, s in zip(ys, order):
             mean, lo, hi = summary[s][metric]
-            ax.barh(y, mean, height=0.55, color=COLORS[s], edgecolor=SURFACE, linewidth=2)
-            ax.errorbar(mean, y, xerr=[[mean - lo], [hi - mean]], color=INK, linewidth=1, capsize=3)
+            if metric == "yield_rel":
+                # truncated axis -> dot + CI instead of bars (bars must start at zero)
+                ax.errorbar(mean, y, xerr=[[mean - lo], [hi - mean]], color=INK2, linewidth=1, capsize=3, zorder=2)
+                ax.scatter([mean], [y], s=70, color=COLORS[s], edgecolor=SURFACE, linewidth=2, zorder=3)
+            else:
+                ax.barh(y, mean, height=0.55, color=COLORS[s], edgecolor=SURFACE, linewidth=2)
+                ax.errorbar(mean, y, xerr=[[mean - lo], [hi - mean]], color=INK, linewidth=1, capsize=3)
             ax.text(hi, y, "  " + fmt.format(mean), va="center", ha="left", fontsize=9, color=INK)
         ax.set_yticks(ys, [LABELS[s] for s in order])
         ax.set_title(title, loc="left", fontsize=11, color=INK)

@@ -9,7 +9,7 @@ Dla dowolnej działki rolnej w Polsce i dowolnej daty z ostatnich 10 lat moduł:
 
 Rekomendacja jest liczona z pobranych danych, a nie wybierana z gotowych odpowiedzi.
 
-> **Status agenta RL:** <!--STATUS-->uzupełniany po ewaluacji (sekcja „Wyniki”).<!--/STATUS-->
+> **Status agenta RL: eksperymentalny.** Na latach testowych 2025–2026 agent zużył **o 7% mniej wody niż reguła FAO-56 (80 wobec 86 mm na sezon) przy nieco wyższym plonie** (+0,09 pkt proc.); obie różnice są istotne. Przy budżecie 50 mm wyszedł jednak remis, a ustalone z góry kryterium wymaga istotnej wygranej przy każdym budżecie. Dlatego **domyślną strategią modułu jest reguła FAO-56**, a agent jest dostępny przez `policy="rl"`. Szczegóły: [`reports/evaluation.md`](reports/evaluation.md).
 
 ---
 
@@ -58,8 +58,10 @@ uv run python ml/rl_irrigator/scripts/fetch_training_data.py     # około 12 min
 uv run python ml/rl_irrigator/scripts/calibrate_forecast.py      # szum prognozy vs ECMWF 2024
 uv run python ml/rl_irrigator/scripts/sanity_baselines.py        # sanity check strategii bazowych
 cd ml/rl_irrigator
-uv run python -m kowr_rl.train --run E4_s1 --seed 1 --c-w 0.00035 --c-p 0.0003 --lr 0.0001 --ent-coef 0.001 --bc-seasons 8000 --bc-epochs 8
-uv run python -m kowr_rl.evaluate --runs E4_s1 E4_s2 E4_s3     # reports/evaluation.md
+# konfiguracja finalna E5 (3 ziarna, każde ok. 14 min na CPU)
+for s in 1 2 3; do uv run python -m kowr_rl.train --run E5_s$s --seed $s --c-w 0.0005 --c-p 0.0003 --lr 0.0003 --ent-coef 0.001 --bc-seasons 8000 --bc-epochs 8; done
+uv run python -m kowr_rl.evaluate --runs E5_s1 E5_s2 E5_s3     # reports/evaluation.md, artifacts/validation/rl_eval.json
+uv run python scripts/export_policy.py E5_s3                    # artifacts/models/ppo_irrigator_weights.npz
 uv run python scripts/make_examples.py                          # examples/*.json
 uv run python scripts/benchmark_latency.py                      # reports/latency.json
 tensorboard --logdir runs
@@ -120,7 +122,15 @@ Do zewnętrznych serwisów wysyłane są wyłącznie współrzędne punktu lub n
 
 ### Które dane pobrano wcześniej i kiedy
 
-<!--PREFETCH-->Uzupełniane z `data/MANIFEST.json`.<!--/PREFETCH-->
+| Dane | Tryb | Kiedy pobrano | Zakres |
+|---|---|---|---|
+| Pogoda działki (opad, ET0), kategoria gleby IUNG, działka ULDK, prognoza ECMWF lub archiwalna prognoza dla daty analizy | **LIVE** przy każdym zapytaniu `recommend` / `compare` (cache na dysku: archiwum przeszłości bez wygasania, dane z ostatnich 10 dni przez 6 h, prognoza przez 3 h) | w chwili zapytania; data pobrania jest w polu `sources[].retrieved_at` odpowiedzi | 2016-01-01 → wczoraj, prognoza do 15 dni |
+| Wybór 50 punktów treningowych: siatka 0,7°, warstwa IUNG `katgl_landuse2024` | PRE-FETCHED | 21.11.2026, 12:36–12:37 UTC | 135 węzłów → 83 rolne → 50 (wszystkie 16 województw) |
+| Pogoda punktów treningowych (Open-Meteo archive) | PRE-FETCHED | 21.11.2026, 12:37–12:48 UTC | 2016-01-01 → 2026-11-16, 0 brakujących dni |
+| Archiwalne prognozy ECMWF punktów (Previous Runs) | PRE-FETCHED | 21.11.2026, 12:37–12:48 UTC | 15 III – 31 X w latach 2024, 2025, 2026 (0,25% pustych komórek) |
+| Wagi polityki RL `artifacts/models/ppo_irrigator_weights.npz` | wytrenowane offline na danych PRE-FETCHED | 21.11.2026 | trening 2016–2023, walidacja 2024, test 2025–2026 |
+
+Szczegóły (URL, znaczniki czasu dla każdego punktu, kontrola jakości) są w [`data/MANIFEST.json`](data/MANIFEST.json). Dane surowe nie są w repozytorium; odtwarza je `scripts/fetch_training_data.py`. **Rekomendacja zawsze liczy się na żywo z danych działki.** Dane pobrane wcześniej służą wyłącznie do treningu i ewaluacji.
 
 ---
 
@@ -150,7 +160,31 @@ Do zewnętrznych serwisów wysyłane są wyłącznie współrzędne punktu lub n
 
 ## 6. Wyniki
 
-<!--RESULTS-->Uzupełniane po ewaluacji.<!--/RESULTS-->
+**Ewaluacja na latach testowych 2025–2026** (pełny raport: [`reports/evaluation.md`](reports/evaluation.md)). Liczono 50 punktów × 2 lata × 4 uprawy × 4 gleby × 4 budżety (50/100/150/250 mm), czyli 6400 sezonów na strategię. Wszystkie strategie dostają te same dane z **prawdziwymi prognozami ECMWF**, a przedziały to 95% bootstrap po punktach i latach.
+
+| Strategia | Plon względny | Woda [mm/sezon] | Perkolacja [mm] | Dni stresu |
+|---|---|---|---|---|
+| Bez nawadniania | 0,849 | 0 | 33 | 48 |
+| Kalendarz | 0,954 | 138 | 99 | 20 |
+| Reguła FAO-56 (domyślna) | 0,969 | 86 | 39 | 15 |
+| FAO-56 + prognoza | 0,969 | 83 | 38 | 16 |
+| **Agent RL (E5_s3)** | **0,970** | **80** | 38 | 14 |
+| Wyrocznia (znana pogoda, górna granica) | 0,973 | 75 | 35 | 12 |
+
+- **RL wobec reguły FAO:**
+  - łącznie: **+0,09 pkt proc.** plonu [+0,06; +0,12] i **−5,9 mm** wody [−7,7; −4,2];
+  - przy budżetach 100, 150 i 250 mm wygrywa istotnie, a przy 250 mm oszczędza aż −14,7 mm;
+  - przy 50 mm jest **remis**: obie strategie zużywają cały budżet, a różnica plonu (+0,04 pkt proc.) mieści się w szumie.
+- **RL wobec FAO + prognoza** (rywal, który też korzysta z prognozy): +0,13 pkt proc. plonu i −2,8 mm wody.
+- **Górna granica:** nawet wyrocznia ze znaną pogodą poprawia regułę FAO tylko o +0,4 pkt proc. plonu i 11 mm wody. Agent RL osiąga ok. 55% tej oszczędności z prawdziwymi, niedoskonałymi prognozami.
+- **Słaby punkt:** ziemniak na glebie kat. I przy małym budżecie. Agent czasem zaczyna podlewać za wcześnie i w 13% takich sezonów traci ponad 1 pkt proc. plonu względem FAO.
+- **Stabilność:** 3 ziarna dają woda 78–82 mm i plon 0,969–0,970.
+
+**Czas odpowiedzi** (`reports/latency.json`, 10 losowych punktów i dat z lat 2016–2026, tempo pojedynczego użytkownika, 21.11.2026):
+- **z pobraniem danych:** mediana **0,48 s**, maksimum **4,9 s** (przypadek z chwilowym timeoutem połączenia i ponowieniem); cel < 10 s;
+- **bez sieci (cache):** mediana **0,011 s**, maksimum **0,05 s**; cel < 1 s.
+
+Wcześniejszy pomiar dał 11,4 s (timeout WMS IUNG przy 8 s limicie) i 17,5 s (czekanie na limit Open-Meteo). Po tym zaostrzyłem limity runtime: 4 s na zapytanie, jedno ponowienie, brak czekania dłuższego niż 2 s.
 
 ---
 
@@ -164,6 +198,7 @@ Do zewnętrznych serwisów wysyłane są wyłącznie współrzędne punktu lub n
 - **Prognozy archiwalne** są dostępne dopiero od 2024. Dla starszych dat rekomendacja używa klimatologii punktu, a porównanie historyczne syntetycznej prognozy skalibrowanej na ECMWF 2024.
 - **Historia nawodnień** rolnika jest nieznana, o ile jej nie poda (`irrigation_history`). Domyślnie przyjmujemy brak nawadniania albo rozłożenie podanej zużytej wody zgodnie ze strategią.
 - **Mało lat testowych:** tylko dwa (2025–2026), więc przedziały niepewności między latami są szerokie.
+- **Limity darmowego Open-Meteo:** zimna analiza pobiera 10 lat archiwum, czyli ok. 57 „wywołań” w rozliczeniu Open-Meteo. Przy limitach 600/min i 5000/h daje to ok. 10 zimnych analiz na minutę z jednego IP. Przy limicie moduł nie czeka, tylko od razu zwraca czytelny komunikat. Powtórne zapytania dla tego samego punktu idą z cache. Przy wielu rolnikach potrzebna jest własna instancja Open-Meteo albo licencja komercyjna (por. główne README, sekcja 8).
 
 ---
 

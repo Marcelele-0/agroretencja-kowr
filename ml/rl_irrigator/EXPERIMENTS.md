@@ -86,3 +86,30 @@ Programowanie dynamiczne ze znaną pogodą (3200 sezonów walidacyjnych):
 **Dlaczego:** kryterium dopuszcza do 1 pkt proc. niższy plon przy mniejszym zużyciu wody, a celem KOWR jest efektywność wody. Wyższa cena wody (1 pkt proc. plonu ≈ 20 mm) przesuwa agenta w stronę oszczędności. Wyższy lr pozwala szybciej odejść od klonu FAO.
 **Wynik (seed 1, najlepszy checkpoint 3,0 mln kroków, trening 824 s):** plon **0,9317 (−0,16 pkt proc.)** przy **99,6 mm (−7,7 mm, −7,2%)**, perkolacja 30,8 mm. To prawie tyle oszczędności wody co wyrocznia. Próba ewaluacji na walidacji przechodzi kryterium przy każdym budżecie: Δplon od −0,07 (50 mm) do −0,29 pkt proc. (250 mm), Δwoda od −1,4 mm do −16,2 mm, cały 95% CI < 0.
 **Wybór:** E5 jako konfiguracja finalna, bo oszczędza dwa razy więcej wody niż E4 przy koszcie plonu dużo poniżej limitu. Ziarna 2 i 3 trenowane z identyczną konfiguracją. Lata testowe 2025–2026 zostały użyte dopiero po tym wyborze.
+
+**Trzy ziarna, walidacja 2024 (najlepszy checkpoint każdego):**
+
+| Przebieg | Krok | Plon (FAO 0,9333) | Woda [mm] (FAO 107,3) | Perkolacja [mm] |
+|---|---|---|---|---|
+| E5_s1 | 3,0 mln | 0,9317 | 99,6 | 30,8 |
+| E5_s2 | 2,3 mln | 0,9327 | 101,3 | 31,6 |
+| E5_s3 | 1,9 mln | 0,9317 | 97,7 | 31,3 |
+
+Wyniki ziaren są spójne: −0,06 do −0,16 pkt proc. plonu i −6 do −10 mm wody. Do wdrożenia trafia **E5_s3** (najlepsza nagroda walidacyjna). Każdy trening trwał ok. 13,5 min przy 3,7 tys. kroków/s (dwa przebiegi równolegle).
+
+---
+
+## TEST 2025–2026: jedno uruchomienie po wyborze E5 (bez dalszego strojenia)
+
+`uv run python -m kowr_rl.evaluate --runs E5_s1 E5_s2 E5_s3`: 6400 sezonów na strategię, prawdziwe prognozy ECMWF, bootstrap 2000×. Pełny raport: `reports/evaluation.md`.
+
+| | Plon | Woda [mm] |
+|---|---|---|
+| Reguła FAO | 0,969 | 86 |
+| FAO + prognoza | 0,969 | 83 |
+| **Agent RL (E5_s3)** | **0,970** | **80** |
+| Wyrocznia | 0,973 | 75 |
+
+Różnica RL − FAO: łącznie +0,09 pkt proc. [+0,06; +0,12] i −5,9 mm [−7,7; −4,2]. Według budżetów: 100 mm +0,17 / −2,3; 150 mm +0,25 / −6,7; 250 mm −0,08 / −14,7. **50 mm: +0,04 [−0,03; +0,09] / +0,1 [−0,3; +0,6], czyli remis.** Ziarna: woda 78,0 / 81,6 / 80,2 mm, plon 0,9693 / 0,9695 / 0,9699.
+
+**Werdykt wg kryterium ustalonego przed testem** (istotna wygrana przy każdym budżecie): **niegotowy**, bo przy 50 mm jest remis. Domyślna zostaje reguła FAO, a agent jest eksperymentalny (`policy="rl"`). Według dosłownego kryterium z promptu (same średnie) agent przeszedłby, ale nie zmieniam reguły po zobaczeniu wyniku. Decyzję o przełączeniu `default_policy: rl` zostawiam zespołowi lub mentorowi.

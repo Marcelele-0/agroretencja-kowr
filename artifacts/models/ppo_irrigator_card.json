@@ -1,0 +1,101 @@
+{
+ "name": "FAO-RL-Irrigator (MaskablePPO)",
+ "exported_at": "2026-11-21T14:49:39",
+ "run": "E5_s3",
+ "weights": "ppo_irrigator_weights.npz",
+ "runtime": "NumPy only (kowr_rl.policy.NumpyPolicy); MLP actor + VecNormalize observation statistics",
+ "train_config": {
+  "run": "E5_s3",
+  "seed": 3,
+  "timesteps": 3000000,
+  "n_envs": 16,
+  "eval_freq": 100000,
+  "c_w": 0.0005,
+  "c_p": 0.0003,
+  "ent_coef": 0.001,
+  "lr": 0.0003,
+  "gamma": 0.995,
+  "net": [
+   128,
+   128
+  ],
+  "n_steps": 512,
+  "batch_size": 4096,
+  "threads": 4,
+  "bc_seasons": 8000,
+  "bc_epochs": 8,
+  "reward": {
+   "c_w": 0.0005,
+   "c_p": 0.0003
+  }
+ },
+ "train_years": [
+  2016,
+  2017,
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023
+ ],
+ "validation": {
+  "year": [
+   2024
+  ],
+  "best": {
+   "reward": -0.13497382234834873,
+   "yield": 0.931722888484288,
+   "yield_p05": 0.7342827773345271,
+   "water_mm": 97.715625,
+   "dp_mm": 31.274505238255205,
+   "stress_days": 25.490625,
+   "timesteps": 1900000,
+   "eval_s": 0.87,
+   "best": true
+  },
+  "reference": {
+   "none": {
+    "reward": -0.2673334366893732,
+    "yield": 0.7682297129191434,
+    "yield_p05": 0.5517984632606621,
+    "water_mm": 0.0,
+    "dp_mm": 29.104454566422746,
+    "stress_days": 62.7375
+   },
+   "calendar": {
+    "reward": -0.18726765515518373,
+    "yield": 0.9150033233884066,
+    "yield_p05": 0.7138740619600892,
+    "water_mm": 137.5,
+    "dp_mm": 77.27384020218841,
+    "stress_days": 29.6778125
+   },
+   "fao_rule": {
+    "reward": -0.1382881897172025,
+    "yield": 0.9333044053353572,
+    "yield_p05": 0.7350574110030809,
+    "water_mm": 107.25625,
+    "dp_mm": 32.20650505258021,
+    "stress_days": 25.5415625
+   },
+   "fao_forecast": {
+    "reward": -0.13773741020933833,
+    "yield": 0.9323192048172395,
+    "yield_p05": 0.7352487443225182,
+    "water_mm": 104.53125,
+    "dp_mm": 31.310987349691512,
+    "stress_days": 26.9825
+   }
+  }
+ },
+ "test_decision": {
+  "ready": false,
+  "recommended_default_policy": "fao_rule",
+  "deployed_run": "E5_s3",
+  "generated_at": "2026-11-21T14:48:34"
+ },
+ "status": "experimental",
+ "intended_use": "Step 4 (optional irrigation) of the KOWR workflow, after water assessment, causes, retention and agrotechnics.",
+ "limitations": "Trained on a single-layer FAO-56 bucket simulator with FAO-33 yield response; see ml/rl_irrigator/README.md."
+}

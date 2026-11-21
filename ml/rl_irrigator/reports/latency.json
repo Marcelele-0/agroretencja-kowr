@@ -1,110 +1,110 @@
 {
- "measured_at": "2026-11-21T14:04:30",
+ "measured_at": "2026-11-21T14:53:52",
  "n": 10,
- "cold_median_s": 0.40549999999999997,
- "cold_max_s": 1.653,
- "warm_median_s": 0.037500000000000006,
- "warm_max_s": 0.057,
+ "cold_median_s": 0.476,
+ "cold_max_s": 4.925,
+ "warm_median_s": 0.011,
+ "warm_max_s": 0.049,
  "cases": [
   {
-   "lat": 52.5004,
-   "lon": 22.2291,
+   "lat": 50.5143,
+   "lon": 19.2446,
    "crop": "pszenica_ozima",
-   "date": "2024-07-02",
-   "status": "ok",
-   "forecast_mode": "archived_ecmwf",
-   "cold_s": 1.653,
-   "warm_s": 0.035
-  },
-  {
-   "lat": 51.2007,
-   "lon": 22.0517,
-   "crop": "kukurydza",
-   "date": "2026-05-15",
-   "status": "not_arable",
-   "forecast_mode": null,
-   "cold_s": 0.596,
-   "warm_s": 0.022
-  },
-  {
-   "lat": 53.2849,
-   "lon": 21.478,
-   "crop": "kukurydza",
-   "date": "2021-09-06",
+   "date": "2022-06-20",
    "status": "ok",
    "forecast_mode": "climatology",
-   "cold_s": 0.528,
-   "warm_s": 0.051
+   "cold_s": 0.443,
+   "warm_s": 0.023
   },
   {
-   "lat": 51.1137,
-   "lon": 17.4115,
-   "crop": "ziemniak",
-   "date": "2026-06-30",
-   "status": "ok",
-   "forecast_mode": "archived_ecmwf",
-   "cold_s": 0.399,
-   "warm_s": 0.042
-  },
-  {
-   "lat": 52.0182,
-   "lon": 19.6512,
-   "crop": "pszenica_ozima",
-   "date": "2026-06-29",
-   "status": "ok",
-   "forecast_mode": "archived_ecmwf",
-   "cold_s": 0.381,
-   "warm_s": 0.047
-  },
-  {
-   "lat": 52.4887,
-   "lon": 22.9172,
-   "crop": "burak_cukrowy",
-   "date": "2021-06-01",
+   "lat": 50.5917,
+   "lon": 22.4616,
+   "crop": "kukurydza",
+   "date": "2022-05-24",
    "status": "not_arable",
    "forecast_mode": null,
-   "cold_s": 0.305,
+   "cold_s": 0.424,
+   "warm_s": 0.009
+  },
+  {
+   "lat": 50.5191,
+   "lon": 22.6125,
+   "crop": "burak_cukrowy",
+   "date": "2022-09-07",
+   "status": "not_arable",
+   "forecast_mode": null,
+   "cold_s": 4.925,
+   "warm_s": 0.01
+  },
+  {
+   "lat": 52.0456,
+   "lon": 20.4713,
+   "crop": "ziemniak",
+   "date": "2026-06-10",
+   "status": "not_arable",
+   "forecast_mode": null,
+   "cold_s": 0.461,
    "warm_s": 0.012
   },
   {
-   "lat": 50.6408,
-   "lon": 20.094,
+   "lat": 50.5519,
+   "lon": 21.4103,
    "crop": "kukurydza",
-   "date": "2016-07-16",
+   "date": "2023-07-18",
    "status": "ok",
    "forecast_mode": "climatology",
-   "cold_s": 0.494,
-   "warm_s": 0.04
+   "cold_s": 0.468,
+   "warm_s": 0.049
   },
   {
-   "lat": 52.0596,
-   "lon": 18.9965,
-   "crop": "kukurydza",
-   "date": "2024-09-20",
+   "lat": 53.2669,
+   "lon": 19.6181,
+   "crop": "pszenica_ozima",
+   "date": "2026-07-16",
    "status": "ok",
    "forecast_mode": "archived_ecmwf",
-   "cold_s": 0.412,
-   "warm_s": 0.057
+   "cold_s": 0.688,
+   "warm_s": 0.03
   },
   {
-   "lat": 52.5169,
-   "lon": 19.3559,
+   "lat": 50.818,
+   "lon": 19.653,
+   "crop": "burak_cukrowy",
+   "date": "2021-09-24",
+   "status": "not_arable",
+   "forecast_mode": null,
+   "cold_s": 0.474,
+   "warm_s": 0.009
+  },
+  {
+   "lat": 52.3664,
+   "lon": 17.2648,
    "crop": "ziemniak",
-   "date": "2021-06-22",
+   "date": "2022-08-10",
    "status": "ok",
    "forecast_mode": "climatology",
-   "cold_s": 0.349,
-   "warm_s": 0.035
+   "cold_s": 0.478,
+   "warm_s": 0.049
   },
   {
-   "lat": 50.0472,
-   "lon": 16.943,
-   "crop": "kukurydza",
-   "date": "2026-08-19",
-   "status": "no_data",
+   "lat": 53.4693,
+   "lon": 16.4657,
+   "crop": "burak_cukrowy",
+   "date": "2021-08-10",
+   "status": "not_arable",
    "forecast_mode": null,
-   "cold_s": 0.279,
-   "warm_s": 0.016
+   "cold_s": 0.801,
+   "warm_s": 0.007
+  },
+  {
+   "lat": 50.3325,
+   "lon": 22.2196,
+   "crop": "ziemniak",
+   "date": "2019-06-28",
+   "status": "not_arable",
+   "forecast_mode": null,
+   "cold_s": 0.645,
+   "warm_s": 0.007
   }
  ]
 }

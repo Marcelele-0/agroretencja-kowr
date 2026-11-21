@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from kowr_rl import REPORTS_DIR  # noqa: E402
 from kowr_rl.config import load_crops  # noqa: E402
 from kowr_rl.data import HttpClient  # noqa: E402
-from kowr_rl.inference import recommend  # noqa: E402
+from kowr_rl.inference import RUNTIME_HTTP, recommend  # noqa: E402
 
 
 def main() -> None:
@@ -42,7 +42,7 @@ def main() -> None:
             cases.append((round(lat, 4), round(lon, 4), c.key, d))
     rows = []
     with tempfile.TemporaryDirectory() as tmp:
-        client = HttpClient(Path(tmp) / "cache", timeout=8.0, retries=2, backoff_s=1.0)
+        client = HttpClient(Path(tmp) / "cache", **RUNTIME_HTTP)
         for lat, lon, crop, d in cases:
             t0 = time.perf_counter()
             r1 = recommend(lat, lon, crop, d, 150, client=client)
@@ -52,7 +52,7 @@ def main() -> None:
             warm = time.perf_counter() - t0
             rows.append({"lat": lat, "lon": lon, "crop": crop, "date": d.isoformat(), "status": r1["status"], "forecast_mode": r1.get("forecast_mode"), "cold_s": round(cold, 3), "warm_s": round(warm, 3)})
             print(f"{crop:15s} {d} ({lat:.2f},{lon:.2f}) {r1['status']:12s} cold {cold:5.2f}s  warm {warm:5.3f}s")
-            time.sleep(1.0)  # be gentle with public APIs
+            time.sleep(7.0)  # ~1 cold analysis per 7 s = a single user; stays under the 600/min API limit
         client.close()
     cold = [r["cold_s"] for r in rows]
     warm = [r["warm_s"] for r in rows]

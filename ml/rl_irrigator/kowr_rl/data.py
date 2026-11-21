@@ -97,6 +97,8 @@ class HttpClient:
         backoff_s: base for exponential backoff.
         min_interval_s: minimum seconds between *live* requests to the same host.
         offline: never touch the network; raise if a response is not cached.
+        max_wait_s: longest wait accepted before a retry (rate limit / backoff); a longer
+            requested wait raises immediately (interactive use must not hang).
     """
 
     def __init__(
@@ -109,6 +111,7 @@ class HttpClient:
         min_interval_s: float | dict[str, float] = 0.0,
         offline: bool = False,
         transport: httpx.BaseTransport | None = None,
+        max_wait_s: float | None = None,
     ) -> None:
         self.cache_dir = Path(cache_dir) if cache_dir is not None else None
         if self.cache_dir is not None:
@@ -116,6 +119,7 @@ class HttpClient:
         self.timeout = timeout
         self.retries = retries
         self.backoff_s = backoff_s
+        self.max_wait_s = max_wait_s
         self.min_interval_s = min_interval_s
         self.offline = offline
         self._last_call: dict[str, float] = {}
@@ -210,6 +214,11 @@ class HttpClient:
                     last_err = DataUnavailableError(f"HTTP {resp.status_code} from {host}: {reason}")
                     if "Hourly" in reason or "Daily" in reason:
                         raise last_err  # retrying would not help within a reasonable time
+                    if attempt == self.retries or (self.max_wait_s is not None and wait > self.max_wait_s):
+                        kind_txt = "limit zapytan" if resp.status_code == 429 else "blad serwera"
+                        raise DataUnavailableError(
+                            f"{host}: {kind_txt} (HTTP {resp.status_code}); sprobuj ponownie za ok. {wait:.0f} s"
+                        )
                     log.warning("HTTP %s from %s, retry in %.0fs", resp.status_code, host, wait)
                     time.sleep(wait)
                     continue

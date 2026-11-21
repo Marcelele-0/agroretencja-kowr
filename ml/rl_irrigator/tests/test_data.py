@@ -105,6 +105,19 @@ def test_retry_on_429_then_success(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert res.payload == {"ok": 1} and not res.from_cache
 
 
+def test_rate_limit_fails_fast_in_interactive_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    slept: list[float] = []
+    monkeypatch.setattr("kowr_rl.data.time.sleep", lambda s: slept.append(s))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, headers={"Retry-After": "30"}, text="Minutely API request limit exceeded")
+
+    with HttpClient(tmp_path, transport=httpx.MockTransport(handler), max_wait_s=2.0) as c:
+        with pytest.raises(DataUnavailableError, match="limit zapytan"):
+            c.get("https://example.org/z")
+    assert slept == []  # no waiting at all
+
+
 def test_open_meteo_error_payload_raises(tmp_path: Path) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"error": True, "reason": "bad variable"})

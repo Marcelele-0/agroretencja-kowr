@@ -1,0 +1,212 @@
+{
+ "request": {
+  "method": "POST",
+  "path": "/rl/recommend",
+  "body": {
+   "lat": 52.6,
+   "lon": 17.0,
+   "crop": "kukurydza",
+   "date": "2025-07-15",
+   "budget_mm": 150,
+   "budget_used_mm": 30
+  }
+ },
+ "status_code": 200,
+ "response": {
+  "module": "kowr_rl",
+  "version": "0.1.0",
+  "input": {
+   "lat": 52.6,
+   "lon": 17.0,
+   "parcel_id": null,
+   "crop": "kukurydza",
+   "date": "2025-07-15",
+   "budget_mm": 150.0,
+   "budget_used_mm": 30.0,
+   "policy": "default"
+  },
+  "limitations": [
+   "Model bilansu jest jednowarstwowy (FAO-56 'wiadro'): nie uwzglednia podsiaku wod gruntowych, splywu powierzchniowego ani drenazu.",
+   "Pogoda pochodzi z reanalizy i modelu ECMWF na siatce ok. 9-25 km, a nie z pomiaru na dzialce; lokalne burze moga sie roznic.",
+   "Pojemnosc wodna gleby (TAW) to wartosc reprezentatywna dla kategorii IUNG-PIB, a nie pomiar na dzialce; nie zalezy od glebokosci korzeni uprawy.",
+   "Parametry upraw (Kc, p, Ky, terminy siewu i dlugosci faz) sa z FAO-56/FAO-33 i wymagaja weryfikacji z ekspertem dla warunkow Polski.",
+   "Plon wzgledny wg FAO-33 to wskaznik straty z niedoboru wody, a nie prognoza plonu w t/ha (nie uwzglednia nawozenia, chorob, odmiany).",
+   "Nawadnianie jest ostatnim krokiem po dzialaniach retencyjnych i agrotechnicznych - ta rekomendacja ich nie zastepuje."
+  ],
+  "status": "ok",
+  "message": "Nie nawadniaj dzis - zapas wody 53% TAW jest powyzej progu stresu (41% TAW); przy obecnym zuzyciu stres za ok. 5 dni bez deszczu. W kolejnych 6 dniach nie przewiduje sie nawadniania (jesli prognoza sie sprawdzi).",
+  "location": {
+   "lat": 52.6,
+   "lon": 17.0,
+   "iung_code": 2,
+   "soil_category": "II",
+   "soil_label": "II - gleby podatne na susze",
+   "taw_mm": 150.0
+  },
+  "crop": {
+   "key": "kukurydza",
+   "label": "Kukurydza na ziarno",
+   "season_start": "2025-04-25",
+   "season_end": "2025-10-11",
+   "params": {
+    "kc_ini": 0.3,
+    "kc_mid": 1.2,
+    "kc_end": 0.6,
+    "p": 0.55,
+    "ky": 1.25
+   },
+   "day_of_season": 82,
+   "season_length": 170,
+   "stage": "mid",
+   "stage_label": "srodkowa (pelnia wzrostu, kwitnienie)",
+   "kc": 1.2
+  },
+  "policy": {
+   "used": "fao_rule",
+   "label": "Regula FAO-56 (Dr > RAW)",
+   "default": "fao_rule",
+   "rl_status": "eksperymentalny (domyslna jest regula FAO - patrz reports/evaluation.md)",
+   "rl_weights": "ppo_irrigator_weights.npz"
+  },
+  "recommendation": {
+   "action_now": "Nie nawadniaj dzis",
+   "dose_today_mm": 0.0,
+   "total_7d_mm": 0.0,
+   "plan_7d": [
+    {
+     "day": 0,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 4.5,
+     "et0_assumed_mm": 3.3,
+     "storage_pct_taw_start": 53.3,
+     "stress_expected": false,
+     "date": "2025-07-15"
+    },
+    {
+     "day": 1,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 1.2,
+     "et0_assumed_mm": 3.3,
+     "storage_pct_taw_start": 53.6,
+     "stress_expected": false,
+     "date": "2025-07-16"
+    },
+    {
+     "day": 2,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 4.2,
+     "et0_assumed_mm": 3.3,
+     "storage_pct_taw_start": 51.8,
+     "stress_expected": false,
+     "date": "2025-07-17"
+    },
+    {
+     "day": 3,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 1.5,
+     "et0_assumed_mm": 3.3,
+     "storage_pct_taw_start": 51.9,
+     "stress_expected": false,
+     "date": "2025-07-18"
+    },
+    {
+     "day": 4,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 0.0,
+     "et0_assumed_mm": 3.3,
+     "storage_pct_taw_start": 50.2,
+     "stress_expected": false,
+     "date": "2025-07-19"
+    },
+    {
+     "day": 5,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 0.6,
+     "et0_assumed_mm": 3.3,
+     "storage_pct_taw_start": 47.6,
+     "stress_expected": false,
+     "date": "2025-07-20"
+    },
+    {
+     "day": 6,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 13.5,
+     "et0_assumed_mm": 3.3,
+     "storage_pct_taw_start": 45.3,
+     "stress_expected": false,
+     "date": "2025-07-21"
+    }
+   ],
+   "window": [],
+   "scenarios_7d_mm": {
+    "bez_opadu": 30.0,
+    "wg_prognozy": 0.0,
+    "opad_x1_5": 0.0
+   },
+   "alternative": {
+    "policy": "rl",
+    "label": "Agent RL (MaskablePPO)",
+    "dose_today_mm": 0.0,
+    "total_7d_mm": 0.0
+   }
+  },
+  "rationale": {
+   "soil_water_storage_pct_taw": 53.3,
+   "depletion_mm": 70.1,
+   "taw_mm": 150.0,
+   "stress_threshold_storage_pct_taw": 40.9,
+   "raw_mm": 88.6,
+   "days_to_stress_without_rain": 4.6,
+   "etc_estimate_mm_per_day": 3.99,
+   "precip_last7_mm": 26.2,
+   "et0_last7_mm": 23.2,
+   "forecast_precip_3d_mm": 9.9,
+   "forecast_precip_7d_mm": 25.5,
+   "budget_mm": 150.0,
+   "budget_used_mm": 30.0,
+   "budget_left_mm": 120.0,
+   "irrigation_before_date_mm": 30.0,
+   "policy_action_probabilities": null
+  },
+  "forecast_mode": "archived_ecmwf",
+  "uncertainty": [
+   "Suma dawek na 7 dni: 30 mm gdyby nie padalo, 0 mm wg prognozy, 0 mm przy opadzie 1,5 x prognoza.",
+   "Prognoza: archiwalna prognoza ECMWF wydana dzien przed data analizy (Open-Meteo Previous Runs).",
+   "Historia nawodnien nie zostala podana: przyjeto, ze zuzyte 30 mm podano zgodnie z wybrana strategia."
+  ],
+  "sources": [
+   {
+    "name": "IUNG-PIB WMS Susza:katgl_landuse2024 (kategorie podatnosci gleb na susze)",
+    "url": "https://sgeo.iung.pl/geoserver/Susza/wms?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=Susza%3Akatgl_landuse2024&query_layers=Susza%3Akatgl_landuse2024&info_format=application%2Fjson&srs=EPSG%3A4326&bbox=16.999000%2C52.599000%2C17.001000%2C52.601000&width=101&height=101&x=50&y=50&styles=",
+    "retrieved_at": "2026-11-21T12:36:47+00:00",
+    "mode": "cache",
+    "license": "IUNG-PIB, Mapa podatnosci gleb na susze (katgl_landuse2024), publiczna usluga WMS",
+    "detail": "punkt 52.60000N 17.00000E"
+   },
+   {
+    "name": "Open-Meteo Historical Weather API (best_match: ERA5/ERA5-Land/ECMWF IFS)",
+    "url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.6&longitude=17.0&start_date=2016-01-01&end_date=2026-11-20&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+    "retrieved_at": "2026-11-21T13:12:01+00:00",
+    "mode": "cache",
+    "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
+    "detail": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-20; punkt siatki 52.619N 16.959E"
+   },
+   {
+    "name": "Open-Meteo Previous Runs API (ecmwf_ifs025)",
+    "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-07-15&end_date=2025-07-21&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+    "retrieved_at": "2026-11-21T13:12:02+00:00",
+    "mode": "cache",
+    "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
+    "detail": "archiwalne prognozy opadu, wyprzedzenie 1-7 dni, 2025-07-15..2025-07-21"
+   }
+  ],
+  "timing_s": 0.086,
+  "irrigation_advice": {
+   "action_now": "Nie nawadniaj dzis",
+   "recommended_mm": 0.0,
+   "rationale": "Nie nawadniaj dzis - zapas wody 53% TAW jest powyzej progu stresu (41% TAW); przy obecnym zuzyciu stres za ok. 5 dni bez deszczu. W kolejnych 6 dniach nie przewiduje sie nawadniania (jesli prognoza sie sprawdzi).",
+   "forecast_mode": "archived_ecmwf",
+   "strategies_10y": []
+  }
+ }
+}

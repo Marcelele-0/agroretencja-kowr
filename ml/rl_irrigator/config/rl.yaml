@@ -2,6 +2,10 @@
 # logged in EXPERIMENTS.md together with the validation result.
 
 # Policy used by recommend() by default: "rl" or "fao_rule". Set by the M5 decision point.
+# Test 2025-2026 (reports/evaluation.md): RL (E5_s3) vs FAO overall +0.09 pp yield, -5.9 mm water
+# (both significant), significant wins at budgets 100/150/250 mm, but a statistical TIE at 50 mm.
+# The pre-registered rule requires a significant win at EVERY budget -> "not ready": FAO stays the
+# default and the RL agent is available as experimental via policy="rl".
 default_policy: fao_rule
 
 actions_mm: [0, 10, 20, 30]

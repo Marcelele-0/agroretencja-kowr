@@ -2,7 +2,7 @@
 
 Moduł obsługuje krok 4 analizy KOWR (nawadnianie, opcjonalne). Codziennie rekomenduje, czy podlać działkę i ile mm. Uczy się rozkładać ograniczony budżet wody na sezon lepiej niż proste reguły. Wynik jest liczony z danych pobieranych na żywo, a działa jako funkcja Pythona i endpoint HTTP.
 
-Status: **zaakceptowany** (21.11.2026), z decyzjami D1–D6 poniżej.
+Status: **zaakceptowany** (21.11.2026), z decyzjami D1–D6 poniżej. **Wykonanie:** M0–M7 ukończone 21.11.2026 (szczegóły w rejestrze decyzji i w EXPERIMENTS.md).
 
 ---
 
