@@ -1,5 +1,5 @@
 import progi from "../data/iung-progi.json";
-import { request, sourceFailure } from "./http";
+import { requestViaProxy, sourceFailure } from "./http";
 
 /** IUNG-PIB GeoServer, layer Susza:katgl_landuse2024: soil drought-susceptibility category and land use. CORS: *. */
 export const IUNG_WMS = "https://sgeo.iung.pl/geoserver/Susza/wms";
@@ -50,7 +50,7 @@ async function fetchLandUse(lon: number, lat: number): Promise<LandUse> {
   });
   let res;
   try {
-    res = await request(`${IUNG_WMS}?${q}`, 8000);
+    res = await requestViaProxy("/iung", `/iung?${q}`, `${IUNG_WMS}?${q}`, 10000);
   } catch (e) {
     throw sourceFailure("Warstwa gleb IUNG", e);
   }
