@@ -24,13 +24,18 @@ dependencies = [
   "matplotlib>=3.9",
   "jinja2>=3.1",
   "weasyprint>=63.0",
+  "pyyaml>=6.0",
 ]
 
 [dependency-groups]
 train = [
   "torch>=2.5",
   "stable-baselines3>=2.4",
+  "sb3-contrib>=2.4",
   "gymnasium>=1.0",
+  "tensorboard>=2.17",
+  "tqdm>=4.66",
+  "rich>=13.7",
   "scikit-learn>=1.5",
   "optuna>=4.0",
   "pandas>=2.2",
@@ -43,16 +48,26 @@ dev = [
   "mypy>=1.13",
 ]
 
+[tool.uv.sources]
+# CPU-only torch: PPO with a small MLP gains nothing from the GPU (parallel CPU envs matter).
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/hydro_core", "src/backend"]
+packages = ["src/hydro_core", "src/backend", "ml/rl_irrigator/kowr_rl"]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 100
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "ml/rl_irrigator/tests"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 python_version = "3.11"

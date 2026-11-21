@@ -30,3 +30,9 @@ data/*.duckdb*
 data/*.parquet
 ml/runs/
 *.log
+
+# RL irrigation module (ml/rl_irrigator): raw data, HTTP cache, TensorBoard, intermediate checkpoints
+ml/rl_irrigator/data/weather/*.parquet
+ml/rl_irrigator/data/cache/
+ml/rl_irrigator/runs/
+ml/rl_irrigator/models/checkpoints/
