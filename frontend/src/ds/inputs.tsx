@@ -1,6 +1,6 @@
 import { useId, type CSSProperties, type FormEvent } from "react";
 import { CROP_GROUPS, type CropCode } from "../lib/crops";
-import { inSeason, isoOf, parts, seasonYear, todayIso, type Iso } from "../lib/dates";
+import { addDays, formatLong, inSeason, isoOf, parts, seasonYear, todayIso, type Iso } from "../lib/dates";
 import { Button, cx, Icon, Pill } from "./core";
 
 export function ParcelSearch({ value, onChange, onSubmit, busy, error, placeholder, style, className }: {
@@ -65,5 +65,28 @@ export function CropDateForm({ crop, date, onCrop, onDate, onSubmit, disabled, b
         <Button variant="primary" size="lg" arrow type="submit" disabled={disabled || busy}>{busy ? "Analizuję…" : submitLabel}</Button>
       </div>}
     </form>
+  );
+}
+
+/** Analysis date as a readable bar: "10 lipca 2019" with day steps, a native calendar under the date and quick picks. */
+export function DateBar({ date, onDate, className }: { date: Iso; onDate: (d: Iso) => void; className?: string }) {
+  const id = useId();
+  const { min, max } = dateBounds();
+  const step = (n: number) => { const d = addDays(date, n); if (d >= min && d <= max) onDate(d); };
+  return (
+    <div className={cx("rs-datebar", className)} role="group" aria-labelledby={`${id}l`}>
+      <span className="ar-form__label" id={`${id}l`}>Analiza na dzień</span>
+      <div className="rs-datebar__row">
+        <Button variant="icon" size="sm" icon="back" label="Dzień wcześniej" onClick={() => step(-1)} disabled={date <= min} />
+        <label className="rs-datebar__date">
+          <span aria-hidden="true">{formatLong(date)}</span>
+          <Icon name="calendar" />
+          <input type="date" value={date} min={min} max={max} aria-label={`Data analizy: ${formatLong(date)}. Zmień datę`} onChange={(e) => e.target.value && onDate(e.target.value)} />
+        </label>
+        <Button variant="icon" size="sm" icon="arrow" label="Dzień później" onClick={() => step(1)} disabled={date >= max} />
+        <div className="rs-datebar__picks">{quickPicks().map((p) => <Pill key={p.label} pressed={date === p.date} onClick={() => onDate(p.date)}>{p.label}</Pill>)}</div>
+      </div>
+      <span className="ar-form__hint">{seasonHint(date)}</span>
+    </div>
   );
 }

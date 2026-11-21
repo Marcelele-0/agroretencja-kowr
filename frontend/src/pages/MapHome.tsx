@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "../analysis/useAnalysis";
-import { Button, CropDateForm, CropSelect, ParcelPopover, ParcelSearch, Wordmark } from "../ds";
+import { Button, CropSelect, DateBar, ParcelPopover, ParcelSearch, Wordmark } from "../ds";
 import { DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { todayIso, type Iso } from "../lib/dates";
 import { landUseAt, type LandUse } from "../lib/iung";
@@ -155,8 +155,10 @@ export function MapHome() {
                 </li>
               ))}
             </ul>
-            <CropDateForm className="rs-panel__form" layout="stack" hideCrop crop={lastCrop} date={date} onCrop={setLastCrop} onDate={setDate} onSubmit={analyse}
-              submitLabel={sel.length === 1 ? "Analizuj działkę" : `Analizuj działki (${sel.length})`} />
+            <div className="rs-panel__form">
+              <DateBar className="rs-panel__date" date={date} onDate={setDate} />
+              <Button variant="primary" size="lg" arrow onClick={analyse}>{sel.length === 1 ? "Analizuj działkę" : `Analizuj działki (${sel.length})`}</Button>
+            </div>
           </>
         ) : (
           <p className="rs-panel__empty">Kliknij działki na mapie albo wpisz numer. Możesz wybrać kilka.</p>

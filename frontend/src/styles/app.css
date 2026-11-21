@@ -48,7 +48,11 @@ a { color: inherit; }
 .rs-panel__crop.ar-select { height: 28px; font-size: 13px; }
 .rs-panel__name span { overflow: hidden; color: var(--ink-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .rs-panel .ar-btn--icon { flex: none; border: 1px solid var(--hairline); box-shadow: none; }
-.rs-panel__form.ar-form { flex: none; margin-top: auto; padding: 4px 6px 8px; border: 0; border-top: 1px solid var(--hairline); border-radius: 0; background: transparent; }
+.rs-panel__form { flex: none; display: grid; gap: 10px; margin-top: auto; padding: 12px 14px 14px; border-top: 1px solid var(--hairline); }
+.rs-panel__form > .ar-btn { width: 100%; justify-content: space-between; }
+.rs-panel__date { padding: 0; border: 0; }
+.rs-panel__date .rs-datebar__date { font-size: 24px; }
+.rs-panel__date .rs-datebar__picks { margin-left: 0; }
 
 /* ---------- Analysis ---------- */
 .rs-analysis { min-height: 100%; background: var(--ground); }
@@ -134,7 +138,8 @@ a { color: inherit; }
   .rs-panel__list { flex: none; max-height: 132px; }
   .rs-panel__head { padding: 12px 16px 8px; }
   .rs-panel__hint { display: none; }
-  .rs-panel__form .ar-form__cell--submit { position: sticky; bottom: 0; background: var(--surface); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .rs-panel__form > .ar-btn { position: sticky; bottom: 0; }
+  .rs-panel__form { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   .rs-metrics { grid-template-columns: 1fr 1fr; }
   .rs-status { gap: 16px; }
 }
@@ -215,3 +220,15 @@ button.rs-st__day:hover { background: var(--hairline); }
   .rs-pitem__mini { display: none; }
   .rs-pitem__remove { grid-row: 1; grid-column: 2; }
 }
+
+/* ---------- DateBar: the analysis date as a readable bar ---------- */
+.rs-datebar { display: grid; gap: 8px; padding: 14px 16px 12px; border: 1px solid var(--hairline); border-radius: var(--radius-lg); background: var(--surface); }
+.rs-datebar__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.rs-datebar__row > .ar-btn--icon { border: 1px solid var(--hairline); box-shadow: none; }
+.rs-datebar__date { position: relative; display: inline-flex; align-items: center; gap: 10px; padding: 2px 6px 4px; border-bottom: 1px solid var(--line-strong); font: 500 30px/1.05 var(--font-sans); font-stretch: 86%; letter-spacing: -.03em; cursor: pointer; }
+.rs-datebar__date .ar-ico { width: 18px; height: 18px; color: var(--ink-muted); }
+.rs-datebar__date input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; }
+.rs-datebar__date:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+.rs-datebar__picks { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.rs-listtitle { margin-top: 4px; }
+@media (max-width: 560px) { .rs-datebar__date { font-size: 24px; } .rs-datebar__picks { margin-left: 0; } }

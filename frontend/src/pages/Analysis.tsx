@@ -4,7 +4,7 @@ import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
 import type { AnalysisResponse, RlRecommendResponse } from "../api/contract";
 import { computeLocal, longestDrought, soilCause, withLevers, type Levers, type LocalResult } from "../analysis/local";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
-import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropDateForm, CropSelect, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, signed, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
+import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, signed, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, cropOf as cropInfo, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
@@ -171,10 +171,8 @@ export function Analysis() {
         </aside>
 
         <main className="rs-main">
-          <div className="rs-listhead">
-            <h2 className="ar-section-title">Twoje działki</h2>
-            <CropDateForm className="rs-recalc" hideCrop hideSubmit crop={crop} date={date} onCrop={() => undefined} onSubmit={() => undefined} onDate={(d) => write(items, activeId, { data: d })} />
-          </div>
+          <DateBar className="rs-recalc" date={date} onDate={(d) => write(items, activeId, { data: d })} />
+          <h2 className="ar-section-title rs-listtitle">Twoje działki</h2>
           <ol className="rs-plist" aria-label="Wybierz działkę">
             {portfolio.map((r) => {
               const p = r.parcel.status === "ready" ? r.parcel.data : null;
