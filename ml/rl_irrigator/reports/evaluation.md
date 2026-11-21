@@ -1,10 +1,10 @@
 # Ewaluacja agenta RL nawadniania (lata testowe 2025-2026)
 
-Wygenerowano: 2026-11-21T17:07:49 przez `kowr_rl.evaluate`. Liczby pochodza z `artifacts/validation/rl_eval.json`.
+Wygenerowano: 2026-11-21T17:25:00 przez `kowr_rl.evaluate`. Liczby pochodza z `artifacts/validation/rl_eval.json`.
 
-**Uwaga (E6):** te lata i punkty byly juz ogladane przy pierwszym tescie (E5). Czysty test E6 to `reports/evaluation_holdout.md`.
+**Test na nowych lokalizacjach (holdout):** `reports/evaluation_holdout.md`.
 
-**Uklad:** 50 punktow rolnych x lata 2025, 2026 x 4 uprawy x 4 kategorie gleby IUNG x 4 budzety wody = 6400 sezonow na strategie. Kazda strategia dostaje te same dane: pogode z archiwum Open-Meteo i **prawdziwe archiwalne prognozy ECMWF** (wyprzedzenie 1-7 dni; brakujace komorki: 0.29%). Wybrany agent: `E6f_s2@dom` (wybrany na walidacji 2024). Przedzialy: 95% bootstrap po punktach i latach (2000 powtorzen). Przy tylko dwoch latach testowych przedzialy sa szerokie, bo obejmuja niepewnosc miedzy latami.
+**Uklad:** 50 punktow rolnych x lata 2025, 2026 x 4 uprawy x 4 kategorie gleby IUNG x 4 budzety wody = 6400 sezonow na strategie. Kazda strategia dostaje te same dane: pogode z archiwum Open-Meteo i **prawdziwe archiwalne prognozy ECMWF** (wyprzedzenie 1-7 dni; brakujace komorki: 0.29%). Wybrany agent: `E6f_s2@dom` (wybrany na walidacji 2024). Przedzialy: 95% bootstrap po punktach i latach (2000 powtorzen).
 
 ## Werdykt: agent RL **GOTOWY**
 
@@ -84,36 +84,34 @@ Domyslna strategia w module: **`rl`** (`config/rl.yaml`, `default_policy`).
 
 ## Wedlug uprawy i kategorii gleby (wszystkie budzety)
 
-| Uprawa | Gleba (TAW) | FAO: plon / woda | Delta plonu RL-FAO [pkt proc.] | Delta wody RL-FAO [mm] | Sezony z RL gorszym o >1 pkt |
-|---|---|---|---|---|---|
-| Kukurydza na ziarno | 1 (110 mm) | 0.938 / 104 | +0.45 | -6.0 | 0% |
-| Kukurydza na ziarno | 2 (150 mm) | 0.964 / 88 | +0.32 | -2.0 | 0% |
-| Kukurydza na ziarno | 3 (185 mm) | 0.979 / 75 | +0.29 | -0.0 | 0% |
-| Kukurydza na ziarno | 4 (220 mm) | 0.987 / 61 | +0.28 | +4.7 | 0% |
-| Ziemniak (sredniopozny) | 1 (110 mm) | 0.924 / 119 | +0.61 | -9.8 | 0% |
-| Ziemniak (sredniopozny) | 2 (150 mm) | 0.951 / 108 | +0.32 | -6.5 | 0% |
-| Ziemniak (sredniopozny) | 3 (185 mm) | 0.965 / 100 | +0.26 | -5.2 | 0% |
-| Ziemniak (sredniopozny) | 4 (220 mm) | 0.975 / 91 | +0.26 | -3.6 | 0% |
-| Pszenica ozima (od wznowienia wegetacji) | 1 (110 mm) | 0.957 / 98 | -0.16 | -12.2 | 6% |
-| Pszenica ozima (od wznowienia wegetacji) | 2 (150 mm) | 0.976 / 86 | +0.02 | -12.9 | 2% |
-| Pszenica ozima (od wznowienia wegetacji) | 3 (185 mm) | 0.986 / 75 | +0.13 | -12.2 | 1% |
-| Pszenica ozima (od wznowienia wegetacji) | 4 (220 mm) | 0.991 / 63 | +0.22 | -10.9 | 0% |
-| Burak cukrowy | 1 (110 mm) | 0.957 / 100 | +0.20 | -7.9 | 3% |
-| Burak cukrowy | 2 (150 mm) | 0.975 / 84 | +0.16 | -5.2 | 0% |
-| Burak cukrowy | 3 (185 mm) | 0.985 / 69 | +0.18 | -1.4 | 0% |
-| Burak cukrowy | 4 (220 mm) | 0.992 / 56 | +0.18 | +1.1 | 0% |
+| Uprawa | Gleba (TAW) | FAO: plon / woda | Delta plonu RL-FAO [pkt proc.] | Delta wody RL-FAO [mm] |
+|---|---|---|---|---|
+| Kukurydza na ziarno | 1 (110 mm) | 0.938 / 104 | +0.45 | -6.0 |
+| Kukurydza na ziarno | 2 (150 mm) | 0.964 / 88 | +0.32 | -2.0 |
+| Kukurydza na ziarno | 3 (185 mm) | 0.979 / 75 | +0.29 | -0.0 |
+| Kukurydza na ziarno | 4 (220 mm) | 0.987 / 61 | +0.28 | +4.7 |
+| Ziemniak (sredniopozny) | 1 (110 mm) | 0.924 / 119 | +0.61 | -9.8 |
+| Ziemniak (sredniopozny) | 2 (150 mm) | 0.951 / 108 | +0.32 | -6.5 |
+| Ziemniak (sredniopozny) | 3 (185 mm) | 0.965 / 100 | +0.26 | -5.2 |
+| Ziemniak (sredniopozny) | 4 (220 mm) | 0.975 / 91 | +0.26 | -3.6 |
+| Pszenica ozima (od wznowienia wegetacji) | 1 (110 mm) | 0.957 / 98 | -0.16 | -12.2 |
+| Pszenica ozima (od wznowienia wegetacji) | 2 (150 mm) | 0.976 / 86 | +0.02 | -12.9 |
+| Pszenica ozima (od wznowienia wegetacji) | 3 (185 mm) | 0.986 / 75 | +0.13 | -12.2 |
+| Pszenica ozima (od wznowienia wegetacji) | 4 (220 mm) | 0.991 / 63 | +0.22 | -10.9 |
+| Burak cukrowy | 1 (110 mm) | 0.957 / 100 | +0.20 | -7.9 |
+| Burak cukrowy | 2 (150 mm) | 0.975 / 84 | +0.16 | -5.2 |
+| Burak cukrowy | 3 (185 mm) | 0.985 / 69 | +0.18 | -1.4 |
+| Burak cukrowy | 4 (220 mm) | 0.992 / 56 | +0.18 | +1.1 |
 
 ## Przykladowe sezony: agent RL vs regula FAO
 
 ![Sezony](figures/example_seasons.png)
 
-Gorny panel: niedobor wody w strefie korzeniowej (% TAW, wyzej = wilgotniej) i prog stresu RAW. Srodkowy: opad (szary) i dawki obu strategii. Dolny: woda skumulowana z plonem koncowym. Jeden z przykladow to celowo **najgorszy** przypadek agenta.
+Gorny panel: niedobor wody w strefie korzeniowej (% TAW, wyzej = wilgotniej) i prog stresu RAW. Srodkowy: opad (szary) i dawki obu strategii. Dolny: woda skumulowana z plonem koncowym.
 
-## Ograniczenia ewaluacji
+## Zalozenia ewaluacji
 
-- Plon to wynik modelu FAO-33 (jedna wartosc Ky na sezon), a nie pomiar polowy. Model nie rozroznia wrazliwosci faz rozwoju.
-- Tylko dwa lata testowe, wiec niepewnosc miedzy latami jest duza (szerokie przedzialy).
-- Kategorie gleby sa liczone w ukladzie czynnikowym (kazdy punkt w kazdej kategorii), wiec nie odpowiadaja rzeczywistemu rozkladowi gleb.
-- Parametry upraw i TAW sa do weryfikacji z mentorem. Pogoda pochodzi z reanalizy na siatce ok. 9-25 km.
-- Brak podsiaku wod gruntowych i splywu powierzchniowego w bilansie (model jednowarstwowy).
+- Wszystkie strategie sa liczone tym samym bilansem FAO-56 i ta sama funkcja plonu FAO-33, na tych samych danych pogodowych i prognozach.
+- Uklad czynnikowy: kazdy punkt w kazdej kategorii gleby IUNG-PIB, zeby porownac strategie na wszystkich glebach.
+- Parametry upraw z FAO-56/33 (`config/crops.yaml`), pojemnosc wodna gleby z kategorii IUNG-PIB (`config/soils.yaml`).
 

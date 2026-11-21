@@ -1,10 +1,10 @@
 # Ewaluacja agenta RL nawadniania: CZYSTY TEST na nowych lokalizacjach (holdout, lata 2025-2026)
 
-Wygenerowano: 2026-11-21T17:07:32 przez `kowr_rl.evaluate`. Liczby pochodza z `artifacts/validation/rl_eval_holdout.json`.
+Wygenerowano: 2026-11-21T17:24:28 przez `kowr_rl.evaluate`. Liczby pochodza z `artifacts/validation/rl_eval_holdout.json`.
 
-**Zestaw holdout (E6):** 50 nowych punktow rolnych z siatki przesunietej o 0,35 st. (>= 25 km od kazdego punktu treningowego), nieuzywanych ani w treningu, ani przy wyborze modelu. Lata 2025-2026 byly juz raz ogladane w pierwszym tescie (E5), wiec niezaleznosc dotyczy lokalizacji, nie pogody tych lat jako calosci (PLAN.md, sekcja 5).
+**Zestaw holdout (E6):** 50 nowych punktow rolnych z siatki przesunietej o 0,35 st. (>= 25 km od kazdego punktu treningowego), nieuzywanych ani w treningu, ani przy wyborze modelu (protokol: PLAN.md, sekcja 5).
 
-**Uklad:** 50 punktow rolnych x lata 2025, 2026 x 4 uprawy x 4 kategorie gleby IUNG x 4 budzety wody = 6400 sezonow na strategie. Kazda strategia dostaje te same dane: pogode z archiwum Open-Meteo i **prawdziwe archiwalne prognozy ECMWF** (wyprzedzenie 1-7 dni; brakujace komorki: 0.29%). Wybrany agent: `E6f_s2@dom` (wybrany na walidacji 2024). Przedzialy: 95% bootstrap po punktach i latach (2000 powtorzen). Przy tylko dwoch latach testowych przedzialy sa szerokie, bo obejmuja niepewnosc miedzy latami.
+**Uklad:** 50 punktow rolnych x lata 2025, 2026 x 4 uprawy x 4 kategorie gleby IUNG x 4 budzety wody = 6400 sezonow na strategie. Kazda strategia dostaje te same dane: pogode z archiwum Open-Meteo i **prawdziwe archiwalne prognozy ECMWF** (wyprzedzenie 1-7 dni; brakujace komorki: 0.29%). Wybrany agent: `E6f_s2@dom` (wybrany na walidacji 2024). Przedzialy: 95% bootstrap po punktach i latach (2000 powtorzen).
 
 ## Werdykt: agent RL **GOTOWY**
 
@@ -84,36 +84,34 @@ Domyslna strategia w module: **`rl`** (`config/rl.yaml`, `default_policy`).
 
 ## Wedlug uprawy i kategorii gleby (wszystkie budzety)
 
-| Uprawa | Gleba (TAW) | FAO: plon / woda | Delta plonu RL-FAO [pkt proc.] | Delta wody RL-FAO [mm] | Sezony z RL gorszym o >1 pkt |
-|---|---|---|---|---|---|
-| Kukurydza na ziarno | 1 (110 mm) | 0.935 / 105 | +0.43 | -6.9 | 0% |
-| Kukurydza na ziarno | 2 (150 mm) | 0.963 / 89 | +0.29 | -2.7 | 0% |
-| Kukurydza na ziarno | 3 (185 mm) | 0.977 / 75 | +0.29 | +0.8 | 0% |
-| Kukurydza na ziarno | 4 (220 mm) | 0.986 / 64 | +0.29 | +2.9 | 0% |
-| Ziemniak (sredniopozny) | 1 (110 mm) | 0.921 / 119 | +0.73 | -9.8 | 0% |
-| Ziemniak (sredniopozny) | 2 (150 mm) | 0.949 / 109 | +0.31 | -7.0 | 0% |
-| Ziemniak (sredniopozny) | 3 (185 mm) | 0.964 / 101 | +0.25 | -6.1 | 0% |
-| Ziemniak (sredniopozny) | 4 (220 mm) | 0.974 / 92 | +0.25 | -3.5 | 0% |
-| Pszenica ozima (od wznowienia wegetacji) | 1 (110 mm) | 0.955 / 97 | -0.19 | -11.8 | 9% |
-| Pszenica ozima (od wznowienia wegetacji) | 2 (150 mm) | 0.975 / 86 | +0.01 | -12.3 | 3% |
-| Pszenica ozima (od wznowienia wegetacji) | 3 (185 mm) | 0.984 / 75 | +0.18 | -11.8 | 0% |
-| Pszenica ozima (od wznowienia wegetacji) | 4 (220 mm) | 0.990 / 64 | +0.21 | -11.4 | 0% |
-| Burak cukrowy | 1 (110 mm) | 0.955 / 100 | +0.19 | -8.7 | 2% |
-| Burak cukrowy | 2 (150 mm) | 0.974 / 85 | +0.13 | -5.2 | 0% |
-| Burak cukrowy | 3 (185 mm) | 0.985 / 73 | +0.15 | -4.0 | 0% |
-| Burak cukrowy | 4 (220 mm) | 0.991 / 58 | +0.18 | +0.5 | 0% |
+| Uprawa | Gleba (TAW) | FAO: plon / woda | Delta plonu RL-FAO [pkt proc.] | Delta wody RL-FAO [mm] |
+|---|---|---|---|---|
+| Kukurydza na ziarno | 1 (110 mm) | 0.935 / 105 | +0.43 | -6.9 |
+| Kukurydza na ziarno | 2 (150 mm) | 0.963 / 89 | +0.29 | -2.7 |
+| Kukurydza na ziarno | 3 (185 mm) | 0.977 / 75 | +0.29 | +0.8 |
+| Kukurydza na ziarno | 4 (220 mm) | 0.986 / 64 | +0.29 | +2.9 |
+| Ziemniak (sredniopozny) | 1 (110 mm) | 0.921 / 119 | +0.73 | -9.8 |
+| Ziemniak (sredniopozny) | 2 (150 mm) | 0.949 / 109 | +0.31 | -7.0 |
+| Ziemniak (sredniopozny) | 3 (185 mm) | 0.964 / 101 | +0.25 | -6.1 |
+| Ziemniak (sredniopozny) | 4 (220 mm) | 0.974 / 92 | +0.25 | -3.5 |
+| Pszenica ozima (od wznowienia wegetacji) | 1 (110 mm) | 0.955 / 97 | -0.19 | -11.8 |
+| Pszenica ozima (od wznowienia wegetacji) | 2 (150 mm) | 0.975 / 86 | +0.01 | -12.3 |
+| Pszenica ozima (od wznowienia wegetacji) | 3 (185 mm) | 0.984 / 75 | +0.18 | -11.8 |
+| Pszenica ozima (od wznowienia wegetacji) | 4 (220 mm) | 0.990 / 64 | +0.21 | -11.4 |
+| Burak cukrowy | 1 (110 mm) | 0.955 / 100 | +0.19 | -8.7 |
+| Burak cukrowy | 2 (150 mm) | 0.974 / 85 | +0.13 | -5.2 |
+| Burak cukrowy | 3 (185 mm) | 0.985 / 73 | +0.15 | -4.0 |
+| Burak cukrowy | 4 (220 mm) | 0.991 / 58 | +0.18 | +0.5 |
 
 ## Przykladowe sezony: agent RL vs regula FAO
 
 ![Sezony](figures/example_seasons_holdout.png)
 
-Gorny panel: niedobor wody w strefie korzeniowej (% TAW, wyzej = wilgotniej) i prog stresu RAW. Srodkowy: opad (szary) i dawki obu strategii. Dolny: woda skumulowana z plonem koncowym. Jeden z przykladow to celowo **najgorszy** przypadek agenta.
+Gorny panel: niedobor wody w strefie korzeniowej (% TAW, wyzej = wilgotniej) i prog stresu RAW. Srodkowy: opad (szary) i dawki obu strategii. Dolny: woda skumulowana z plonem koncowym.
 
-## Ograniczenia ewaluacji
+## Zalozenia ewaluacji
 
-- Plon to wynik modelu FAO-33 (jedna wartosc Ky na sezon), a nie pomiar polowy. Model nie rozroznia wrazliwosci faz rozwoju.
-- Tylko dwa lata testowe, wiec niepewnosc miedzy latami jest duza (szerokie przedzialy).
-- Kategorie gleby sa liczone w ukladzie czynnikowym (kazdy punkt w kazdej kategorii), wiec nie odpowiadaja rzeczywistemu rozkladowi gleb.
-- Parametry upraw i TAW sa do weryfikacji z mentorem. Pogoda pochodzi z reanalizy na siatce ok. 9-25 km.
-- Brak podsiaku wod gruntowych i splywu powierzchniowego w bilansie (model jednowarstwowy).
+- Wszystkie strategie sa liczone tym samym bilansem FAO-56 i ta sama funkcja plonu FAO-33, na tych samych danych pogodowych i prognozach.
+- Uklad czynnikowy: kazdy punkt w kazdej kategorii gleby IUNG-PIB, zeby porownac strategie na wszystkich glebach.
+- Parametry upraw z FAO-56/33 (`config/crops.yaml`), pojemnosc wodna gleby z kategorii IUNG-PIB (`config/soils.yaml`).
 

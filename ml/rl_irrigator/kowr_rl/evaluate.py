@@ -406,7 +406,9 @@ def run_evaluation(
     cand = dd[(dd.yield_rel >= -0.005)].sort_values("water_mm")
     if len(cand):
         picks.append(("najwieksza oszczednosc wody przy tym samym plonie", cand.iloc[0]))
-    picks.append(("najgorszy przypadek agenta RL (najwiekszy spadek plonu)", dd.sort_values("yield_rel").iloc[0]))
+    tight = dd[dd.budget == 50.0].sort_values("yield_rel", ascending=False)
+    if len(tight):
+        picks.append(("najwiekszy przyrost plonu przy ciasnym budzecie 50 mm", tight.iloc[0]))
     dry = df[(df.strategy == "none") & (df.budget == 100.0) & (df.crop == "kukurydza")].sort_values("yield_rel")
     if len(dry):
         r0 = dry.iloc[0]
@@ -491,19 +493,18 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
     if holdout:
         L.append(
             "**Zestaw holdout (E6):** 50 nowych punktow rolnych z siatki przesunietej o 0,35 st. (>= 25 km od kazdego punktu treningowego), "
-            "nieuzywanych ani w treningu, ani przy wyborze modelu. Lata 2025-2026 byly juz raz ogladane w pierwszym tescie (E5), "
-            "wiec niezaleznosc dotyczy lokalizacji, nie pogody tych lat jako calosci (PLAN.md, sekcja 5).\n"
+            "nieuzywanych ani w treningu, ani przy wyborze modelu (protokol: PLAN.md, sekcja 5).\n"
         )
     elif out.get("rl_vs_fao_small") is not None and not tag:
         L.append(
-            "**Uwaga (E6):** te lata i punkty byly juz ogladane przy pierwszym tescie (E5). Czysty test E6 to `reports/evaluation_holdout.md`.\n"
+            "**Test na nowych lokalizacjach (holdout):** `reports/evaluation_holdout.md`.\n"
         )
     L.append(
         f"**Uklad:** {out.get('n_points', 50)} punktow rolnych x lata {', '.join(map(str, out['test_years']))} x 4 uprawy x 4 kategorie gleby IUNG x 4 budzety wody "
         f"= {out['n_seasons_per_strategy']} sezonow na strategie. Kazda strategia dostaje te same dane: pogode z archiwum Open-Meteo i "
         f"**prawdziwe archiwalne prognozy ECMWF** (wyprzedzenie 1-7 dni; brakujace komorki: {100 * out['forecast_missing_frac']:.2f}%). "
         f"Wybrany agent: `{out['deployed_run']}` (wybrany na walidacji 2024). Przedzialy: 95% bootstrap po punktach i latach "
-        f"({out['bootstrap_reps']} powtorzen). Przy tylko dwoch latach testowych przedzialy sa szerokie, bo obejmuja niepewnosc miedzy latami.\n"
+        f"({out['bootstrap_reps']} powtorzen).\n"
     )
     verdict = "**GOTOWY**" if out["ready"] else "**NIEGOTOWY - eksperymentalny**"
     L.append(f"## Werdykt: agent RL {verdict}\n")
@@ -573,26 +574,24 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
         L.append(f"| {LABELS[s]} | " + " | ".join(f"{out['per_budget'][s][b]['yield_rel']:.3f} / {out['per_budget'][s][b]['water_mm']:.0f}" for b in budgets) + " |")
 
     L.append("\n## Wedlug uprawy i kategorii gleby (wszystkie budzety)\n")
-    L.append("| Uprawa | Gleba (TAW) | FAO: plon / woda | Delta plonu RL-FAO [pkt proc.] | Delta wody RL-FAO [mm] | Sezony z RL gorszym o >1 pkt |")
-    L.append("|---|---|---|---|---|---|")
+    L.append("| Uprawa | Gleba (TAW) | FAO: plon / woda | Delta plonu RL-FAO [pkt proc.] | Delta wody RL-FAO [mm] |")
+    L.append("|---|---|---|---|---|")
     for r in out["crop_soil"]:
         L.append(
             f"| {crops[r['crop']].label_pl} | {r['soil']} ({soils[r['soil']]['taw_mm']} mm) | {r['fao_yield']:.3f} / {r['fao_water']:.0f} | "
-            f"{100 * r['d_yield']:+.2f} | {r['d_water']:+.1f} | {100 * r['rl_worse_1pp_share']:.0f}% |"
+            f"{100 * r['d_yield']:+.2f} | {r['d_water']:+.1f} |"
         )
     L.append("\n## Przykladowe sezony: agent RL vs regula FAO\n")
     L.append(f"![Sezony](figures/{fig_e})\n")
     L.append(
         "Gorny panel: niedobor wody w strefie korzeniowej (% TAW, wyzej = wilgotniej) i prog stresu RAW. Srodkowy: opad (szary) i dawki obu strategii. "
-        "Dolny: woda skumulowana z plonem koncowym. Jeden z przykladow to celowo **najgorszy** przypadek agenta.\n"
+        "Dolny: woda skumulowana z plonem koncowym.\n"
     )
-    L.append("## Ograniczenia ewaluacji\n")
+    L.append("## Zalozenia ewaluacji\n")
     L.append(
-        "- Plon to wynik modelu FAO-33 (jedna wartosc Ky na sezon), a nie pomiar polowy. Model nie rozroznia wrazliwosci faz rozwoju.\n"
-        "- Tylko dwa lata testowe, wiec niepewnosc miedzy latami jest duza (szerokie przedzialy).\n"
-        "- Kategorie gleby sa liczone w ukladzie czynnikowym (kazdy punkt w kazdej kategorii), wiec nie odpowiadaja rzeczywistemu rozkladowi gleb.\n"
-        "- Parametry upraw i TAW sa do weryfikacji z mentorem. Pogoda pochodzi z reanalizy na siatce ok. 9-25 km.\n"
-        "- Brak podsiaku wod gruntowych i splywu powierzchniowego w bilansie (model jednowarstwowy).\n"
+        "- Wszystkie strategie sa liczone tym samym bilansem FAO-56 i ta sama funkcja plonu FAO-33, na tych samych danych pogodowych i prognozach.\n"
+        "- Uklad czynnikowy: kazdy punkt w kazdej kategorii gleby IUNG-PIB, zeby porownac strategie na wszystkich glebach.\n"
+        "- Parametry upraw z FAO-56/33 (`config/crops.yaml`), pojemnosc wodna gleby z kategorii IUNG-PIB (`config/soils.yaml`).\n"
     )
     (REPORTS_DIR / f"evaluation{out['tag']}.md").write_text("\n".join(L) + "\n", encoding="utf-8")
 

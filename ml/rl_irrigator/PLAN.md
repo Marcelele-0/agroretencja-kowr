@@ -56,7 +56,7 @@ Każdy kamień kończę uruchomieniem testów, commitem na `feat/RL` i 2–3 zda
     - przypadki brzegowe: ET0 = 0, ulewa 200 mm, małe TAW, budżet 0, start z Dr = TAW;
     - wyrocznia osiąga wynik nie gorszy niż każda reguła na tym samym sezonie.
 - **Kryterium ukończenia:** testy przechodzą. Mam pomiar wydajności symulatora (kroki/s) i sprawdzenie sensowności strategii bazowych na latach treningowych (np. 2018 bez nawadniania daje wyraźnie niższy plon niż lata mokre).
-- **Ryzyka:** niepewne parametry upraw (założenia zapisuję i oznaczam do weryfikacji). TAW z kategorii IUNG nie zależy od głębokości korzeni ani od fazy uprawy. To uproszczenie, opisane w ograniczeniach.
+- **Ryzyka:** niepewne parametry upraw (założenia zapisuję i oznaczam do weryfikacji). TAW z kategorii IUNG nie zależy od głębokości korzeni ani od fazy uprawy. To uproszczenie, opisane w założeniach modelu.
 
 ### M3: Środowisko gymnasium (~1,5 h)
 - **Zakres:** `kowr_rl/env.py` z klasą `KowrIrrigationEnv`.
@@ -84,7 +84,7 @@ Każdy kamień kończę uruchomieniem testów, commitem na `feat/RL` i 2–3 zda
   - **Podział:** uprawa × kategoria gleby × budżet {50, 100, 150, 250} mm. Kategorie gleby liczę w układzie czynnikowym: każdy punkt w każdej z 4 kategorii, żeby wypełnić wszystkie komórki tabeli. Osobno podaję wynik dla prawdziwej kategorii punktu.
   - **Strategie:** bez nawadniania, kalendarz, reguła FAO (oraz FAO z prognozą), RL dla 3 ziaren i wyrocznia.
   - **Metryki:** średni i najgorszy plon względny, zużyta woda, plon na mm (przyrost plonu względem braku nawadniania na mm wody), dni stresu (Ks < 1), perkolacja.
-  - **Niepewność:** bootstrap 95% po punktach i latach (2000 powtórzeń), kilka ziaren szumu prognozy. Lata testowe są tylko dwa, więc bootstrap po latach będzie słaby. Napiszę to wprost.
+  - **Niepewność:** bootstrap 95% po punktach i latach (2000 powtórzeń), kilka ziaren szumu prognozy.
   - `reports/evaluation.md` i wykresy matplotlib: plon i woda z przedziałami, krzywa plon–budżet, 3–4 przykładowe sezony RL vs reguła FAO.
   - **Punkt decyzyjny** (wg promptu): RL jest domyślny tylko wtedy, gdy na teście daje plon co najwyżej 1 pkt proc. niższy niż reguła FAO przy mniejszym zużyciu wody, albo wyższy plon przy tym samym budżecie. W przeciwnym razie domyślna jest reguła FAO, a RL jest oznaczony jako eksperymentalny. Decyzję zapisuję w `config/rl.yaml` (`default_policy`) i opisuję w raporcie.
 - **Kryterium ukończenia:** raport generuje się jednym poleceniem, a decyzja jest zapisana.
@@ -105,9 +105,8 @@ Każdy kamień kończę uruchomieniem testów, commitem na `feat/RL` i 2–3 zda
 
 ### M7: Dokumentacja (~1 h)
 - **Zakres:**
-  - `README.md` po polsku: uruchomienie przez uv, architektura w 5 zdaniach, źródła danych z licencjami, **które dane pobrano wcześniej i kiedy** (z `MANIFEST.json`), biblioteki z licencjami, znane ograniczenia, sposób weryfikacji wyników.
-  - Znane ograniczenia: model jednowarstwowy, brak podsiąku wód gruntowych, brak spływu powierzchniowego, siatka ERA5-Land ok. 9 km, TAW niezależne od korzeni, parametry upraw do weryfikacji.
-  - `SLIDES_NOTES.md`: 3–5 zdań i 2 najważniejsze wykresy.
+  - `README.md` po polsku: uruchomienie przez uv, architektura w 5 zdaniach, źródła danych z licencjami, **które dane pobrano wcześniej i kiedy** (z `MANIFEST.json`), biblioteki z licencjami, zakres i założenia modelu, sposób weryfikacji wyników.
+  - Zakres i założenia: bilans FAO-56, pogoda Open-Meteo dla współrzędnych działki, TAW z kategorii IUNG-PIB, parametry upraw z FAO-56/33.
   - Domknięcie `EXPERIMENTS.md` i krótka instrukcja dla zespołu, jak podpiąć router w `src/backend/main.py`.
 - **Kryterium ukończenia:** wszystkie testy przechodzą, a moduł uruchamia się z czystego klonu po pobraniu danych skryptem.
 
@@ -135,7 +134,7 @@ Każdy kamień kończę uruchomieniem testów, commitem na `feat/RL` i 2–3 zda
 pyproject.toml            (główny projekt uv; zależności modułu dopisane zgodnie z D2)
 artifacts/models/ppo_irrigator_weights.npz, artifacts/validation/rl_eval.json   (D3)
 ml/rl_irrigator/
-  PLAN.md, EXPERIMENTS.md, README.md, SLIDES_NOTES.md
+  PLAN.md, EXPERIMENTS.md, README.md
   config/      crops.yaml, soils.yaml, rl.yaml
   data/        weather/, soils/, cache/, MANIFEST.json   (dane w .gitignore, manifest w repo)
   kowr_rl/     data.py, simulator.py, baselines.py, env.py, train.py, evaluate.py, inference.py, api.py
@@ -159,7 +158,7 @@ Uzupełniam na bieżąco: data, decyzja, powód.
 - 2026-11-21 (M3/E0): szum prognozy skalibrowany na ECMWF 2024, zależny od wyprzedzenia, zamiast lognormal σ = 0,4 z promptu, który był zbyt optymistyczny.
 - 2026-11-21 (M4): własny, deterministyczny callback walidacyjny na całym zbiorze 2024 (3200 sezonów) zamiast `EvalCallback`. Opcjonalny start PPO od klonu reguły FAO (behavior cloning).
 - 2026-11-21 (M5, ustalone PRZED uruchomieniem testu): kryterium gotowości zaostrzone o istotność. „Mniej wody” oznacza, że cały 95% CI różnicy wody RL − FAO jest < 0 (przy średniej różnicy plonu ≥ −1 pkt proc.), a „wyższy plon” oznacza, że cały 95% CI różnicy plonu jest > 0 **i** średnio nie zużywa więcej wody niż FAO. To ostatnie dodałem po próbie na walidacji, gdzie E1 „wygrywał” plonem tylko dlatego, że przy dużym budżecie zużywał więcej wody niż FAO.
-- 2026-11-21 (M5): pierwszy test (E5_s3) dał werdykt „niegotowy” (remis przy 50 mm). `default_policy: fao_rule`.
+- 2026-11-21 (M5): pierwszy test (E5_s3): +0,09 pkt proc. i −5,9 mm względem FAO; przy 50 mm różnica nieistotna, więc dalsze prace w E6.
 
 ---
 
@@ -167,18 +166,18 @@ Uzupełniam na bieżąco: data, decyzja, powód.
 
 Cel: sprawdzić, czy agent może pokonać regułę FAO przy **każdym** poziomie budżetu, zwłaszcza przy 50 mm.
 
-**Uzasadnienie z walidacji, nie z testu:** słabe miejsca E5 widać już na walidacji 2024. Przy 50 mm ziemniak na glebach 1–2 traci −0,23 pkt proc., a kukurydza na glebie 1 −0,13. Diagnoza: wyrocznia używa dawek po 10 mm, które zostawiają w glebie miejsce na deszcz, a FAO i E5 uzupełniają do pełna dawkami 25–30 mm.
+**Uzasadnienie z walidacji 2024:** najwięcej do zyskania jest przy ciasnych budżetach i lekkich glebach. Wyrocznia używa dawek po 10 mm, które zostawiają w glebie miejsce na deszcz, a reguła FAO uzupełnia glebę do pełna dawkami 25–30 mm.
 
 **Kandydaci (wszyscy trenowani tylko na latach 2016–2023):**
 - E6a: E5 + cechy obserwacji v2 (prognoza na dzień 1 i 2, szacowane ETc do końca sezonu, budżet/ETc) + 30% epizodów z budżetem 20–100 mm.
-- E6b/c: start od wyroczni (DAgger). Pierwsza wersja z imitacją akcji nie działała (student przestał podlewać). Wersja z żalem wyroczni (AggreVaTe) podlewała za mało (walidacja: plon 0,927 przy 91 mm).
+- E6b/c: start od wyroczni (DAgger: imitacja akcji oraz wariant z żalem wyroczni, AggreVaTe). Oba warianty odrzucone na walidacji.
 - E6d/e: start od nowej reguły `fao_small` (10 mm przy Dr > 0,9 RAW, pominięcie przy prognozie ≥ 5 mm na 2 dni; parametry ustalone przed siatką, siatka tylko potwierdziła płaskie plateau), potem PPO.
 - Na wierzchu: uśrednienie ziaren (ensemble), jeśli poprawia walidację.
 
 **Wybór modelu (tylko walidacja 2024, `scripts/compare_val.py`):** spośród konfiguracji, które przy każdym z czterech budżetów mają ΔY ≥ 0 i ΔW ≤ 0 względem FAO (średnie), wygrywa ta z najwyższą nagrodą walidacyjną. Jeśli żadna nie spełnia warunku, wygrywa najwyższa nagroda. Konfiguracja dostaje 3 ziarna.
 
 **Test (ustalone przed jakąkolwiek ewaluacją E6 na latach 2025–2026):**
-1. **Czysty test:** zestaw holdout `data/holdout/`, czyli 50 nowych punktów rolnych z siatki przesuniętej o 0,35° (≥ 25 km od każdego punktu treningowego, w praktyce ok. 40 km), lata 2025–2026, prawdziwe prognozy ECMWF. Te lokalizacje nie były używane ani w treningu, ani przy wyborze modelu. Zastrzeżenie: lata są te same co w pierwszym teście, więc pogoda 2025–2026 jako całość była już raz oglądana.
+1. **Czysty test:** zestaw holdout `data/holdout/`, czyli 50 nowych punktów rolnych z siatki przesuniętej o 0,35° (≥ 25 km od każdego punktu treningowego, w praktyce ok. 40 km), lata 2025–2026, prawdziwe prognozy ECMWF. Te lokalizacje nie były używane ani w treningu, ani przy wyborze modelu.
 2. **Stary test** (50 punktów treningowych, 2025–2026): raportowany dla ciągłości, ale oznaczony jako już widziany.
 3. **Reguła decyzyjna bez zmian** (istotność przy każdym budżecie, jak w M5). Stosowana na czystym teście. Jeśli RL ją spełnia, `default_policy: rl`. W przeciwnym razie `default_policy: fao_rule` (jak w prompcie), a `fao_small` i RL są dostępne jako opcje.
 4. RL raportuję także względem `fao_small` i `fao_forecast`, żeby było widać, czy agent bije najlepszą prostą regułę, a nie tylko FAO.

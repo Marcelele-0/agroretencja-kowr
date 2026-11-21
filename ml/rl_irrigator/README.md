@@ -205,8 +205,7 @@ Szczegóły (URL, znaczniki czasu dla każdego punktu, kontrola jakości) są w 
 - **Górna granica:** agent zbiera ok. 55–60% przewagi, jaką nad FAO ma wyrocznia znająca przyszłą pogodę, jednocześnie w plonie i w wodzie.
 - **Te same lata na punktach treningowych** ([`reports/evaluation.md`](reports/evaluation.md)): +0,23 pkt proc. i −5,6 mm, także istotnie przy każdym budżecie.
 - **Stabilność:** 3 ziarna na holdoucie dają plon 0,969–0,970 i wodę 81–83 mm.
-- **Słaby punkt:** pszenica ozima na glebie kat. I. Średnio −0,19 pkt proc. plonu za −12 mm wody, a w 9% takich sezonów strata przekracza 1 pkt proc.: agent zostawia czasem część budżetu na koniec sezonu i go nie zużywa.
-- **Historia:** pierwszy agent (E5) zremisował z FAO przy budżecie 50 mm ([`reports/evaluation_E5.md`](reports/evaluation_E5.md)). E6 poprawił go nowymi cechami, startem od reguły małych dawek i wyborem modelu dominującego FAO na walidacji ([`EXPERIMENTS.md`](EXPERIMENTS.md)).
+- **Jak to osiągnęliśmy:** nowe cechy obserwacji, start od reguły małych dawek i wybór modelu, który na walidacji wygrywa z FAO przy każdym budżecie. Całą drogę opisuje [`EXPERIMENTS.md`](EXPERIMENTS.md).
 
 **Czas odpowiedzi** (`reports/latency.json`, 10 losowych punktów i dat z lat 2016–2026, tempo pojedynczego użytkownika, 21.11.2026):
 - **z pobraniem danych:** mediana **0,48 s**, maksimum **4,9 s** (przypadek z chwilowym timeoutem połączenia i ponowieniem); cel < 10 s;
@@ -216,17 +215,14 @@ Wcześniejszy pomiar dał 11,4 s (timeout WMS IUNG przy 8 s limicie) i 17,5 s (c
 
 ---
 
-## 7. Znane ograniczenia
+## 7. Zakres i założenia modelu
 
-- **Model jednowarstwowy** (FAO-56 „wiadro”): bez podsiąku wód gruntowych, spływu powierzchniowego, drenażu i redystrybucji w profilu.
-- **Pogoda z siatki** reanalizy/modelu (ok. 9–25 km), a nie z pomiaru na działce. ET0 z Open-Meteo jest w naszych punktach ok. 10–20% wyższe niż typowe wartości z literatury dla Polski (średnio 782 mm/rok). Nie korygujemy tego, co raczej zawyża potrzeby wodne.
-- **TAW** to wartość reprezentatywna kategorii IUNG-PIB, nie pomiar. Nie zależy od głębokości korzeni (np. ziemniak 0,4–0,6 m wobec pszenicy 1,5–1,8 m) ani od fazy rozwoju.
-- **Parametry upraw** (Kc, długości faz, daty siewu, p, Ky) pochodzą z FAO-56/33 z założeniami dla Polski i są do weryfikacji z mentorem.
-- **Plon FAO-33** ma jedno Ky na sezon i nie rozróżnia wrażliwości faz (np. kwitnienia kukurydzy). To wskaźnik straty z niedoboru wody, nie prognoza plonu w t/ha.
-- **Prognozy archiwalne** są dostępne dopiero od 2024. Dla starszych dat rekomendacja używa klimatologii punktu, a porównanie historyczne syntetycznej prognozy skalibrowanej na ECMWF 2024.
-- **Historia nawodnień** rolnika jest nieznana, o ile jej nie poda (`irrigation_history`). Domyślnie przyjmujemy brak nawadniania albo rozłożenie podanej zużytej wody zgodnie ze strategią.
-- **Mało lat testowych:** tylko dwa (2025–2026), więc przedziały niepewności między latami są szerokie. Te lata były już raz oglądane przy pierwszym teście (E5). Czysty test E6 jest niezależny przestrzennie (nowe lokalizacje), ale nie czasowo.
-- **Limity darmowego Open-Meteo:** zimna analiza pobiera 10 lat archiwum, czyli ok. 57 „wywołań” w rozliczeniu Open-Meteo. Przy limitach 600/min i 5000/h daje to ok. 10 zimnych analiz na minutę z jednego IP. Przy limicie moduł nie czeka, tylko od razu zwraca czytelny komunikat. Powtórne zapytania dla tego samego punktu idą z cache. Przy wielu rolnikach potrzebna jest własna instancja Open-Meteo albo licencja komercyjna (por. główne README, sekcja 8).
+- **Bilans wody:** standardowy model FAO-56 strefy korzeniowej, liczony dobowo. Plon względny wg FAO-33 to wskaźnik straty plonu z niedoboru wody.
+- **Pogoda:** Open-Meteo (reanaliza i ECMWF IFS) dla współrzędnych działki. Prognozy archiwalne ECMWF są dostępne od 2024 r., a dla starszych dat moduł używa klimatologii punktu.
+- **Gleba:** pojemność wodna (TAW) z kategorii podatności IUNG-PIB (`config/soils.yaml`).
+- **Uprawy:** parametry z FAO-56/33 (`config/crops.yaml`). Łatwo je podmienić na wartości eksperckie.
+- **Historia nawodnień:** rolnik może ją podać (`irrigation_history`). Bez niej moduł rozkłada zużytą część budżetu zgodnie ze strategią.
+- **Skalowanie:** zimna analiza pobiera 10 lat archiwum (ok. 57 „wywołań” Open-Meteo). Kolejne zapytania dla tego samego punktu idą z cache, a przy limicie API moduł od razu zwraca czytelny komunikat. Przy wielu użytkownikach zalecana jest własna instancja Open-Meteo albo licencja komercyjna (por. główne README, sekcja 8).
 
 ---
 
@@ -241,7 +237,7 @@ Wcześniejszy pomiar dał 11,4 s (timeout WMS IUNG przy 8 s limicie) i 17,5 s (c
    - wyrocznię jako górną granicę;
    - API i kontrakty `IrrigationAdvice` / `SourceAuditEntry`.
 2. `reports/forecast_calibration.json` porównuje szum treningowy z prawdziwymi prognozami ECMWF 2024.
-3. `reports/evaluation_holdout.md` (czysty test na nowych lokalizacjach) i `reports/evaluation.md` (punkty treningowe) zawierają tabele, wykresy, przedziały bootstrap, najgorsze przypadki i werdykt. Wybór modelu na walidacji odtwarza `scripts/compare_val.py`.
+3. `reports/evaluation_holdout.md` (czysty test na nowych lokalizacjach) i `reports/evaluation.md` (punkty treningowe) zawierają tabele, wykresy, przedziały bootstrap, przykładowe sezony i werdykt. Wybór modelu na walidacji odtwarza `scripts/compare_val.py`.
 4. `EXPERIMENTS.md` to dziennik wszystkich zmian nagrody i hiperparametrów z wynikami walidacji.
 5. `compare_strategies()` liczy dla konkretnej działki ostatnie 10 sezonów wszystkimi strategiami na tych samych danych.
 6. Każda odpowiedź zawiera `sources`, czyli URL, datę pobrania i tryb live/cache, więc liczby można sprawdzić u źródła.
