@@ -103,8 +103,8 @@ export function MapHome() {
   const analyse = () => {
     const [first, ...rest] = sel;
     if (!first) return;
-    const q = new URLSearchParams({ dzialka: first.id, uprawa: cropOfId(first.id), data: date });
-    if (rest.length) q.set("inne", rest.map((p) => `${p.id}~${cropOfId(p.id)}`).join(","));
+    const q = new URLSearchParams({ dzialki: sel.map((p) => `${p.id}~${cropOfId(p.id)}`).join(","), aktywna: first.id, data: date });
+    void rest;
     nav(`/analiza?${q}`);
   };
   /** Weather is fetched on intent (pointer or focus on the panel), not on every click: Open-Meteo has a daily quota. */

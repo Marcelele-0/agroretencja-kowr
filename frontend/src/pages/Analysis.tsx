@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
 import type { AnalysisResponse, RlRecommendResponse } from "../api/contract";
 import { computeLocal, longestDrought, soilCause, withLevers, type Levers, type LocalResult } from "../analysis/local";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
-import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropDateForm, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, signed, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
+import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropDateForm, CropSelect, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, signed, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, cropOf as cropInfo, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
@@ -21,33 +21,48 @@ const NAV: { id: string; label: string; icon: IconName }[] = [
 ];
 const NO_LEVERS: Levers = { addMm: 0, etCut: 0 };
 
+/** Water-state colour token of a stage, for the frame of an expanded parcel. */
+function stateVar(n: number | null | undefined): string {
+  if (n === null || n === undefined) return "var(--line-strong)";
+  return `var(--${n < 0 ? `dry-${-n}` : n > 0 ? `wet-${n}` : "optimum"})`;
+}
+
+/**
+ * URL: dzialki=id~crop,id~crop (fixed order of the list), aktywna=id (expanded parcel), data=ISO.
+ * Old links (dzialka, uprawa, inne) still open.
+ */
+function readList(sp: URLSearchParams): { items: { id: string; crop: CropCode }[]; activeId: string } {
+  const parse = (raw: string | null, fallback: CropCode) => (raw ?? "").split(",").map((x) => x.trim()).filter(Boolean)
+    .map((e) => { const [id, c] = e.split("~"); return { id: id!, crop: isCropCode(c) ? c : fallback }; });
+  const legacyCrop = isCropCode(sp.get("uprawa")) ? (sp.get("uprawa") as CropCode) : DEFAULT_CROP;
+  let items = parse(sp.get("dzialki"), DEFAULT_CROP);
+  if (!items.length && sp.get("dzialka")) items = [{ id: sp.get("dzialka")!, crop: legacyCrop }, ...parse(sp.get("inne"), legacyCrop)];
+  items = items.filter((x, i) => items.findIndex((y) => y.id === x.id) === i);
+  const want = sp.get("aktywna") ?? sp.get("dzialka");
+  return { items, activeId: items.some((x) => x.id === want) ? want! : items[0]?.id ?? "" };
+}
+
 export function Analysis() {
   const [sp, setSp] = useSearchParams();
-  const parcelId = sp.get("dzialka") ?? "";
-  /** Other parcels as "id~crop"; a missing crop falls back to the crop of the displayed parcel. */
-  const otherEntries = (sp.get("inne") ?? "").split(",").map((s) => s.trim()).filter(Boolean).map((e) => e.split("~")).filter(([id]) => id && id !== parcelId);
-  const others = otherEntries.map((e) => e[0]!);
-  const rawCrop = sp.get("uprawa");
-  const crop: CropCode = isCropCode(rawCrop) ? rawCrop : DEFAULT_CROP;
+  const { items, activeId } = readList(sp);
+  const parcelId = activeId;
+  const crop: CropCode = items.find((x) => x.id === activeId)?.crop ?? DEFAULT_CROP;
   const rawDate = sp.get("data");
   const { min, max } = dateBounds();
   const date: Iso = isIso(rawDate) && rawDate >= min && rawDate <= max ? rawDate : todayIso();
   const st = useAnalysis({ parcelId, crop, date });
-  const ids = useMemo(() => [parcelId, ...others], [parcelId, others.join(",")]);
-  const cropOf = (id: string): CropCode => { if (id === parcelId) return crop; const c = otherEntries.find(([x]) => x === id)?.[1]; return isCropCode(c) ? c : crop; };
-  const items = useMemo(() => ids.map((id) => ({ id, crop: cropOf(id) })), [ids.join(","), sp.get("inne"), crop]);
-  const portfolio = usePortfolio(ids.length > 1 ? items : [], date);
-  const encodeOthers = (list: string[]) => list.map((id) => `${id}~${cropOf(id)}`).join(",");
+  const key = items.map((x) => `${x.id}~${x.crop}`).join(",");
+  const stableItems = useMemo(() => items, [key]);
+  const portfolio = usePortfolio(stableItems, date);
 
   const [active, setActive] = useState("ocena");
   const [addMode, setAddMode] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
-  const setQuery = (patch: Record<string, string | null>) => {
-    const next = new URLSearchParams(sp);
-    Object.entries(patch).forEach(([k, v]) => (v === null || v === "" ? next.delete(k) : next.set(k, v)));
-    setSp(next);
+  const write = (next: { id: string; crop: CropCode }[], nextActive: string, extra: Record<string, string> = {}) => {
+    const q = new URLSearchParams({ dzialki: next.map((x) => `${x.id}~${x.crop}`).join(","), aktywna: nextActive, data: date, ...extra });
+    setSp(q);
   };
 
   const parcel = st.parcel.status === "ready" ? st.parcel.data : null;
@@ -63,15 +78,13 @@ export function Analysis() {
     const io = new IntersectionObserver((es) => { const v = es.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]; if (v) setActive(v.target.id); }, { rootMargin: "-20% 0px -60% 0px" });
     els.forEach((e) => io.observe(e));
     return () => io.disconnect();
-  }, [st.parcel.status, !!local, showIrr]);
+  }, [st.parcel.status, !!local, showIrr, activeId]);
 
   const zones = useMemo<MapZone[] | null>(() => backend?.map_layers?.zones?.features.map((f) => ({ geometry: f.geometry, value: f.properties.value })) ?? null, [backend]);
-  /** Every selected parcel on the map, coloured by its water state; the displayed one has the hatch. */
-  const mapParcels = useMemo<MapParcel[]>(() => {
-    const main = parcel ? [{ id: parcel.id, geometry: parcel.geometry, value: local?.stage ?? null, active: true, label: `${parcel.number}, ${parcel.region}` }] : [];
-    const rest = portfolio.flatMap((r) => (r.id !== parcelId && r.parcel.status === "ready" ? [{ id: r.id, geometry: r.parcel.data.geometry, value: r.local?.stage ?? null, active: false, label: `${r.parcel.data.number}, ${r.parcel.data.region}` }] : []));
-    return [...main, ...rest];
-  }, [parcel, local?.stage, portfolio, parcelId]);
+  const stageOf = (r: PortfolioRow) => (r.id === activeId ? local?.stage ?? r.local?.stage ?? null : r.local?.stage ?? null);
+  /** Every parcel on the map, coloured by its water state; the expanded one has the hatch. */
+  const mapParcels = useMemo<MapParcel[]>(() => portfolio.flatMap((r) => (r.parcel.status === "ready"
+    ? [{ id: r.id, geometry: r.parcel.data.geometry, value: stageOf(r), active: r.id === activeId, label: `${r.parcel.data.number}, ${r.parcel.data.region}` }] : [])), [portfolio, activeId, local?.stage]);
 
   if (!parcelId) return <Navigate to="/" replace />;
   const pdf = parcel && backendCrop(crop) ? reportPdfUrl({ parcel_id: parcel.id, crop: backendCrop(crop)!, analysis_date: date }) : null;
@@ -81,31 +94,67 @@ export function Analysis() {
     setAddError(null);
     try {
       const p = await parcelByPoint(lon, lat);
-      if (p.id === parcelId || others.includes(p.id)) return;
-      setQuery({ inne: [encodeOthers(others), `${p.id}~${crop}`].filter(Boolean).join(",") });
+      if (items.some((x) => x.id === p.id)) return;
+      write([...items, { id: p.id, crop }], activeId);
     } catch (e) {
       setAddError(message(e));
     }
   };
-  const makeActive = (id: string) => setQuery({ dzialka: id, uprawa: cropOf(id), inne: encodeOthers(ids.filter((x) => x !== id)) });
+  const show = (id: string) => write(items, id);
+  const setCropOf = (id: string, c: CropCode) => write(items.map((x) => (x.id === id ? { ...x, crop: c } : x)), activeId);
   const remove = (id: string) => {
-    if (id === parcelId) { const [next, ...rest] = others; if (next) setQuery({ dzialka: next, uprawa: cropOf(next), inne: encodeOthers(rest) }); return; }
-    setQuery({ inne: encodeOthers(others.filter((x) => x !== id)) });
+    const next = items.filter((x) => x.id !== id);
+    if (!next.length) return;
+    write(next, id === activeId ? next[Math.max(0, items.findIndex((x) => x.id === id) - 1)]!.id : activeId);
   };
   const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const overlay = (
     <>
-      <Pill tone="glass" pressed={addMode} onClick={() => { setAddMode((v) => !v); setAddError(null); }}>{addMode ? "Zakończ dodawanie" : "Dodaj działkę do porównania"}</Pill>
+      <Pill tone="glass" pressed={addMode} onClick={() => { setAddMode((v) => !v); setAddError(null); }}>{addMode ? "Zakończ dodawanie" : "Dodaj działkę"}</Pill>
       {addMode ? <p className="rs-map__hint">{addError ?? "Kliknij działkę na mapie."}</p> : null}
+    </>
+  );
+
+  const body = (
+    <>
+      {st.parcel.status === "error" ? <ErrorCard text={st.parcel.message} /> : null}
+      {land?.kind === "nonAgri" && parcel ? <ErrorCard text={`${land.label}: działka ${parcel.number} nie jest gruntem rolnym. Rusałka analizuje grunty orne, łąki, pastwiska i sady.`} /> : null}
+      {st.parcel.status !== "error" && land?.kind !== "nonAgri" ? (
+        <>
+          <section id="ocena" className="rs-section">
+            {local ? <Assessment local={local} onPickDate={(d) => write(items, activeId, { data: d })} /> : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
+          </section>
+          <section id="przyczyny" className="rs-section">
+            <h3 className="ar-section-title">{causesTitle(local)}</h3>
+            <Causes local={local} backend={backend} land={landForCalc(st.land)} weatherFailed={!!weatherFailed} />
+          </section>
+          <section id="retencja" className="rs-section">
+            <h3 className="ar-section-title">Od czego zacząć</h3>
+            <Retention local={local} backend={backend} weatherFailed={!!weatherFailed} picked={picked} onPick={togglePick} />
+          </section>
+          {local && st.weather.status === "ready" ? (
+            <section id="symulacja" className="rs-section">
+              <h3 className="ar-section-title">Co jeśli</h3>
+              <WhatIf base={local} st={st} crop={crop} date={date} picked={picked} onPick={togglePick} />
+            </section>
+          ) : null}
+          {local && showIrr ? (
+            <section id="nawadnianie" className="rs-section">
+              <h3 className="ar-section-title">Nawadnianie</h3>
+              <Irrigation local={local} rl={rl} />
+            </section>
+          ) : null}
+        </>
+      ) : null}
     </>
   );
 
   return (
     <div className="rs-analysis">
       <header className="rs-ahead">
-        <Link to={parcel ? `/?dzialka=${encodeURIComponent(parcel.id)}` : "/"} aria-label="Wróć do mapy"><Wordmark /></Link>
-        <p className="rs-ahead__parcel ar-muted">{parcel ? <>Działka {parcel.number}, obręb {parcel.region}, gm. {parcel.commune} · {ha(parcel.areaHa)} ha · {cropInfo(crop).label.toLowerCase()} · {formatLong(date)}</> : parcelId}</p>
+        <Link to={`/?dzialki=${encodeURIComponent(key)}`} aria-label="Wróć do mapy"><Wordmark /></Link>
+        <p className="rs-ahead__parcel ar-muted">{items.length === 1 ? "1 działka" : `${items.length} działki`} · {formatLong(date)}</p>
         {pdf ? <Button variant="light" arrow="down" href={pdf}>Pobierz raport PDF</Button> : <Button variant="light" arrow="down" onClick={() => window.print()}>Pobierz raport PDF</Button>}
       </header>
 
@@ -116,46 +165,44 @@ export function Analysis() {
         </aside>
 
         <main className="rs-main">
-          <CropDateForm className="rs-recalc" crop={crop} date={date} hideSubmit onSubmit={() => undefined}
-            onCrop={(c) => setQuery({ uprawa: c })} onDate={(d) => setQuery({ data: d })} />
-
-          {ids.length > 1 ? <Portfolio rows={portfolio} activeId={parcelId} onShow={makeActive} onRemove={remove} /> : null}
-
-          {st.parcel.status === "error" ? <ErrorCard text={st.parcel.message} /> : null}
-          {land?.kind === "nonAgri" && parcel ? <ErrorCard text={`${land.label}: działka ${parcel.number} nie jest gruntem rolnym. Rusałka analizuje grunty orne, łąki, pastwiska i sady.`} /> : null}
-
-          {st.parcel.status !== "error" && land?.kind !== "nonAgri" ? (
-            <>
-              <section id="ocena" className="rs-section">
-                <h2 className="ar-section-title">Sytuacja wodna {formatLong(date)}</h2>
-                {local ? <Assessment local={local} onPickDate={(d) => setQuery({ data: d })} /> : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
-              </section>
-              <section id="przyczyny" className="rs-section">
-                <h2 className="ar-section-title">{causesTitle(local)}</h2>
-                <Causes local={local} backend={backend} land={landForCalc(st.land)} weatherFailed={!!weatherFailed} />
-              </section>
-              <section id="retencja" className="rs-section">
-                <h2 className="ar-section-title">Od czego zacząć</h2>
-                <Retention local={local} backend={backend} weatherFailed={!!weatherFailed} picked={picked} onPick={togglePick} />
-              </section>
-              {local && st.weather.status === "ready" ? (
-                <section id="symulacja" className="rs-section">
-                  <h2 className="ar-section-title">Co jeśli</h2>
-                  <WhatIf base={local} st={st} crop={crop} date={date} picked={picked} onPick={togglePick} />
-                </section>
-              ) : null}
-              {local && showIrr ? (
-                <section id="nawadnianie" className="rs-section">
-                  <h2 className="ar-section-title">Nawadnianie</h2>
-                  <Irrigation local={local} rl={rl} />
-                </section>
-              ) : null}
-              <section id="raport" className="rs-section">
-                <h2 className="ar-section-title">Źródła danych</h2>
-                <Sources sources={st.sources} backend={backend} elapsed={st.elapsedMs} />
-              </section>
-            </>
-          ) : null}
+          <div className="rs-listhead">
+            <h2 className="ar-section-title">Twoje działki</h2>
+            <CropDateForm className="rs-recalc" hideCrop hideSubmit crop={crop} date={date} onCrop={() => undefined} onSubmit={() => undefined} onDate={(d) => write(items, activeId, { data: d })} />
+          </div>
+          <ol className="rs-plist">
+            {portfolio.map((r) => {
+              const p = r.parcel.status === "ready" ? r.parcel.data : null;
+              const on = r.id === activeId;
+              const stage = stageOf(r);
+              const rl2 = on ? local : r.local;
+              return (
+                <li key={r.id} className={`rs-pitem${on ? " is-on" : ""}`} style={{ "--state": stateVar(stage) } as CSSProperties}>
+                  <div className="rs-pitem__row" role={on ? undefined : "button"} tabIndex={on ? undefined : 0} aria-expanded={on}
+                    onClick={() => !on && show(r.id)} onKeyDown={(e) => { if (!on && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); show(r.id); } }}>
+                    <div className="rs-pitem__name">
+                      <b>{p ? `Działka ${p.number}, ${p.region}` : r.id}</b>
+                      <span>{p ? `gm. ${p.commune} · ${ha(p.areaHa)} ha` : "…"}{r.land?.kind === "mineral" ? ` · gleba kat. ${r.land.category}` : ""}</span>
+                    </div>
+                    <div className="rs-pitem__crop" onClick={(e) => on && e.stopPropagation()}>
+                      {on ? <CropSelect value={r.crop} onChange={(c) => setCropOf(r.id, c)} label={`Uprawa na działce ${p?.number ?? r.id}`} /> : <span>{cropInfo(r.crop).label}</span>}
+                    </div>
+                    <div className="rs-pitem__state">{rl2 ? <WaterBalance size="sm" value={stage} /> : <span className="ar-muted">{r.land?.kind === "nonAgri" ? "grunt nierolny" : r.error ?? "…"}</span>}</div>
+                    {!on && r.local ? <div className="rs-pitem__mini"><StateTimeline compact days={r.local.timeline} selected={r.local.date} today={todayIso()} /></div> : null}
+                    {items.length > 1 ? (
+                      <span className="rs-pitem__remove" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="icon" size="sm" icon="minus" label={`Usuń działkę ${p?.number ?? r.id} z listy`} onClick={() => remove(r.id)} />
+                      </span>
+                    ) : null}
+                  </div>
+                  {on ? <div className="rs-pitem__body">{body}</div> : null}
+                </li>
+              );
+            })}
+          </ol>
+          <section id="raport" className="rs-section">
+            <h2 className="ar-section-title">Źródła danych</h2>
+            <Sources sources={st.sources} backend={backend} elapsed={st.elapsedMs} />
+          </section>
           {import.meta.env.DEV ? <DevHooks st={st} /> : null}
         </main>
       </div>
@@ -221,38 +268,6 @@ function ErrorCard({ text, retry }: { text: string; retry?: boolean }) {
 }
 function Skeleton({ lines }: { lines: string[] }) {
   return <div className="rs-skel" aria-busy="true" aria-label="Wczytuję dane">{lines.map((l) => <div key={l} className="ar-card rs-skel__card"><span className="rs-skel__bar" /><span className="rs-skel__bar rs-skel__bar--short" /></div>)}</div>;
-}
-
-function Portfolio({ rows, activeId, onShow, onRemove }: { rows: PortfolioRow[]; activeId: string; onShow: (id: string) => void; onRemove: (id: string) => void }) {
-  const today = todayIso();
-  return (
-    <section className="rs-section" aria-label="Porównanie działek">
-      <h2 className="ar-section-title">Twoje działki</h2>
-      <div className="rs-pcards">
-        {rows.map((r) => {
-          const p = r.parcel.status === "ready" ? r.parcel.data : null;
-          const on = r.id === activeId;
-          const nonAgri = r.land?.kind === "nonAgri";
-          return (
-            <div key={r.id} className={`rs-pc${on ? " is-on" : ""}`} role="button" tabIndex={on ? -1 : 0} aria-current={on ? "true" : undefined}
-              aria-label={p ? `Działka ${p.number}, ${p.region}${on ? ", wyświetlana" : ", pokaż analizę"}` : r.id}
-              onClick={() => !on && onShow(r.id)} onKeyDown={(e) => { if (!on && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onShow(r.id); } }}>
-              <div className="rs-pc__head">
-                <b>{p ? `Działka ${p.number}, ${p.region}` : r.id}</b>
-                <span>{cropInfo(r.crop).label} · {p ? `${ha(p.areaHa)} ha` : "…"}{r.land?.kind === "mineral" ? ` · gleba kat. ${r.land.category}` : ""}</span>
-              </div>
-              {r.local ? <WaterBalance size="sm" value={r.local.stage} /> : <span className="ar-muted">{nonAgri ? "Poza zakresem: grunt nierolny" : r.error ?? "Wczytuję…"}</span>}
-              {r.local ? <StateTimeline compact days={r.local.timeline} selected={r.local.date} today={today} /> : null}
-              {r.local ? <span className="rs-pc__foot">{r.local.knownCount ? `Susza wg IUNG: ${r.local.droughtCount} z ${r.local.knownCount} okien` : "Brak progu IUNG dla tej uprawy"}</span> : null}
-              <span className="rs-pc__remove" onClick={(e) => e.stopPropagation()}>
-                <Button variant="icon" size="sm" icon="minus" label={`Usuń działkę ${p?.number ?? r.id} z porównania`} onClick={() => onRemove(r.id)} />
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
 }
 
 function Assessment({ local, onPickDate }: { local: LocalResult; onPickDate: (d: Iso) => void }) {
