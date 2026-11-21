@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { backendEnabled, postAnalyze, postRlCompare, postRlRecommend } from "../api/backend";
+import { BackendError, backendEnabled, postAnalyze, postRlCompare, postRlRecommend } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse } from "../api/contract";
 import { backendCrop, type CropCode } from "../lib/crops";
 import { inSeason, todayIso, type Iso } from "../lib/dates";
@@ -10,7 +10,7 @@ import { STATIC_SOURCES, type SourceEntry } from "../lib/sources";
 import { parcelById, ParcelNotFound, ULDK_URL, type Parcel } from "../lib/uldk";
 import { computeLocal, type LocalResult } from "./local";
 
-export type Res<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string } | { status: "off" };
+export type Res<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string; httpStatus?: number; code?: string } | { status: "off" };
 export interface AnalysisQuery { parcelId: string; crop: CropCode; date: Iso }
 export interface AnalysisState {
   parcel: Res<Parcel>;
@@ -34,6 +34,13 @@ export function message(e: unknown): string {
   if (e instanceof ParcelNotFound) return "ULDK nie zna działki o tym numerze.";
   if (e instanceof SourceError) return e.message;
   return e instanceof Error ? e.message : "Nieznany błąd.";
+}
+function errorRes(e: unknown) {
+  return {
+    status: "error" as const,
+    message: message(e),
+    ...(e instanceof BackendError ? { httpStatus: e.status, code: e.code } : {}),
+  };
 }
 /** Land use for the calculation: the IUNG answer, or "no data" when the layer failed (the KBW still works without it). */
 export function landForCalc(land: Res<LandUse>): LandUse | null {
@@ -108,7 +115,7 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
       import("../api/fixtures").then((m) => { if (!ctl.signal.aborted) setRlCompare({ status: "ready", data: m.RL_COMPARE_FIXTURE }); });
     } else if (backendEnabled) {
       setRlCompare(LOADING);
-      postRlCompare({ parcel_id: p.id, crop: q.crop }, ctl.signal).then((data) => setRlCompare({ status: "ready", data }), (e) => !isAbort(e) && setRlCompare({ status: "error", message: message(e) }));
+      postRlCompare({ parcel_id: p.id, crop: q.crop }, ctl.signal).then((data) => setRlCompare({ status: "ready", data }), (e) => !isAbort(e) && setRlCompare(errorRes(e)));
     } else {
       setRlCompare(OFF);
     }
@@ -123,13 +130,13 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
     prevTarget.current = { parcelId: p.id, crop: q.crop };
     if (backendEnabled && bc) {
       if (!sameTarget) setBackend(LOADING);
-      postAnalyze({ parcel_id: p.id, crop: bc, analysis_date: q.date }, ctl.signal).then((data) => setBackend({ status: "ready", data }), (e) => !isAbort(e) && setBackend({ status: "error", message: message(e) }));
+      postAnalyze({ parcel_id: p.id, crop: bc, analysis_date: q.date }, ctl.signal).then((data) => setBackend({ status: "ready", data }), (e) => !isAbort(e) && setBackend(errorRes(e)));
     } else if (import.meta.env.DEV && new URLSearchParams(location.search).has("fixtures")) {
       import("../api/fixtures").then((m) => { if (!ctl.signal.aborted) setBackend({ status: "ready", data: m.BACKEND_FIXTURE }); });
     } else setBackend(OFF);
     if (backendEnabled && inSeason(q.date)) {
       if (!sameTarget) setRl(LOADING);
-      postRlRecommend({ parcel_id: p.id, crop: q.crop, date: q.date, plan_days: RL_PLAN_DAYS }, ctl.signal).then((data) => setRl({ status: "ready", data }), (e) => !isAbort(e) && setRl({ status: "error", message: message(e) }));
+      postRlRecommend({ parcel_id: p.id, crop: q.crop, date: q.date, plan_days: RL_PLAN_DAYS }, ctl.signal).then((data) => setRl({ status: "ready", data }), (e) => !isAbort(e) && setRl(errorRes(e)));
     } else setRl(OFF);
     return () => ctl.abort();
   }, [p, q.crop, q.date]);

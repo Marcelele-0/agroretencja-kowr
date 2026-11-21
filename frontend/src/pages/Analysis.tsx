@@ -1,19 +1,22 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
-import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
-import type { AnalysisResponse, RlCompareResponse, RlPlan14d, RlRecommendResponse, RlSoilZoneDay, RlSource } from "../api/contract";
+import { API_URL, backendEnabled, postWhatIf, reportPdfUrl } from "../api/backend";
+import type { AnalysisResponse, RlCompareResponse, RlPlan14d, RlRecommendResponse, RlSoilZoneDay, RlSource, WhatIfScenarioResult } from "../api/contract";
 import { computeLocal, soilCause, withLevers, type Levers, type LocalResult, type TimelineDay } from "../analysis/local";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
 import { BAL, balStep, cx, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, simForBackend, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, cropOf, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, isoOf, minIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
+import { isAbort } from "../lib/http";
 import { thresholdsFor, type LandUse } from "../lib/iung";
 import { activeWindow, kbw60, progressiveSeasonWindows, riskFromStage, seasonWindows, stageAt, sumOf, type KbwWindow } from "../lib/kbw";
 import { coversRange, seasonWeatherFor, type DailySeries } from "../lib/openMeteo";
 import type { SourceEntry } from "../lib/sources";
 import { containsPoint } from "../lib/geo";
 import { ParcelMap, type MapParcel, type MapZone } from "../map/ParcelMap";
+import { PrintReport } from "../report/PrintReport";
+import { ReportDocumentBuilder } from "../report/reportBuilder";
 import { dec, ha, mm, timePl } from "./shared";
 
 const NAV: { id: string; label: string; icon: IconName }[] = [
@@ -79,6 +82,7 @@ export function Analysis() {
   const [active, setActive] = useState("ocena");
   const [pickedByParcel, setPickedByParcel] = useState<Record<string, string[]>>({});
   const picked = useMemo(() => new Set(pickedByParcel[activeId] ?? []), [pickedByParcel, activeId]);
+  const [whatIfData, setWhatIfData] = useState<WhatIfScenarioResult | null>(null);
   const [replay, setReplay] = useState<ReplayState>(REPLAY_INIT);
   const replaySeq = useRef(0);
 
@@ -90,6 +94,9 @@ export function Analysis() {
   const parcel = st.parcel.status === "ready" ? st.parcel.data : null;
   const land = st.land.status === "ready" ? st.land.data : null;
   const backend = st.backend.status === "ready" ? st.backend.data : null;
+  const backendErr = st.backend.status === "error" ? st.backend : null;
+  const backendRefused = !!backendErr && (backendErr.code === "not_arable" || backendErr.httpStatus === 422);
+  const backendNonFatalError = backendErr && !backendRefused ? backendErr.message : null;
   const local = useMemo(() => withBackend(st.local, backend), [st.local, backend]);
   const rl = st.rl.status === "ready" ? st.rl.data : null;
   const weatherFailed = st.weather.status === "error" ? st.weather.message : null;
@@ -103,6 +110,7 @@ export function Analysis() {
   useEffect(() => {
     replaySeq.current++;
     setReplay(REPLAY_INIT);
+    setWhatIfData(null);
   }, [activeId, date]);
 
   useEffect(() => {
@@ -128,29 +136,6 @@ export function Analysis() {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [replay.active, replay.playing, replay.speed, replayDates.length]);
-
-  useEffect(() => {
-    const onBefore = () => {
-      document.querySelectorAll<HTMLDetailsElement>(".rs-analysis details:not(.rs-dev)").forEach((d) => {
-        if (!d.open) {
-          d.dataset.printOpen = "1";
-          d.open = true;
-        }
-      });
-    };
-    const onAfter = () => {
-      document.querySelectorAll<HTMLDetailsElement>('.rs-analysis details[data-print-open="1"]').forEach((d) => {
-        d.open = false;
-        delete d.dataset.printOpen;
-      });
-    };
-    window.addEventListener("beforeprint", onBefore);
-    window.addEventListener("afterprint", onAfter);
-    return () => {
-      window.removeEventListener("beforeprint", onBefore);
-      window.removeEventListener("afterprint", onAfter);
-    };
-  }, []);
 
   useEffect(() => {
     const els = NAV.map((n) => document.getElementById(n.id)).filter((e): e is HTMLElement => !!e);
@@ -311,11 +296,41 @@ export function Analysis() {
     onApplyDate: () => { if (replayDate && replayDate >= min && replayDate <= max) write(items, activeId, { data: replayDate }); },
   };
 
+  const reportDoc = useMemo(() => {
+    const builder = new ReportDocumentBuilder().setMetadata(date, timePl(new Date()));
+    for (const r of portfolio) {
+      const isAct = r.id === activeId;
+      const rowParcel = r.parcel.status === "ready" ? r.parcel.data : (isAct ? parcel : null);
+      const rowLand = isAct ? activeLand : r.land;
+      const rowNonAgri = rowLand?.kind === "nonAgri" && rowParcel
+        ? `${rowLand.label}: działka ${rowParcel.number} nie jest gruntem rolnym. Rusałka analizuje grunty orne, łąki, pastwiska i sady.`
+        : isAct && backendRefused && backendErr
+          ? backendErr.message
+          : null;
+      builder.addParcelSheet({
+        parcelId: r.id,
+        parcel: rowParcel,
+        crop: r.crop,
+        land: rowLand,
+        local: isAct ? local : r.local,
+        backend: isAct ? backend : null,
+        rl: isAct ? rl : null,
+        rlCompare: isAct ? rlCompare : null,
+        whatIfBackend: isAct ? whatIfData : null,
+        pickedMeasures: new Set(pickedByParcel[r.id] ?? []),
+        sources: isAct ? st.sources : undefined,
+        nonAgriMessage: rowNonAgri,
+      });
+    }
+    return builder.build();
+  }, [portfolio, activeId, date, parcel, activeLand, local, backend, backendRefused, st.backend, rl, rlCompare, whatIfData, pickedByParcel, st.sources]);
+
   const body = (
     <>
       {st.parcel.status === "error" ? <ErrorCard text={st.parcel.message} /> : null}
       {land?.kind === "nonAgri" && parcel ? <ErrorCard text={`${land.label}: działka ${parcel.number} nie jest gruntem rolnym. Rusałka analizuje grunty orne, łąki, pastwiska i sady.`} /> : null}
-      {st.parcel.status !== "error" && land?.kind !== "nonAgri" ? (
+      {backendRefused && backendErr && land?.kind !== "nonAgri" ? <ErrorCard text={backendErr.message} /> : null}
+      {st.parcel.status !== "error" && land?.kind !== "nonAgri" && !backendRefused ? (
         <>
           <section id="ocena" className="rs-section">
             {local ? <Assessment local={local} components={backendComponents(backend?.assessment)} replay={replayView} onPickDate={(d) => write(items, activeId, { data: d })} /> : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
@@ -326,7 +341,7 @@ export function Analysis() {
           </section>
           <section id="retencja" className="rs-section">
             <h3 className="ar-section-title">Co możesz zrobić</h3>
-            <Measures parcelId={activeId} local={local} st={st} backend={backend} crop={crop} date={date} weatherFailed={!!weatherFailed} picked={picked} onPick={togglePick} />
+            <Measures parcelId={activeId} local={local} st={st} backend={backend} crop={crop} date={date} weatherFailed={!!weatherFailed} picked={picked} onPick={togglePick} onWhatIfData={setWhatIfData} />
           </section>
           {local && showIrr ? (
             <section id="nawadnianie" className="rs-section">
@@ -391,6 +406,7 @@ export function Analysis() {
               </label>
             </div>
             {st.updating ? <p className="rs-updating" role="status" aria-live="polite">Aktualizuję dane dla {formatLong(date)}…</p> : null}
+            {backendNonFatalError ? <p className="rs-updating" role="status">{backendNonFatalError} (wyświetlam ocenę lokalną).</p> : null}
             {body}
           </section>
 
@@ -402,6 +418,7 @@ export function Analysis() {
         </main>
       </div>
       <FloatingNav className="rs-fnav" items={NAV.filter((n) => n.id !== "nawadnianie" || showIrr)} active={active} onChange={go} />
+      <PrintReport doc={reportDoc} />
     </div>
   );
 }
@@ -667,10 +684,16 @@ const stageName = (n: number | null) => (n === null ? "brak danych" : BAL[String
  * One list of measures: the whole card toggles it into the simulation. Each measure is simulated alone to rank
  * the list by water gain; the selected ones are simulated together below the list.
  */
-function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, picked, onPick }: {
-  parcelId: string; local: LocalResult | null; st: AnalysisState; backend: AnalysisResponse | null; crop: CropCode; date: Iso; weatherFailed: boolean; picked: Set<string>; onPick: (id: string) => void;
+function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, picked, onPick, onWhatIfData }: {
+  parcelId: string; local: LocalResult | null; st: AnalysisState; backend: AnalysisResponse | null; crop: CropCode; date: Iso; weatherFailed: boolean; picked: Set<string>; onPick: (id: string) => void; onWhatIfData?: (res: WhatIfScenarioResult | null) => void;
 }) {
   const [own, setOwn] = useState<Levers | null>(null);
+  const [whatIf, setWhatIf] = useState<{ key: string; loading: boolean; data: WhatIfScenarioResult | null; error: string | null }>({
+    key: "",
+    loading: false,
+    data: null,
+    error: null,
+  });
   const land = landForCalc(st.land);
   const series = st.weather.status === "ready" ? st.weather.data : null;
   const recs = backend?.retention?.recommendations;
@@ -692,6 +715,38 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
   const lv = own ?? preset;
   const combined = useMemo(() => (lv.addMm || lv.etCut ? run(lv) : null), [lv, series, land, crop, date]);
   const dryYears = (r: LocalResult) => r.years.filter((y) => y.value !== null && y.value <= -3).length;
+
+  const bc = backendCrop(crop);
+  const pickedSorted = [...picked].sort().join(",");
+  const whatIfKey = backendEnabled && backend && bc && own === null && picked.size > 0
+    ? `${parcelId}|${bc}|${date}|${pickedSorted}`
+    : "";
+
+  useEffect(() => {
+    if (!whatIfKey || !bc) {
+      setWhatIf({ key: "", loading: false, data: null, error: null });
+      onWhatIfData?.(null);
+      return;
+    }
+    const ctl = new AbortController();
+    setWhatIf((prev) => ({ key: whatIfKey, loading: true, data: prev.data, error: null }));
+    postWhatIf({ parcel_id: parcelId, crop: bc, analysis_date: date, enabled_measures: [...picked] }, ctl.signal).then(
+      (data) => {
+        if (ctl.signal.aborted) return;
+        setWhatIf({ key: whatIfKey, loading: false, data, error: null });
+        onWhatIfData?.(data);
+      },
+      (e) => {
+        if (ctl.signal.aborted || isAbort(e)) return;
+        setWhatIf({ key: whatIfKey, loading: false, data: null, error: message(e) });
+        onWhatIfData?.(null);
+      },
+    );
+    return () => ctl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [whatIfKey]);
+
+  const activeWhatIf = whatIfKey && whatIf.key === whatIfKey ? whatIf.data : null;
 
   if (!local && !recs && !weatherFailed) return <Skeleton lines={["Działania"]} />;
   const groups = [{ title: "Bez urządzeń wodnych", items: ordered.filter((m) => !m.permit) }, { title: "Wymaga zgody Wód Polskich", items: ordered.filter((m) => m.permit) }];
@@ -734,33 +789,64 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
         <div className="ar-card rs-whatif">
           <h4 className="rs-subtitle">Z wybranymi działaniami</h4>
           <p className="ar-card__text">
-            {combined ? "Porównanie stanu obecnego z wybranymi założeniami." : "Wybierz działanie powyżej albo przesuń suwaki poniżej."}
+            {activeWhatIf
+              ? `Symulacja FAO-56 + SCS-CN (rok odniesienia ${activeWhatIf.reference_dry_year}).`
+              : combined
+                ? "Porównanie stanu obecnego z wybranymi założeniami."
+                : "Wybierz działanie powyżej albo przesuń suwaki poniżej."}
           </p>
+          {whatIf.loading && whatIfKey ? <p className="rs-updating" role="status">Przeliczam symulację na serwerze…</p> : null}
+          {whatIf.error && whatIfKey ? <p className="rs-updating" role="status">{whatIf.error} (wynik lokalny poniżej).</p> : null}
           <table className="rs-compare">
             <colgroup><col className="rs-compare__k" /><col className="rs-compare__v" /><col className="rs-compare__v" /></colgroup>
             <thead><tr><th /><th>Teraz</th><th>Z działaniami</th></tr></thead>
-            <tbody>
-              <tr>
-                <td>Stan wody</td>
-                <td><WaterBalance size="sm" value={local.stage} /></td>
-                <td className={combined ? undefined : "rs-compare__same"}><WaterBalance size="sm" value={(combined ?? local).stage} /></td>
-              </tr>
-              <tr>
-                <td>Bilans wody z 60 dni</td>
-                <td>{mm(local.kbw60)} mm</td>
-                <td className={combined ? undefined : "rs-compare__same"}>{mm((combined ?? local).kbw60)} mm</td>
-              </tr>
-              <tr>
-                <td>Okna z suszą IUNG w sezonie {local.season}</td>
-                <td>{local.droughtCount} z {local.knownCount}</td>
-                <td className={combined ? undefined : "rs-compare__same"}>{(combined ?? local).droughtCount} z {(combined ?? local).knownCount}</td>
-              </tr>
-              <tr>
-                <td>Lata z suszą ({formatDayMonth(date)}, 10 lat)</td>
-                <td>{dryYears(local)} z {local.years.length}</td>
-                <td className={combined ? undefined : "rs-compare__same"}>{dryYears(combined ?? local)} z {(combined ?? local).years.length}</td>
-              </tr>
-            </tbody>
+            {activeWhatIf ? (
+              <tbody>
+                <tr>
+                  <td>Strata plonu ({activeWhatIf.reference_dry_year})</td>
+                  <td>{dec(activeWhatIf.baseline_yield_loss_pct, 1)}%</td>
+                  <td><b>{dec(activeWhatIf.scenario_yield_loss_pct, 1)}%</b></td>
+                </tr>
+                <tr>
+                  <td>Dni stresu w sezonie</td>
+                  <td>{activeWhatIf.baseline_stress_days ?? "—"}</td>
+                  <td><b>{activeWhatIf.scenario_stress_days ?? "—"}</b></td>
+                </tr>
+                <tr>
+                  <td>Dodatkowa rezerwa wody</td>
+                  <td>0 dni</td>
+                  <td><b>+{activeWhatIf.delta_reserve_days} dni</b></td>
+                </tr>
+                <tr>
+                  <td>Zatrzymana woda{activeWhatIf.retained_runoff_mm ? ` (spływ −${dec(activeWhatIf.retained_runoff_mm, 0)} mm)` : ""}</td>
+                  <td>0 mm</td>
+                  <td><b>+{dec(activeWhatIf.saved_water_mm, 0)} mm</b></td>
+                </tr>
+              </tbody>
+            ) : (
+              <tbody>
+                <tr>
+                  <td>Stan wody</td>
+                  <td><WaterBalance size="sm" value={local.stage} /></td>
+                  <td className={combined ? undefined : "rs-compare__same"}><WaterBalance size="sm" value={(combined ?? local).stage} /></td>
+                </tr>
+                <tr>
+                  <td>Bilans wody z 60 dni</td>
+                  <td>{mm(local.kbw60)} mm</td>
+                  <td className={combined ? undefined : "rs-compare__same"}>{mm((combined ?? local).kbw60)} mm</td>
+                </tr>
+                <tr>
+                  <td>Okna z suszą IUNG w sezonie {local.season}</td>
+                  <td>{local.droughtCount} z {local.knownCount}</td>
+                  <td className={combined ? undefined : "rs-compare__same"}>{(combined ?? local).droughtCount} z {(combined ?? local).knownCount}</td>
+                </tr>
+                <tr>
+                  <td>Lata z suszą ({formatDayMonth(date)}, 10 lat)</td>
+                  <td>{dryYears(local)} z {local.years.length}</td>
+                  <td className={combined ? undefined : "rs-compare__same"}>{dryYears(combined ?? local)} z {(combined ?? local).years.length}</td>
+                </tr>
+              </tbody>
+            )}
           </table>
           <div className="rs-more rs-more--inline">
             <div className="rs-sliders__head">

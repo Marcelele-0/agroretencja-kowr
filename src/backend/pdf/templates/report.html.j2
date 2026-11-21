@@ -2,124 +2,231 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<title>AgroRetencja KOWR – raport działki {{ r.parcel.parcel_id }}</title>
+<title>Rusałka KOWR – raport działki {{ r.parcel.parcel_id }}</title>
 <style>
-  @page { size: A4; margin: 14mm 13mm 16mm 13mm;
-          @bottom-center { content: "AgroRetencja KOWR · {{ r.parcel.parcel_id }} · strona " counter(page) " z " counter(pages); font-size: 7.5pt; color: #666; } }
-  body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 9pt; color: #1b2a22; line-height: 1.35; }
-  h1 { font-size: 15pt; margin: 0 0 2mm; color: #12422b; }
-  h2 { font-size: 11pt; margin: 4mm 0 1.5mm; color: #12422b; border-bottom: 1px solid #b9d3c3; padding-bottom: 0.8mm; }
-  .meta { color: #4a5a50; font-size: 8.5pt; }
-  .row { display: flex; gap: 5mm; }
-  .col { flex: 1; }
-  .badge { display: inline-block; padding: 1mm 2.5mm; border-radius: 2mm; font-weight: bold; }
-  .r-niskie { background: #d8f0df; } .r-umiarkowane { background: #fff1c2; }
-  .r-wysokie { background: #ffd9b8; } .r-krytyczne { background: #ffc4c4; }
-  table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-top: 1mm; }
-  th, td { border-bottom: 1px solid #dfe8e2; padding: 0.8mm 1.2mm; text-align: left; vertical-align: top; }
-  th { background: #eef5f0; }
-  .big { font-size: 20pt; font-weight: bold; color: #12422b; }
-  .small { font-size: 7.5pt; color: #4a5a50; }
-  .advice { margin: 1mm 0; padding: 1.5mm 2mm; border-left: 2.5px solid #2f7d55; background: #f4f9f6; }
-  .p1 { border-left-color: #c0392b; } .p2 { border-left-color: #e67e22; }
-  img.map { width: 100%; border: 1px solid #ccd; }
-  .page-break { page-break-before: always; }
+  @page {
+    size: A4 portrait;
+    margin: 9mm 11mm 12mm 11mm;
+    @bottom-center {
+      content: "Rusałka (AgroRetencja KOWR) · {{ r.parcel.parcel_id }} · strona " counter(page) " z " counter(pages);
+      font-size: 7pt;
+      color: #56625a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "DejaVu Sans", Arial, sans-serif;
+    font-size: 7.6pt;
+    color: #13211a;
+    line-height: 1.24;
+    background: #ffffff;
+  }
+  .head {
+    padding-bottom: 1.4mm;
+    margin-bottom: 1.8mm;
+    border-bottom: 1.3pt solid #1d3a2a;
+  }
+  .brand {
+    display: inline-block;
+    font-size: 7.2pt;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #1d3a2a;
+    background: #edf0ea;
+    padding: 0.5mm 1.8mm;
+    border-radius: 3mm;
+    margin-bottom: 0.8mm;
+  }
+  h1 { font-size: 12pt; margin: 0 0 0.6mm; color: #13211a; }
+  h2 {
+    font-size: 8.8pt;
+    margin: 1.8mm 0 0.9mm;
+    color: #1d3a2a;
+    border-bottom: 0.7pt solid #d7dfd9;
+    padding-bottom: 0.4mm;
+    break-after: avoid;
+  }
+  .meta { color: #56625a; font-size: 7.1pt; }
+  .row { display: flex; gap: 2.8mm; align-items: stretch; }
+  .col { flex: 1; min-width: 0; }
+  .box {
+    background: #f4f6f2;
+    border: 0.6pt solid #d7dfd9;
+    border-radius: 1.8mm;
+    padding: 1.6mm 2.1mm;
+    break-inside: avoid;
+  }
+  .badge { display: inline-block; padding: 0.4mm 1.6mm; border-radius: 1.8mm; font-weight: bold; font-size: 7.1pt; }
+  .r-niskie { background: #e8f5e6; color: #1d3a2a; }
+  .r-umiarkowane { background: #fbf4db; color: #6e5005; }
+  .r-wysokie { background: #fbeee2; color: #8b3c10; }
+  .r-krytyczne { background: #fde6e1; color: #8c1d13; }
+  .scale { display: flex; gap: 0.8mm; margin: 1.1mm 0 0.5mm; align-items: center; }
+  .cell { flex: 1; height: 2mm; border-radius: 0.6mm; opacity: 0.4; }
+  .cell.on { height: 3mm; opacity: 1; border: 1pt solid #13211a; }
+  .ends { display: flex; justify-content: space-between; font-size: 6.4pt; color: #56625a; margin-bottom: 1mm; }
+  table { width: 100%; border-collapse: collapse; font-size: 6.9pt; margin-top: 0.4mm; break-inside: avoid; }
+  th, td { border-bottom: 0.5pt solid #d7dfd9; padding: 0.5mm 0.8mm; text-align: left; vertical-align: top; }
+  th { background: #edf0ea; color: #1d3a2a; font-weight: bold; }
+  tr:last-child td { border-bottom: 0; }
+  .big { font-size: 14.5pt; font-weight: bold; color: #1d3a2a; line-height: 1.05; }
+  .small { font-size: 6.8pt; color: #56625a; }
+  p { margin: 0.6mm 0; }
+  ul { margin: 0.6mm 0; padding-left: 3.6mm; font-size: 6.9pt; color: #13211a; }
+  .advice {
+    margin: 0.8mm 0;
+    padding: 1mm 1.8mm;
+    border-left: 2pt solid #1d3a2a;
+    background: #f4f6f2;
+    font-size: 7.1pt;
+    break-inside: avoid;
+  }
+  .p1 { border-left-color: #cf4629; }
+  .p2 { border-left-color: #e77e3d; }
+  .whatif-pill {
+    margin-top: 1mm;
+    padding: 0.9mm 1.6mm;
+    background: #c6ee7c;
+    border-radius: 1.2mm;
+    font-size: 7pt;
+    color: #13211a;
+  }
+  img.map {
+    max-height: 33mm;
+    width: auto;
+    max-width: 100%;
+    display: block;
+    margin: 1.2mm auto;
+    border: 0.6pt solid #d7dfd9;
+    border-radius: 1.4mm;
+    background: #ffffff;
+  }
+  .page-break { page-break-before: always; break-before: page; }
+  .sec { break-inside: avoid; }
 </style>
 </head>
 <body>
-<h1>Ocena wody na działce {{ r.parcel.parcel_id }}</h1>
-<div class="meta">
-  {{ r.parcel.voivodeship or "" }} · {{ r.parcel.county or "" }} · {{ r.parcel.commune or "" }} · obręb {{ r.parcel.region or "–" }} ·
-  {{ "%.2f"|format(r.parcel.area_ha) }} ha (z granic działki) · uprawa: {{ crop_label }} · data analizy: {{ a.analysis_date }} ·
-  wygenerowano {{ generated }}
+{% set state_step = a.water_state|round|int %}
+{% set palette = {
+  -5: "#a12a22", -4: "#cf4629", -3: "#e77e3d", -2: "#edba4c", -1: "#f0df78",
+   0: "#d3e37c",  1: "#abd97d",  2: "#6ebe7e",  3: "#3da38f",  4: "#247e93", 5: "#1a4876"
+} %}
+
+<div class="head">
+  <div class="brand">Rusałka · Raport oceny wody</div>
+  <h1>Ocena wody na działce {{ r.parcel.parcel_id }}</h1>
+  <div class="meta">
+    {{ r.parcel.voivodeship or "" }} · {{ r.parcel.county or "" }} · {{ r.parcel.commune or "" }} · obręb {{ r.parcel.region or "–" }} ·
+    {{ "%.2f"|format(r.parcel.area_ha) }} ha · uprawa: <b>{{ crop_label }}</b> · data analizy: <b>{{ a.analysis_date }}</b> · wygenerowano {{ generated }}
+  </div>
 </div>
 
 <h2>1. Ocena sytuacji wodnej</h2>
-<div class="row">
-  <div class="col">
+<div class="row sec">
+  <div class="col box">
     <div class="big">{{ "%+.1f"|format(a.water_state) }}</div>
-    <div class="small">stan wody w skali −5 (bardzo sucho) … +5 (bardzo mokro)</div>
+    <div class="small">stan wody (−5 skrajna susza … 0 optimum … +5 zalanie)</div>
+    <div class="scale">
+      {% for s in [-5,-4,-3,-2,-1,0,1,2,3,4,5] %}
+      <span class="cell{% if s == state_step %} on{% endif %}" style="background: {{ palette[s] }};"></span>
+      {% endfor %}
+    </div>
+    <div class="ends"><span>Susza (−5)</span><span>Optimum (0)</span><span>Nadmiar (+5)</span></div>
     <p>WaterScore <b>{{ "%.0f"|format(a.water_score.total) }}/100</b> ·
       ryzyko <span class="badge r-{{ a.water_risk.level.value }}">{{ a.water_risk.level.value }}</span> ·
       pewność danych: <b>{{ a.confidence.level.value }}</b></p>
     <p>{{ a.summary_text }}</p>
-    {% if a.water_risk.veto_reasons %}<p><b>Weto:</b> {{ a.water_risk.veto_reasons|join("; ") }}</p>{% endif %}
+    {% if a.water_risk.veto_reasons %}<p class="small"><b>Weto:</b> {{ a.water_risk.veto_reasons|join("; ") }}</p>{% endif %}
   </div>
-  <div class="col">
+  <div class="col box">
     <table>
       <tr><th>Wskaźnik</th><th>Wartość</th></tr>
       <tr><td>Zapas wody (strefa korzeniowa)</td><td>{{ "%.0f"|format(a.storage_pct_taw or 0) }}% z {{ "%.0f"|format(a.taw_mm) }} mm</td></tr>
       <tr><td>KBW {{ a.kbw_period_label or "" }}</td><td>{% if a.kbw_mm is not none %}{{ "%.0f"|format(a.kbw_mm) }} mm{% if a.kbw_threshold_mm is not none %} (próg {{ "%.0f"|format(a.kbw_threshold_mm) }} mm){% endif %}{% else %}brak{% endif %}</td></tr>
-      <tr><td>Susza wg progów IUNG (ostatnie okno)</td><td>{% if a.kbw_is_drought is none %}brak rozstrzygnięcia{% elif a.kbw_is_drought %}tak{% else %}nie{% endif %}</td></tr>
+      <tr><td>Susza IUNG (ostatnie okno)</td><td>{% if a.kbw_is_drought is none %}brak rozstrzygnięcia{% elif a.kbw_is_drought %}tak{% else %}nie{% endif %}</td></tr>
       <tr><td>Gleba</td><td>kat. {{ a.iung_category.value }} – {{ a.soil_source_layer }}</td></tr>
       <tr><td>Teren</td><td>spadek {{ "%.1f"|format(a.mean_slope_deg) }}°, spływ 60 dni {{ "%.0f"|format(a.runoff_60d_mm or 0) }} mm</td></tr>
-      <tr><td>Satelita NDMI</td><td>{% if a.ndmi_value is not none %}{{ "%.2f"|format(a.ndmi_value) }}{% if a.ndmi_is_reconstructed %} (odtworzone ML){% endif %}{% else %}brak bezchmurnego zdjęcia{% endif %}</td></tr>
+      <tr><td>Satelita NDMI</td><td>{% if a.ndmi_value is not none %}{{ "%.2f"|format(a.ndmi_value) }}{% if a.ndmi_is_reconstructed %} (ML){% endif %}{% else %}brak bezchmurnego zdjęcia{% endif %}</td></tr>
     </table>
   </div>
 </div>
 {% if chart %}<img class="map" src="data:image/png;base64,{{ chart }}" alt="Historia 10 lat">{% endif %}
 
-<h2>2. Przyczyny niedoboru wody</h2>
-<table>
-  <tr><th>Czynnik</th><th>Udział</th><th>Wyjaśnienie</th></tr>
-  <tr><td>Klimat (opad vs parowanie)</td><td>{{ "%.0f"|format(r.causes.climate_pct) }}%</td><td>{{ r.causes.explanations.get("klimat", "") }}</td></tr>
-  <tr><td>Gleba (pojemność wodna)</td><td>{{ "%.0f"|format(r.causes.soil_pct) }}%</td><td>{{ r.causes.explanations.get("gleba", "") }}</td></tr>
-  <tr><td>Spływ powierzchniowy (NMT)</td><td>{{ "%.0f"|format(r.causes.runoff_pct) }}%</td><td>{{ r.causes.explanations.get("splyw", "") }}</td></tr>
-  <tr><td>Uprawa (faza, zapotrzebowanie)</td><td>{{ "%.0f"|format(r.causes.crop_pct) }}%</td><td>{{ r.causes.explanations.get("uprawa", "") }}</td></tr>
-</table>
-<div class="small">Metoda: {{ r.causes.method }}</div>
+<div class="sec">
+  <h2>2. Przyczyny niedoboru wody</h2>
+  <table>
+    <tr><th>Czynnik</th><th>Udział</th><th>Wyjaśnienie</th></tr>
+    <tr><td>Klimat (opad vs parowanie)</td><td><b>{{ "%.0f"|format(r.causes.climate_pct) }}%</b></td><td>{{ r.causes.explanations.get("klimat", "") }}</td></tr>
+    <tr><td>Gleba (pojemność wodna)</td><td><b>{{ "%.0f"|format(r.causes.soil_pct) }}%</b></td><td>{{ r.causes.explanations.get("gleba", "") }}</td></tr>
+    <tr><td>Spływ powierzchniowy (NMT)</td><td><b>{{ "%.0f"|format(r.causes.runoff_pct) }}%</b></td><td>{{ r.causes.explanations.get("splyw", "") }}</td></tr>
+    <tr><td>Uprawa (faza, zapotrzebowanie)</td><td><b>{{ "%.0f"|format(r.causes.crop_pct) }}%</b></td><td>{{ r.causes.explanations.get("uprawa", "") }}</td></tr>
+  </table>
+  <div class="small">Metoda: {{ r.causes.method }}</div>
+</div>
 
 <h2>3. Zatrzymaj wodę tam, gdzie spadła – ranking działań</h2>
-<div class="row">
+<div class="row sec">
   <div class="col">
     <table>
-      <tr><th>#</th><th>Działanie</th><th>Efekt w roku {{ r.retention.what_if_default.reference_dry_year }}</th><th>Uwagi</th></tr>
-      {% for m in r.retention.recommendations[:8] %}
-      <tr><td>{{ m.priority_rank }}</td><td>{{ m.title }}</td>
-          <td>−{{ "%.1f"|format(m.effect_yield_pp) }} p.p. straty plonu, {{ m.effect_reserve_days }} dni stresu mniej</td>
-          <td>{% if m.requires_permit %}wymaga zgody Wód Polskich{% else %}{{ m.time_to_effect or "" }}{% endif %}</td></tr>
+      <tr><th>#</th><th>Działanie</th><th>Efekt ({{ r.retention.what_if_default.reference_dry_year }})</th><th>Uwagi</th></tr>
+      {% for m in r.retention.recommendations[:5] %}
+      <tr><td>{{ m.priority_rank }}</td><td><b>{{ m.title }}</b></td>
+          <td>−{{ "%.1f"|format(m.effect_yield_pp) }} p.p. straty, {{ m.effect_reserve_days }} dni mniej stresu</td>
+          <td>{% if m.requires_permit %}Wody Polskie{% else %}{{ m.time_to_effect or "" }}{% endif %}</td></tr>
       {% endfor %}
     </table>
     {% set w = r.retention.what_if_default %}
-    <p class="small">„Co jeśli” ({{ w.enabled_measures|join(", ") }}): strata plonu {{ "%.0f"|format(w.baseline_yield_loss_pct) }}% → {{ "%.0f"|format(w.scenario_yield_loss_pct) }}%,
-      {{ w.delta_reserve_days }} dni rezerwy więcej, {{ "%.0f"|format(w.saved_water_mm) }} mm wody więcej dla roślin.</p>
+    <div class="whatif-pill">„Co jeśli” ({{ w.enabled_measures|join(", ") }}): strata plonu {{ "%.0f"|format(w.baseline_yield_loss_pct) }}% → <b>{{ "%.0f"|format(w.scenario_yield_loss_pct) }}%</b>,
+      +{{ w.delta_reserve_days }} dni rezerwy, +{{ "%.0f"|format(w.saved_water_mm) }} mm wody.</div>
   </div>
-  {% if map_png %}<div class="col"><img class="map" src="data:image/png;base64,{{ map_png }}" alt="Mapa działki"></div>{% endif %}
+  {% if map_png %}<div class="col box"><img class="map" src="data:image/png;base64,{{ map_png }}" alt="Mapa działki"></div>{% endif %}
 </div>
 
 <div class="page-break"></div>
-<h2>4. Nawadnianie (krok opcjonalny, po działaniach retencyjnych)</h2>
-<p><b>{{ r.irrigation.action_now }}</b></p>
-<p>{{ irrigation_text }}</p>
-<p class="small">Polityka: {{ r.irrigation.policy_used or "-" }} · pogoda w planie: {{ r.irrigation.forecast_mode }}</p>
-{% if r.irrigation.strategies_10y %}
-<table>
-  <tr><th>Strategia (10 sezonów)</th><th>Śr. strata plonu</th><th>Woda [mm/sezon]</th><th>Przesiąk [mm]</th><th>WUE [p.p./100 mm]</th></tr>
-  {% for s in r.irrigation.strategies_10y %}
-  <tr><td>{{ s.strategy_name }}</td><td>{{ "%.1f"|format(s.avg_yield_loss_pct) }}%</td><td>{{ "%.0f"|format(s.avg_water_mm) }}</td><td>{{ "%.0f"|format(s.avg_deep_percolation_mm) }}</td><td>{{ "%.2f"|format(s.water_use_efficiency) }}</td></tr>
+<div class="sec">
+  <h2>4. Nawadnianie (krok opcjonalny, po działaniach retencyjnych)</h2>
+  <div class="box">
+    <p><b>{{ r.irrigation.action_now }}</b></p>
+    <p>{{ irrigation_text }}</p>
+    <p class="small">Polityka: {{ r.irrigation.policy_used or "-" }} · pogoda w planie: {{ r.irrigation.forecast_mode }}</p>
+  </div>
+  {% if r.irrigation.strategies_10y %}
+  <table>
+    <tr><th>Strategia (10 sezonów)</th><th>Śr. strata plonu</th><th>Woda [mm/sezon]</th><th>Przesiąk [mm]</th><th>WUE [p.p./100 mm]</th></tr>
+    {% for s in r.irrigation.strategies_10y %}
+    <tr><td><b>{{ s.strategy_name }}</b></td><td>{{ "%.1f"|format(s.avg_yield_loss_pct) }}%</td><td>{{ "%.0f"|format(s.avg_water_mm) }}</td><td>{{ "%.0f"|format(s.avg_deep_percolation_mm) }}</td><td>{{ "%.2f"|format(s.water_use_efficiency) }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</div>
+
+{% if r.advice %}
+<div class="sec">
+  <h2>Porady</h2>
+  {% for adv in r.advice[:4] %}
+  <div class="advice p{{ adv.priority }}"><b>{{ adv.title }}</b> · {{ adv.text }}</div>
   {% endfor %}
-</table>
+</div>
 {% endif %}
 
-<h2>Porady</h2>
-{% for adv in r.advice %}
-<div class="advice p{{ adv.priority }}"><b>{{ adv.title }}</b><br>{{ adv.text }}</div>
-{% endfor %}
-
-<h2>5. Źródła danych, niepewność i braki</h2>
-<table>
-  <tr><th>Kategoria</th><th>Źródło</th><th>Tryb</th><th>Data obserwacji</th><th>Rozdzielczość</th><th>Licencja</th></tr>
-  {% for s in r.audit.sources %}
-  <tr><td>{{ s.category }}</td><td>{{ s.source_name }}{% if s.message %}<br><span class="small">{{ s.message }}</span>{% endif %}</td>
-      <td>{{ s.mode.value }}</td><td>{{ s.observation_date }}</td><td>{{ s.spatial_resolution }}</td><td>{{ s.license }}</td></tr>
-  {% endfor %}
-</table>
-<div class="row">
-  <div class="col"><b>Skala i świeżość danych</b><ul>{% for x in a.confidence.resolution_warnings %}<li>{{ x }}</li>{% endfor %}</ul></div>
-  <div class="col"><b>Spójność i braki</b><ul>{% for x in a.confidence.consistency_warnings + a.confidence.missing_factors %}<li>{{ x }}</li>{% endfor %}</ul></div>
+<div class="sec">
+  <h2>5. Źródła danych, niepewność i braki</h2>
+  <table>
+    <tr><th>Kategoria</th><th>Źródło</th><th>Tryb</th><th>Data obserwacji</th><th>Rozdzielczość</th><th>Licencja</th></tr>
+    {% for s in r.audit.sources %}
+    <tr><td>{{ s.category }}</td><td>{{ s.source_name }}{% if s.message %}<br><span class="small">{{ s.message }}</span>{% endif %}</td>
+        <td>{{ s.mode.value }}</td><td>{{ s.observation_date }}</td><td>{{ s.spatial_resolution }}</td><td>{{ s.license }}</td></tr>
+    {% endfor %}
+  </table>
+  <div class="row" style="margin-top: 2mm;">
+    <div class="col box"><b>Skala i świeżość danych</b><ul>{% for x in a.confidence.resolution_warnings[:4] %}<li>{{ x }}</li>{% endfor %}</ul></div>
+    <div class="col box"><b>Spójność i braki</b><ul>{% for x in (a.confidence.consistency_warnings + a.confidence.missing_factors)[:4] %}<li>{{ x }}</li>{% endfor %}</ul></div>
+  </div>
+  <p class="small" style="margin-top: 2mm;"><b>Modele:</b> {% for k, v in r.audit.model_versions.items() %}{{ k }}: {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  <p class="small">Czas analizy {{ "%.1f"|format(r.audit.execution_time_s) }} s. {{ r.audit.rodo_notice }}
+    Wynik jest wsparciem decyzji, a nie pomiarem na działce; nie zastępuje oceny komisji szacującej szkody.</p>
 </div>
-<p class="small"><b>Modele:</b> {% for k, v in r.audit.model_versions.items() %}{{ k }}: {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
-<p class="small">Czas analizy {{ "%.1f"|format(r.audit.execution_time_s) }} s. {{ r.audit.rodo_notice }}
-  Wynik jest wsparciem decyzji, a nie pomiarem na działce; nie zastępuje oceny komisji szacującej szkody.</p>
 </body>
 </html>
