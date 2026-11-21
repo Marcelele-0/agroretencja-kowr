@@ -53,6 +53,24 @@ def make_handler(today: dt.date, iung_code: int = 2):
             for k in range(1, 8):
                 hourly[f"precipitation_previous_day{k}"] = [_p(dt.date.fromisoformat(t[:10])) / 24 * 0.8 for t in times]
             return httpx.Response(200, json={"hourly": hourly})
+        if host == "ensemble-api.open-meteo.com":
+            ds = _days(today, today + dt.timedelta(days=int(q["forecast_days"]) - 1))
+            times = [f"{d.isoformat()}T{h:02d}:00" for d in ds for h in range(24)]
+            rng = np.random.default_rng(7)
+            hourly: dict = {"time": times}
+            for m in range(51):
+                sfx = "" if m == 0 else f"_member{m:02d}"
+                f = float(rng.uniform(0.3, 1.7))
+                hourly["precipitation" + sfx] = [_p(dt.date.fromisoformat(t[:10])) / 24 * f for t in times]
+                hourly["temperature_2m" + sfx] = [18.0 + 6 * np.sin(np.pi * (int(t[11:13]) - 6) / 12) + rng.normal(0, 1) for t in times]
+                hourly["shortwave_radiation" + sfx] = [max(0.0, 600 * np.sin(np.pi * (int(t[11:13]) - 5) / 15)) if 5 <= int(t[11:13]) <= 20 else 0.0 for t in times]
+            return httpx.Response(200, json={"hourly": hourly})
+        if host == "rest.isric.org":
+            fc = {"0-5cm": 380, "5-15cm": 360, "15-30cm": 340, "30-60cm": 300, "60-100cm": 280, "100-200cm": 260}
+            wp = {"0-5cm": 160, "5-15cm": 150, "15-30cm": 150, "30-60cm": 140, "60-100cm": 140, "100-200cm": 130}
+            layers = [{"name": n, "unit_measure": {"d_factor": 10}, "depths": [{"label": k, "values": {"mean": v}} for k, v in src.items()]}
+                      for n, src in (("wv0033", fc), ("wv1500", wp))]
+            return httpx.Response(200, json={"properties": {"layers": layers}})
         if host == "sgeo.iung.pl":
             return httpx.Response(200, json={"type": "FeatureCollection", "features": [{"properties": {"GRAY_INDEX": iung_code}}]})
         if host == "uldk.gugik.gov.pl":
@@ -188,3 +206,121 @@ def test_api_router(mock_client, monkeypatch) -> None:
     assert r.status_code == 200 and r.json()["status"] == "ok"
     r = c.post("/rl/recommend", json={"crop": "kukurydza", "date": "2024-07-15"})
     assert r.status_code == 422
+
+
+FRONTEND_CROPS = (
+    "zboza_ozime", "zboza_jare", "kukurydza_ziarno", "kukurydza_kiszonka", "rzepak", "ziemniak", "burak_cukrowy",
+    "straczkowe", "warzywa", "chmiel", "tyton", "drzewa_owocowe", "krzewy_owocowe", "truskawki", "uzytki_zielone",
+)
+SCHEMAS_CROPS = ("pszenica_ozima", "pszenica_jara", "kukurydza", "rzepak_ozimy", "burak_cukrowy", "ziemniak", "uzytki_zielone")
+
+
+def test_every_frontend_and_schema_crop_is_supported() -> None:
+    from kowr_rl.config import load_crops, resolve_crop
+
+    crops = load_crops()
+    for code in FRONTEND_CROPS + SCHEMAS_CROPS:
+        key = resolve_crop(code)
+        assert key in crops, code
+        c = crops[key]
+        # inside the window of archived ECMWF forecasts (15 III - 31 X) and after the 1 III spin-up
+        assert (c.season_start(2025).month, c.season_start(2025).day) >= (3, 15), code
+        assert (c.season_end(2025).month, c.season_end(2025).day) <= (10, 31), code
+        assert 0.1 <= c.p <= 0.8 and 0.5 <= c.ky <= 1.5 and c.kc_mid >= c.kc_ini
+    assert resolve_crop("kapusta_wloska") is None
+
+
+def test_api_accepts_frontend_crop_codes(mock_client, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    from kowr_rl.api import app
+
+    monkeypatch.setattr(inf, "_today", lambda: TODAY)
+    c = TestClient(app)
+    for code in ("zboza_ozime", "truskawki", "pszenica_jara"):
+        r = c.post("/rl/recommend", json={"lat": 52.1, "lon": 18.2, "crop": code, "date": "2024-06-20", "budget_mm": 150})
+        assert r.status_code == 200, r.text
+        assert r.json()["status"] in ("ok", "out_of_season"), r.json().get("message")
+    r = c.post("/rl/recommend", json={"lat": 52.1, "lon": 18.2, "crop": "kapusta_wloska", "date": "2024-06-20"})
+    assert r.status_code == 422
+    assert "zboza_ozime" in c.get("/rl/health").json()["crop_codes_accepted"]
+
+
+def test_plan_14_days_with_scenarios(mock_client) -> None:
+    out = inf.recommend(52.1, 18.2, "kukurydza", "2024-07-10", 150, 0, plan_days=14, client=mock_client, today=TODAY)
+    assert out["status"] == "ok", out.get("message")
+    assert len(out["recommendation"]["plan_7d"]) == 7
+    p14 = out["recommendation"]["plan_14d"]
+    assert len(p14["days"]) == 14
+    assert [d["confidence"] for d in p14["days"]][:3] == ["wysoka"] * 3 and p14["days"][-1]["confidence"] == "niska"
+    assert p14["days"][0]["dose_mm"] == out["recommendation"]["dose_today_mm"]
+    probs = [d["irrigation_probability"] for d in p14["days"] if d["irrigation_probability"] is not None]
+    assert probs and all(0.0 <= x <= 1.0 for x in probs)
+    w = p14["water_need_mm"]
+    assert w is None or (0 <= w["p10_mm"] <= w["expected_mm"] + 1e-9 <= w["p90_mm"] + 2e-9)
+    assert p14["total_plan_mm"] <= 150 + 1e-9
+    assert "plan_14d" not in inf.recommend(52.1, 18.2, "kukurydza", "2024-07-10", 150, 0, client=mock_client, today=TODAY)["recommendation"]
+
+
+def _check_zones(p14: dict, n_days: int) -> None:
+    z = p14["soil_zones"]
+    assert [x["zone"] for x in z["zones"]] == ["0-28 cm", "28-100 cm", "100-200 cm"]
+    assert len(z["days"]) == n_days and z["data_scale"]
+    for d in z["days"]:
+        for blk in [d["root_zone"]] + d["zones"]:
+            probs = blk["class_probabilities"]
+            assert set(probs) == set(z["classes"]) and abs(sum(probs.values()) - 1.0) < 0.03
+            assert blk["class"] in z["classes"]
+        r = d["root_zone"]
+        assert 0 <= r["water_pct_p10"] <= r["water_pct_median"] <= r["water_pct_p90"] <= 100
+        assert 0.0 <= d["stress_probability_no_irrigation"] <= 1.0
+        if "stress_probability_with_plan" in d:
+            assert d["stress_probability_with_plan"] <= d["stress_probability_no_irrigation"] + 1e-9
+
+
+def test_plan_14_days_ecmwf_ensemble_and_soil_zones(mock_client) -> None:
+    out = inf.recommend(52.1, 18.2, "kukurydza", TODAY.isoformat(), 150, 0, plan_days=14, client=mock_client, today=TODAY)
+    assert out["status"] == "ok", out.get("message")
+    p14 = out["recommendation"]["plan_14d"]
+    assert p14["probability_source"] == "ecmwf_ens"
+    assert p14["water_need_mm"]["n_scenarios"] == 51
+    assert p14["days"][0]["dose_mm"] == out["recommendation"]["dose_today_mm"]
+    _check_zones(p14, 14)
+    z = p14["soil_zones"]
+    assert z["n_scenarios"] >= 51 and "ECMWF ENS" in z["weather_source"] and "SoilGrids" in z["soil_profile_source"]
+    assert abs(sum(x["available_water_mm"] for x in z["zones"][:2]) - out["location"]["taw_mm"]) < 0.5
+    names = " ".join(s["name"] for s in out["sources"])
+    assert "Ensemble" in names and "SoilGrids" in names
+    assert mock_client.calls.get("ensemble-api.open-meteo.com") == 1
+    json.dumps(out)
+
+
+def test_plan_14_days_historical_uses_analog_years(mock_client, monkeypatch) -> None:
+    monkeypatch.delenv("KOWR_RL_ENS_ARCHIVE", raising=False)
+    out = inf.recommend(52.1, 18.2, "ziemniak", "2025-07-01", 150, 0, plan_days=14, client=mock_client, today=TODAY)
+    assert out["status"] == "ok", out.get("message")
+    p14 = out["recommendation"]["plan_14d"]
+    assert p14["probability_source"] == "analog_years"
+    _check_zones(p14, 14)
+    assert "lata analogiczne" in p14["soil_zones"]["weather_source"]
+    assert "ensemble-api.open-meteo.com" not in mock_client.calls
+
+
+def test_plan_7_days_does_not_fetch_zone_sources(mock_client) -> None:
+    out = inf.recommend(52.1, 18.2, "kukurydza", TODAY.isoformat(), 150, 0, client=mock_client, today=TODAY)
+    assert out["status"] == "ok"
+    assert "rest.isric.org" not in mock_client.calls and "ensemble-api.open-meteo.com" not in mock_client.calls
+
+
+def test_prefetched_plan_14_fetches_only_the_zone_sources(mock_client) -> None:
+    """Backend path (src/backend/irrigation.py): soil and weather are passed in, the 14-day sources are fetched here."""
+    obs = inf.fetch_archive(mock_client, 52.1, 18.2, inf.ARCHIVE_START, TODAY - dt.timedelta(days=1))[0]
+    fc = inf.fetch_forecast(mock_client, 52.1, 18.2)[0]
+    before = dict(mock_client.calls)
+    out = inf.recommend(52.1, 18.2, "kukurydza_ziarno", TODAY, 150, 0, plan_days=14, client=mock_client, today=TODAY,
+                        _prefetched=(2, obs.merged_with(fc.window(inf.ARCHIVE_START, TODAY - dt.timedelta(days=1))), [], fc))
+    assert out["status"] == "ok", out.get("message")
+    p14 = out["recommendation"]["plan_14d"]
+    assert p14["probability_source"] == "ecmwf_ens" and "soil_zones" in p14
+    new = {h: n - before.get(h, 0) for h, n in mock_client.calls.items() if n - before.get(h, 0)}
+    assert set(new) == {"ensemble-api.open-meteo.com", "rest.isric.org"}, new

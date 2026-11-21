@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
-import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse, RlSource } from "../api/contract";
+import type { AnalysisResponse, RlCompareResponse, RlPlan14d, RlRecommendResponse, RlSoilZoneDay, RlSource } from "../api/contract";
 import { computeLocal, soilCause, withLevers, type Levers, type LocalResult, type TimelineDay } from "../analysis/local";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
 import { BAL, balStep, cx, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
@@ -783,6 +783,69 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
   );
 }
 
+const WATER_CLASS: Record<string, string> = { "bardzo sucho": "bardzo sucho", sucho: "sucho", "umiarkowany zapas": "umiarkowany zapas", wilgotno: "wilgotno", "pelny zapas": "pełny zapas" };
+const SOIL_ZONE: Record<string, string> = { "0-28 cm": "0–28 cm (wierzchnia)", "28-100 cm": "28–100 cm", "100-200 cm": "100–200 cm (głęboka)" };
+const dayShort = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("pl-PL", { weekday: "short", day: "numeric" });
+
+/** 14-day plan (dose + chance of irrigating) and the soil water of three zones as classes with their probability. */
+function Plan14({ plan }: { plan: RlPlan14d }) {
+  const z = plan.soil_zones;
+  const ens = plan.probability_source === "ecmwf_ens";
+  const picks = z ? [2, 6, 13].map((i) => z.days[i]).filter((d): d is RlSoilZoneDay => !!d) : [];
+  const w = plan.water_need_mm;
+  const withPlan = picks.some((d) => d.stress_probability_with_plan !== undefined);
+  const scenarios = ens ? `${w?.n_scenarios ?? 51} wariantów prognozy ECMWF` : "pogoda tych samych dni z innych lat";
+  return (
+    <div className="ar-card rs-table rs-plan14">
+      <h4 className="rs-subtitle">Plan i woda w glebie na 14 dni</h4>
+      <div className="rs-fc" aria-label="Plan nawadniania na 14 dni">
+        {plan.days.map((d) => (
+          <div key={d.date} className="rs-fc__day" title={`Pewność planu: ${d.confidence}`}>
+            <span className="rs-fc__mm">{dec(d.dose_mm, 0)}</span>
+            <span className="rs-fc__d">{dayShort(d.date)}</span>
+            {d.irrigation_probability !== null ? <span className="rs-fc__p">{dec(100 * d.irrigation_probability, 0)}%</span> : null}
+          </div>
+        ))}
+      </div>
+      <p className="ar-muted rs-why__note">
+        Duża liczba to dawka w mm, procent to szansa, że tego dnia trzeba będzie podlać ({scenarios}). Pewność planu: dni 1–3 wysoka, 4–7 średnia, dalej niska.
+        {w ? ` Woda na 14 dni: ok. ${dec(w.expected_mm, 0)} mm (zwykle ${dec(w.p10_mm, 0)}–${dec(w.p90_mm, 0)} mm).` : ""}
+      </p>
+      {z && picks.length ? (
+        <table>
+          <thead><tr><th>Strefa gleby</th><th>Dziś</th>{picks.map((d) => <th key={d.date}>{formatDayMonth(d.date as Iso)}</th>)}</tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Strefa korzeni</b></td>
+              <td>{dec(z.today.root_zone_water_pct, 0)}%</td>
+              {picks.map((d) => <td key={d.date}><b>{WATER_CLASS[d.root_zone.class] ?? d.root_zone.class}</b><span className="rs-table__sub">{dec(d.root_zone.water_pct_median, 0)}% (zwykle {dec(d.root_zone.water_pct_p10, 0)}–{dec(d.root_zone.water_pct_p90, 0)}%)</span></td>)}
+            </tr>
+            {z.today.zones.map((t, k) => (
+              <tr key={t.zone}>
+                <td>{SOIL_ZONE[t.zone] ?? t.zone}</td>
+                <td>{WATER_CLASS[t.class] ?? t.class}<span className="rs-table__sub">{dec(t.water_pct, 0)}%</span></td>
+                {picks.map((d) => {
+                  const c = d.zones[k];
+                  if (!c) return <td key={d.date}>–</td>;
+                  return <td key={d.date}>{WATER_CLASS[c.class] ?? c.class}<span className="rs-table__sub">pewność {dec(100 * (c.class_probabilities[c.class] ?? 0), 0)}%</span></td>;
+                })}
+              </tr>
+            ))}
+            <tr><td>Ryzyko stresu bez nawadniania</td><td>–</td>{picks.map((d) => <td key={d.date}>{dec(100 * d.stress_probability_no_irrigation, 0)}%</td>)}</tr>
+            {withPlan ? <tr><td>Ryzyko stresu z planem</td><td>–</td>{picks.map((d) => <td key={d.date}>{d.stress_probability_with_plan !== undefined ? `${dec(100 * d.stress_probability_with_plan, 0)}%` : "–"}</td>)}</tr> : null}
+          </tbody>
+        </table>
+      ) : null}
+      {z ? (
+        <p className="ar-muted rs-why__note">
+          Procent strefy to woda dostępna dla roślin (0% = punkt więdnięcia, 100% = pojemność polowa). Klasy co 20%, z pewnością prognozy.
+          Pogoda: {ens ? "prognoza zespołowa ECMWF (siatka ok. 25 km)" : "te same dni w innych latach archiwum"}; gleba: {z.soil_profile_source.startsWith("SoilGrids") ? "mapy SoilGrids (250 m) dopasowane do kategorii IUNG-PIB" : "kategoria IUNG-PIB"}. Wynik dotyczy punktu w środku działki.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function Irrigation({ local, rl, compare }: { local: LocalResult; rl: RlRecommendResponse | null; compare: RlCompareResponse | null }) {
   const fc = local.forecast;
   const strip = fc ? (
@@ -796,19 +859,25 @@ function Irrigation({ local, rl, compare }: { local: LocalResult; rl: RlRecommen
     card = (
       <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={r.action_now} text={rl.message}>
         <p className="ar-card__text">Dawka dziś: {dec(r.dose_today_mm, 0)} mm · w 7 dni: {dec(r.total_7d_mm, 0)} mm{rl.policy ? ` · ${rl.policy.label}` : ""}.</p>
-        <div className="rs-fc" aria-label="Plan nawadniania na 7 dni">
-          {r.plan_7d.map((d) => <div key={d.date} className="rs-fc__day"><span className="rs-fc__mm">{dec(d.dose_mm, 0)}</span><span className="rs-fc__d">{new Date(`${d.date}T12:00:00`).toLocaleDateString("pl-PL", { weekday: "short", day: "numeric" })}</span></div>)}
-        </div>
-        <p className="ar-muted rs-why__note">Liczby to dawka w mm na dzień; plan zakłada prognozę opadu ECMWF.</p>
+        {r.plan_14d ? null : (
+          <>
+            <div className="rs-fc" aria-label="Plan nawadniania na 7 dni">
+              {r.plan_7d.map((d) => <div key={d.date} className="rs-fc__day"><span className="rs-fc__mm">{dec(d.dose_mm, 0)}</span><span className="rs-fc__d">{dayShort(d.date)}</span></div>)}
+            </div>
+            <p className="ar-muted rs-why__note">Liczby to dawka w mm na dzień; plan zakłada prognozę opadu ECMWF.</p>
+          </>
+        )}
       </PhotoCard>
     );
   } else if (!local.offSeason && local.irrigation) {
     card = <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={local.irrigation.title} text={local.irrigation.text}>{strip}</PhotoCard>;
   }
   const strategies = compare?.strategies ?? [];
+  const plan14 = !local.offSeason && rl?.status === "ok" ? rl.recommendation?.plan_14d : undefined;
   return (
     <>
       {card}
+      {plan14 ? <Plan14 plan={plan14} /> : null}
       {strategies.length ? (
         <div className="ar-card rs-table">
           <h4 className="rs-subtitle">Strategie nawadniania w 10 sezonach tej działki</h4>

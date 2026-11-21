@@ -1,12 +1,50 @@
 {
  "name": "FAO-RL-Irrigator (MaskablePPO)",
- "exported_at": "2026-11-21T17:08:58",
+ "exported_at": "2026-11-21T20:07:38",
  "runs": [
   "E6f_s2@dom"
  ],
  "weights": "ppo_irrigator_weights.npz",
  "runtime": "NumPy only (kowr_rl.policy.load_policy): MLP actor(s) + VecNormalize observation statistics",
  "observation": "v2 (17 features, kowr_rl.simulator.OBS_NAMES)",
+ "crops": [
+  "kukurydza",
+  "ziemniak",
+  "pszenica_ozima",
+  "burak_cukrowy",
+  "zboza_jare",
+  "kukurydza_kiszonka",
+  "rzepak",
+  "straczkowe",
+  "warzywa",
+  "chmiel",
+  "tyton",
+  "drzewa_owocowe",
+  "krzewy_owocowe",
+  "truskawki",
+  "uzytki_zielone"
+ ],
+ "crop_codes_accepted": [
+  "burak_cukrowy",
+  "chmiel",
+  "drzewa_owocowe",
+  "krzewy_owocowe",
+  "kukurydza",
+  "kukurydza_kiszonka",
+  "kukurydza_ziarno",
+  "pszenica_jara",
+  "pszenica_ozima",
+  "rzepak",
+  "rzepak_ozimy",
+  "straczkowe",
+  "truskawki",
+  "tyton",
+  "uzytki_zielone",
+  "warzywa",
+  "zboza_jare",
+  "zboza_ozime",
+  "ziemniak"
+ ],
  "train_years": [
   2016,
   2017,
@@ -141,14 +179,14 @@
    "ready": true,
    "recommended_default_policy": "rl",
    "deployed_run": "E6f_s2@dom",
-   "generated_at": "2026-11-21T17:07:49",
+   "generated_at": "2026-11-21T20:04:37",
    "dataset": "train_points"
   },
   "test_holdout": {
    "ready": true,
    "recommended_default_policy": "rl",
    "deployed_run": "E6f_s2@dom",
-   "generated_at": "2026-11-21T17:07:32",
+   "generated_at": "2026-11-21T20:03:49",
    "dataset": "holdout"
   }
  },

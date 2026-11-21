@@ -207,3 +207,16 @@ def test_polish_text_helpers() -> None:
     assert num(3.45, 1, sign=True) == "+3,5"
     assert num(-2.0) == "−2"
     assert days(1) == "1 dzień" and days(3) == "3 dni" and days(12) == "12 dni" and days(22) == "22 dni"
+
+
+def test_backend_crops_are_the_rl_crops():
+    """Every CropCode of the API is handled by the RL agent with the same crop physics as the assessment."""
+    from kowr_rl.config import load_crops, resolve_crop
+
+    from hydro_core.crops import all_crops, rl_crop_keys
+    from hydro_core.schemas import CropCode
+
+    rl = load_crops()
+    for code in CropCode:
+        assert code.value in rl_crop_keys()
+        assert all_crops()[code.value] == rl[resolve_crop(code.value)]

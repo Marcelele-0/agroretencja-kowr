@@ -78,6 +78,9 @@ a { color: inherit; }
 .rs-fc__day { display: grid; justify-items: center; gap: 4px; padding: 8px 0; border: 1px solid var(--hairline); border-radius: 10px; }
 .rs-fc__mm { font: 500 18px/1 var(--font-sans); font-stretch: 86%; font-variant-numeric: tabular-nums; }
 .rs-fc__d { font-size: 11px; color: var(--ink-muted); }
+.rs-fc__p { font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.rs-plan14 { display: grid; gap: 10px; }
+.rs-plan14 .rs-why__note { margin: 0; }
 .rs-table { overflow-x: auto; }
 .rs-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.35; }
 .rs-table th { padding: 6px 10px 6px 0; border-bottom: 1px solid var(--hairline); color: var(--ink-muted); font-weight: 600; text-align: left; white-space: nowrap; }

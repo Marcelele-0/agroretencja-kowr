@@ -178,3 +178,76 @@ Przy **każdym** budżecie agent ma istotnie wyższy plon **i** istotnie mniejsz
 **Te same lata na punktach treningowych:** łącznie +0,23 pkt proc. [+0,14; +0,34] i −5,6 mm [−6,8; −4,7]. Przy 50 mm +0,11 / −0,8, przy 100 mm +0,25 / −3,8, przy 150 mm +0,28 / −7,8, przy 250 mm +0,28 / −10,2. Wszystko istotne (`reports/evaluation.md`).
 
 **Werdykt (reguła z M5 bez zmian, na czystym teście):** agent **GOTOWY**, więc `default_policy: rl`. Reguły FAO, FAO + prognoza i `fao_small` pozostają dostępne jako `policy=...`.
+
+---
+
+## E7: wszystkie 15 upraw frontendu (21.11.2026)
+
+**Cel:** jedna polityka dla 15 upraw wybieranych we frontendzie (grupy SMSR IUNG-PIB oraz łąki i pastwiska). Parametry FAO-56/33 nowych upraw i aliasy kodów są w `config/crops.yaml`; protokół w `PLAN.md` (sekcja 6), zapisany przed treningiem.
+
+**Walidacja 2024, 15 upraw (12 000 sezonów, nagroda przy `c_w` = 5e-4, `c_p` = 3e-4; FAO −0,1291):**
+
+| Kandydat | Nagroda | Plon (FAO 0,9395) | Woda [mm] (FAO 102,7) | Uprawy z ΔY ≥ 0 i ΔW ≤ 0 |
+|---|---|---|---|---|
+| **E6f_s2@dom** (wdrożony, uczony na 4 uprawach) | **−0,1240** | 0,9398 | 94,3 | 8/15 |
+| E7_s2@domc (6 mln kroków, 15 upraw) | −0,1252 | 0,9406 | 98,2 | 15/15 |
+| E7_s1@domc | −0,1256 | 0,9408 | 99,6 | 15/15 |
+| E7_s3@dom | −0,1250 | 0,9404 | 97,8 | 13/15 |
+
+E6f_s2 jest uwarunkowany parametrami uprawy (Kc, p, Ky, TAW), więc dobrze przenosi się na nowe uprawy i ma najwyższą nagrodę. Zgodnie z protokołem **zostaje wdrożony E6f_s2@dom**, a E7_s2@domc jest alternatywą.
+
+**Czysty test (holdout, 50 nowych lokalizacji × 2025–2026 × 15 upraw × 4 gleby × 4 budżety = 24 000 sezonów):**
+
+| Strategia | Plon | Woda [mm] |
+|---|---|---|
+| Reguła FAO | 0,972 | 83 |
+| FAO + prognoza | 0,971 | 80 |
+| FAO małe dawki + prognoza | 0,973 | 79 |
+| **Agent RL (E6f_s2@dom)** | **0,973** | **74** |
+| E7_s2@domc | 0,973 | 77 |
+| Wyrocznia | 0,975 | 71 |
+
+RL − FAO: łącznie +0,12 pkt proc. [+0,05; +0,19] i −8,5 mm [−9,9; −7,3]. Według budżetów: 50 mm +0,10 / −1,7; 100 mm +0,16 / −6,2; 150 mm +0,12 / −11,6; 250 mm +0,10 / −14,4. Wszystko istotne, więc werdykt **gotowy**. Każda z 15 upraw zużywa mniej wody niż przy FAO, a w 12 z 15 plon jest wyższy. Wobec FAO + prognoza: +0,16 pkt proc. i −5,3 mm. Wobec `fao_small`: ten sam plon przy −4,4 mm.
+
+**Te same lata na punktach treningowych:** +0,12 pkt proc. [+0,06; +0,19] i −8,5 mm [−10,0; −7,2], istotnie przy każdym budżecie.
+
+
+---
+
+## E8: plan nawadniania na 14 dni (21.11.2026)
+
+Pełny raport: [`reports/plan14.md`](reports/plan14.md).
+
+- **Trafność prognoz ECMWF** (prawdziwe archiwalne, wyprzedzenia 1–7): przewaga nad klimatologią spada liniowo z 0,49–0,54 (dzień 1) do 0,05 (dzień 7).
+- **Plan kroczący na 14 dni** (holdout 2025–2026, 241 600 planów):
+  - dni podlewania trafione w 62% (dzień 2), 41% (dzień 3) i 34% (dzień 4);
+  - z tolerancją ±1 dzień: 87% w dniu 2 i 60% w dniu 7;
+  - zakres zapotrzebowania na wodę w 14 dni (scenariusze z 10 lat) obejmuje rzeczywistość w 92% przypadków.
+- **Agent E8 z 14-dniowym oknem prognozy** (15 upraw, 6 mln kroków, 3 ziarna): nagroda walidacyjna −0,1241 wobec −0,1243 dla E7, czyli tyle samo. Także przy syntetycznej prognozie z informacją na dni 8–14 (−0,1240 wobec −0,1244). Wdrożony zostaje E6f_s2.
+- **API:** `plan_days=14` dodaje `recommendation.plan_14d` (dawki, prawdopodobieństwo podlewania, zakres wody, pewność każdego dnia).
+
+
+---
+
+## E9: prognoza wody w glebie na 14 dni z ensemble ECMWF i trzema strefami gleby (21.11.2026)
+
+Pełny raport: [`reports/forecast14.md`](reports/forecast14.md).
+
+- **Dane:**
+  - 51 członków archiwalnego ensemble ECMWF IFS (dynamical.org), 94 przebiegi co tydzień 2024–2026 dla 100 punktów;
+  - profile SoilGrids 2.0 (pojemność polowa i punkt więdnięcia, 6 warstw 0–200 cm) dla 100 punktów;
+  - ERA5-Land (4 warstwy wilgotności) jako niezależne odniesienie.
+- **Model gleby** (`kowr_rl/soil3.py`):
+  - trzy strefy 0–28 / 28–100 / 100–200 cm, pojemność z SoilGrids przeskalowana do TAW kategorii IUNG;
+  - korzenie rosnące do głębokości maksymalnej uprawy;
+  - parowanie z wierzchniej strefy, transpiracja z zasięgu korzeni;
+  - stan na dziś z bilansu od 1 sierpnia poprzedniego roku.
+- **Kalibracja na 2024, test na holdout 2025–2026:**
+  - ET0 z ensemble wzorem Makkinka i liniowo do FAO-56: CRPS skill wobec klimatologii +0,48–0,51 w dniu 1, +0,22–0,25 w dniu 4;
+  - opad bez zmian: +0,51–0,52 w dniu 1.
+- **Prognoza wody w strefie korzeni** (12 800 prognoz):
+  - CRPS skill ENS wobec scenariuszy z innych lat: +0,54 (dzień 1), +0,44 (4), +0,29 (7), +0,21 (10), +0,05 (14); wobec persystencji: +0,71 / +0,60 / +0,53 w dniach 1 / 7 / 14;
+  - przedział P10–P90 po postprocessingu z 2024 pokrywa prawdę w 78–87% przypadków;
+  - prawdopodobieństwo stresu uprawy: Brier skill wobec klimatologii +0,94 / +0,72 / +0,49 w dniach 1 / 7 / 14.
+- **Plan nawadniania z 51 członków** (51 200 planów): Brier skill dni podlewania +0,53 / +0,38 / +0,23 w dniach 2 / 4 / 7, wobec +0,33 / +0,17 / +0,07 dla scenariuszy z innych lat. Zakres wody na 14 dni obejmuje rzeczywistość w 95% przypadków.
+- **API:** `plan_days=14` używa ensemble do prawdopodobieństwa podlewania (`probability_source: "ecmwf_ens"`). Dodaje też `plan_14d.soil_zones`: klasy wody z prawdopodobieństwami dla każdej strefy i dnia, zakres P10–P90 strefy korzeni, prawdopodobieństwo stresu bez nawadniania i z planem oraz skalę danych.

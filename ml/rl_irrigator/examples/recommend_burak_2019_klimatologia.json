@@ -183,7 +183,7 @@
    {
     "name": "IUNG-PIB WMS Susza:katgl_landuse2024 (kategorie podatnosci gleb na susze)",
     "url": "https://sgeo.iung.pl/geoserver/Susza/wms?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=Susza%3Akatgl_landuse2024&query_layers=Susza%3Akatgl_landuse2024&info_format=application%2Fjson&srs=EPSG%3A4326&bbox=17.699000%2C50.499000%2C17.701000%2C50.501000&width=101&height=101&x=50&y=50&styles=",
-    "retrieved_at": "2026-11-21T12:36:25+00:00",
+    "retrieved_at": "2026-11-21T18:44:14+00:00",
     "mode": "cache",
     "license": "IUNG-PIB, Mapa podatnosci gleb na susze (katgl_landuse2024), publiczna usluga WMS",
     "detail": "punkt 50.50000N 17.70000E"
@@ -191,13 +191,13 @@
    {
     "name": "Open-Meteo Historical Weather API (best_match: ERA5/ERA5-Land/ECMWF IFS)",
     "url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.5&longitude=17.7&start_date=2016-01-01&end_date=2026-11-20&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
-    "retrieved_at": "2026-11-21T13:49:52+00:00",
-    "mode": "cache",
+    "retrieved_at": "2026-11-21T18:46:14+00:00",
+    "mode": "live",
     "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
     "detail": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-20; punkt siatki 50.510N 17.650E"
    }
   ],
-  "timing_s": 0.028,
+  "timing_s": 0.572,
   "irrigation_advice": {
    "action_now": "Nie nawadniaj dzis",
    "recommended_mm": 0.0,

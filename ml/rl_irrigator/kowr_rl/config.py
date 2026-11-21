@@ -109,6 +109,25 @@ def load_crops(path: str | None = None) -> dict[str, CropParams]:
 
 
 @lru_cache(maxsize=None)
+@lru_cache(maxsize=None)
+def crop_aliases(path: str | None = None) -> dict[str, str]:
+    """Other accepted crop codes (frontend SMSR groups, schemas.CropCode) -> crop key in crops.yaml."""
+    return dict(_read_yaml(Path(path) if path else CONFIG_DIR / "crops.yaml").get("aliases") or {})
+
+
+def resolve_crop(code: str) -> str | None:
+    """Crop key in crops.yaml for a crop key or an alias; None if unknown."""
+    if code in load_crops():
+        return code
+    key = crop_aliases().get(code)
+    return key if key in load_crops() else None
+
+
+def accepted_crop_codes() -> list[str]:
+    """All crop codes accepted by the module: crop keys and their aliases."""
+    return sorted(set(load_crops()) | {a for a, k in crop_aliases().items() if k in load_crops()})
+
+
 def load_pre_season(path: str | None = None) -> PreSeason:
     cfg = _read_yaml(Path(path) if path else CONFIG_DIR / "crops.yaml")["pre_season"]
     return PreSeason(tuple(cfg["start_month_day"]), float(cfg["kc"]), float(cfg["p"]))

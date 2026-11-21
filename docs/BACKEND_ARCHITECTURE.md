@@ -110,7 +110,7 @@ Składnik z wartością `None` nie psuje wyniku: jego waga przechodzi proporcjon
 
 **Decyzja:** dobowy krok bilansu to `kowr_rl.simulator.balance_step`, czyli funkcja, na której trenowano agenta RL.
 - `hydro_core` dodaje do niej spływ SCS-CN (opad efektywny P − RO) i oś scenariuszy B: wariant bazowy, każdy zabieg, kombinacje — w jednym przebiegu.
-- Parametry upraw: dla 4 upraw RL źródłem jest `ml/rl_irrigator/config/crops.yaml`, dla 3 pozostałych `hydro_core/config/crops_extra.yaml` (ten sam format).
+- Parametry upraw: źródłem jest `ml/rl_irrigator/config/crops.yaml` (15 upraw i aliasy kodów API, np. `pszenica_jara` → `zboza_jare`); `hydro_core/config/crops_extra.yaml` (ten sam format) uzupełnia tylko kody, których RL nie zna.
 - TAW kategorii IUNG: `ml/rl_irrigator/config/soils.yaml`.
 
 **Dlaczego:** kroki 1 i 4 nie mogą liczyć bilansu różnymi wzorami (*training-serving skew*).

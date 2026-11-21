@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from kowr_rl import ARTIFACT_MODELS_DIR, ARTIFACT_VALIDATION_DIR, MODELS_DIR  # noqa: E402
-from kowr_rl.config import load_rl_config  # noqa: E402
+from kowr_rl.config import accepted_crop_codes, load_crops, load_rl_config  # noqa: E402
 from kowr_rl.evaluate import ensure_npz  # noqa: E402
 from kowr_rl.policy import save_ensemble  # noqa: E402
 
@@ -27,12 +27,13 @@ def _member(run: str) -> dict:
     d = MODELS_DIR / name
     hist = json.loads((d / "val_history.json").read_text(encoding="utf-8"))
     h = hist["history"]
-    if ckpt == "dom":
-        h = [x for x in h if x.get("dominant")] or h
+    if ckpt in ("dom", "domc"):
+        flag = "dominant" if ckpt == "dom" else "dominant_all_crops"
+        h = [x for x in h if x.get(flag)] or h
     best = max(h, key=lambda x: x["reward"])
     return {
         "run": run,
-        "checkpoint": "best_dominant" if ckpt == "dom" else "best",
+        "checkpoint": {"dom": "best_dominant", "domc": "best_domcrops"}.get(ckpt, "best"),
         "validation_best": best,
         "train_config": json.loads((d / "run_config.json").read_text(encoding="utf-8")),
         "reference": hist["reference"],
@@ -66,6 +67,8 @@ def main() -> None:
         "runtime": "NumPy only (kowr_rl.policy.load_policy): MLP actor(s) + VecNormalize observation statistics"
         + ("; ensemble = mean of the members' action probabilities" if len(runs) > 1 else ""),
         "observation": "v2 (17 features, kowr_rl.simulator.OBS_NAMES)",
+        "crops": list(load_crops()),
+        "crop_codes_accepted": accepted_crop_codes(),
         "train_years": cfg["split"]["train_years"],
         "validation_year": cfg["split"]["val_years"],
         "members": members,

@@ -27,7 +27,8 @@ export interface AnalysisState {
 
 const LOADING = { status: "loading" } as const;
 const OFF = { status: "off" } as const;
-const RL_CROPS = new Set(["kukurydza", "ziemniak", "pszenica_ozima", "burak_cukrowy"]);
+/** The irrigation module (/rl/*) takes every crop code of the UI (its crops.yaml has the 15 crops and their aliases). */
+const RL_PLAN_DAYS = 14;
 
 export function message(e: unknown): string {
   if (e instanceof ParcelNotFound) return "ULDK nie zna działki o tym numerze.";
@@ -103,12 +104,11 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
   useEffect(() => {
     if (!p) return;
     const ctl = new AbortController();
-    const bc = backendCrop(q.crop);
     if (import.meta.env.DEV && new URLSearchParams(location.search).has("fixtures")) {
       import("../api/fixtures").then((m) => { if (!ctl.signal.aborted) setRlCompare({ status: "ready", data: m.RL_COMPARE_FIXTURE }); });
-    } else if (backendEnabled && bc && RL_CROPS.has(bc)) {
+    } else if (backendEnabled) {
       setRlCompare(LOADING);
-      postRlCompare({ parcel_id: p.id, crop: bc }, ctl.signal).then((data) => setRlCompare({ status: "ready", data }), (e) => !isAbort(e) && setRlCompare({ status: "error", message: message(e) }));
+      postRlCompare({ parcel_id: p.id, crop: q.crop }, ctl.signal).then((data) => setRlCompare({ status: "ready", data }), (e) => !isAbort(e) && setRlCompare({ status: "error", message: message(e) }));
     } else {
       setRlCompare(OFF);
     }
@@ -127,9 +127,9 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
     } else if (import.meta.env.DEV && new URLSearchParams(location.search).has("fixtures")) {
       import("../api/fixtures").then((m) => { if (!ctl.signal.aborted) setBackend({ status: "ready", data: m.BACKEND_FIXTURE }); });
     } else setBackend(OFF);
-    if (backendEnabled && bc && RL_CROPS.has(bc) && inSeason(q.date)) {
+    if (backendEnabled && inSeason(q.date)) {
       if (!sameTarget) setRl(LOADING);
-      postRlRecommend({ parcel_id: p.id, crop: bc, date: q.date }, ctl.signal).then((data) => setRl({ status: "ready", data }), (e) => !isAbort(e) && setRl({ status: "error", message: message(e) }));
+      postRlRecommend({ parcel_id: p.id, crop: q.crop, date: q.date, plan_days: RL_PLAN_DAYS }, ctl.signal).then((data) => setRl({ status: "ready", data }), (e) => !isAbort(e) && setRl({ status: "error", message: message(e) }));
     } else setRl(OFF);
     return () => ctl.abort();
   }, [p, q.crop, q.date]);

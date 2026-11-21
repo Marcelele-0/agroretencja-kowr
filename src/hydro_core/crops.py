@@ -1,9 +1,10 @@
 """Crop parameters (Kc curve, p, Ky, season dates) for every CropCode of the API contract.
 
-Single source of truth: the RL module's ``ml/rl_irrigator/config/crops.yaml`` for the four
-crops it was trained on, plus ``hydro_core/config/crops_extra.yaml`` (same schema) for the
-remaining ones. Both are parsed by ``kowr_rl.config.load_crops`` so the assessment (step 1)
-and the irrigation agent (step 4) always use identical crop physics.
+Single source of truth: the RL module's ``ml/rl_irrigator/config/crops.yaml`` (15 crops and the
+aliases of the API codes, e.g. ``pszenica_jara`` -> ``zboza_jare``), plus
+``hydro_core/config/crops_extra.yaml`` (same schema) for any code it does not cover. Both are
+parsed by ``kowr_rl.config.load_crops`` so the assessment (step 1) and the irrigation agent
+(step 4) always use identical crop physics.
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ from kowr_rl.config import (
     STAGES,
     CropParams,
     PreSeason,
+    accepted_crop_codes,
+    crop_aliases,
     load_crops,
     load_pre_season,
     load_soils,
@@ -49,15 +52,17 @@ __all__ = [
 
 @lru_cache(maxsize=1)
 def all_crops() -> dict[str, CropParams]:
-    """RL crops + extra crops (RL wins on a duplicated key)."""
+    """RL crops and their aliases + extra crops (RL wins on a duplicated key or alias)."""
     merged = dict(load_crops(str(EXTRA_CROPS_FILE)))
-    merged.update(load_crops(str(RL_CROPS_FILE)))
+    rl = load_crops(str(RL_CROPS_FILE))
+    merged.update(rl)
+    merged.update({alias: rl[key] for alias, key in crop_aliases(str(RL_CROPS_FILE)).items() if key in rl})
     return merged
 
 
 def rl_crop_keys() -> set[str]:
-    """Crops the RL policy was trained on."""
-    return set(load_crops(str(RL_CROPS_FILE)))
+    """Crop codes the RL policy handles: its crop keys and their aliases."""
+    return set(accepted_crop_codes())
 
 
 def crop_params(code: CropCode) -> CropParams:

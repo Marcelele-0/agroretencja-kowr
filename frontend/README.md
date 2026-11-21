@@ -60,11 +60,11 @@ Ta skala jest tymczasowa. Docelowo stan wody liczy backend ze wzoru (bilans FAO-
 | Endpoint | Gdzie w interfejsie | Bez backendu |
 | --- | --- | --- |
 | `POST /api/analyze` | stan wody (`assessment.water_state`, `water_state_timeline`), składowe wzoru (`assessment.components`), przyczyny w %, ranking działań, strefy na mapie (`map_layers.zones`), źródła (`audit.sources`) | stan wody z KBW i progu IUNG, przyczyny klimat i gleba, działania z założeniami symulacji |
-| `POST /rl/recommend` (`ml/rl_irrigator`) | decyzja o nawadnianiu, dawka dziś, plan 7 dni | porada z prognozy Open-Meteo |
+| `POST /rl/recommend` (`ml/rl_irrigator`, `plan_days: 14`) | decyzja o nawadnianiu, dawka dziś, plan 14 dni z szansą podlewania, woda w trzech strefach gleby i ryzyko stresu | porada z prognozy Open-Meteo |
 | `POST /rl/compare` (`ml/rl_irrigator`) | strategie nawadniania z 10 sezonów: strata plonu, woda, przesiąk, dni stresu | brak tabeli |
 | `GET /api/report.pdf` | przycisk „Pobierz raport PDF” | druk strony do PDF |
 
-Moduł RL obsługuje kukurydzę, ziemniaka, pszenicę ozimą i buraka cukrowego. Dla innych upraw sekcja RL się nie pokazuje.
+Moduł RL obsługuje wszystkie 15 upraw z listy; frontend wysyła mu własny kod uprawy.
 
 W trybie deweloperskim `&fixtures` w adresie analizy wczytuje próbkę odpowiedzi backendu (`src/api/fixtures.ts`). Build produkcyjny jej nie zawiera.
 
