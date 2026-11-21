@@ -148,7 +148,7 @@ Do zewnętrznych serwisów wysyłane są wyłącznie współrzędne punktu lub n
 | Zestaw holdout (czysty test E6): siatka przesunięta o 0,35°, IUNG, pogoda i archiwalne prognozy ECMWF ([`data/holdout/MANIFEST.json`](data/holdout/MANIFEST.json)) | PRE-FETCHED | 21.11.2026, 15:17–15:26 UTC | 112 węzłów → 81 rolnych → 50 (16 województw, ≥ 35 km od punktów treningowych); pogoda 2016-01-01 → 2026-11-16; prognozy 15 III – 31 X 2025 i 2026 |
 | Wagi polityki RL `artifacts/models/ppo_irrigator_weights.npz` (E6f_s2@dom) | wytrenowane offline na danych PRE-FETCHED | 21.11.2026 | trening 2016–2023, walidacja 2024, test 2025–2026 (holdout + punkty treningowe) |
 
-Szczegóły (URL, znaczniki czasu dla każdego punktu, kontrola jakości) są w [`data/MANIFEST.json`](data/MANIFEST.json). Dane surowe nie są w repozytorium; odtwarza je `scripts/fetch_training_data.py`. **Rekomendacja zawsze liczy się na żywo z danych działki.** Dane pobrane wcześniej służą wyłącznie do treningu i ewaluacji.
+Szczegóły (URL, znaczniki czasu dla każdego punktu, kontrola jakości) są w [`data/MANIFEST.json`](data/MANIFEST.json). Pobrane dane (pogoda i archiwalne prognozy, pliki `.parquet`, ok. 6 MB) są w repozytorium w `data/weather`, `data/forecasts` i `data/holdout/`. Można je odtworzyć skryptem `scripts/fetch_training_data.py`. **Rekomendacja zawsze liczy się na żywo z danych działki.** Dane pobrane wcześniej służą wyłącznie do treningu i ewaluacji.
 
 ---
 
@@ -239,7 +239,8 @@ Wcześniejszy pomiar dał 11,4 s (timeout WMS IUNG przy 8 s limicie) i 17,5 s (c
    - wyrocznię jako górną granicę;
    - API i kontrakty `IrrigationAdvice` / `SourceAuditEntry`.
 2. `reports/forecast_calibration.json` porównuje szum treningowy z prawdziwymi prognozami ECMWF 2024.
-3. `reports/evaluation_holdout.md` (czysty test na nowych lokalizacjach) i `reports/evaluation.md` (punkty treningowe) zawierają tabele, wykresy, przedziały bootstrap, przykładowe sezony i werdykt. Wybór modelu na walidacji odtwarza `scripts/compare_val.py`.
-4. `EXPERIMENTS.md` to dziennik wszystkich zmian nagrody i hiperparametrów z wynikami walidacji.
-5. `compare_strategies()` liczy dla konkretnej działki ostatnie 10 sezonów wszystkimi strategiami na tych samych danych.
-6. Każda odpowiedź zawiera `sources`, czyli URL, datę pobrania i tryb live/cache, więc liczby można sprawdzić u źródła.
+3. `reports/evaluation_holdout.md` (czysty test na nowych lokalizacjach) i `reports/evaluation.md` (punkty treningowe) zawierają tabele, wykresy, przedziały bootstrap, przykładowe sezony i werdykt. Porównanie kandydatów na walidacji, na podstawie którego wybrano model, jest w `reports/e6_val_selection.json`.
+4. Wynik czystego testu da się odtworzyć bez treningu, na wdrożonym modelu z `models/E6f_s2` i danych z repozytorium: `uv run python -m kowr_rl.evaluate --runs E6f_s2@dom --dataset holdout`.
+5. `EXPERIMENTS.md` to dziennik wszystkich zmian nagrody i hiperparametrów z wynikami walidacji.
+6. `compare_strategies()` liczy dla konkretnej działki ostatnie 10 sezonów wszystkimi strategiami na tych samych danych.
+7. Każda odpowiedź zawiera `sources`, czyli URL, datę pobrania i tryb live/cache, więc liczby można sprawdzić u źródła.

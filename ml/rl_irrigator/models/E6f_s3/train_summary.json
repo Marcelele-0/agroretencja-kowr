@@ -1,7 +1,0 @@
-{
- "run": "E6f_s3",
- "train_seconds": 676.4,
- "steps_per_s": 4435,
- "best_val_reward": -0.13426724230875206,
- "best_dominant_val_reward": -0.13501842673813028
-}

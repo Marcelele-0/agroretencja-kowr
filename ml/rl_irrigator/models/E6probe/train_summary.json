@@ -1,6 +1,0 @@
-{
- "run": "E6probe",
- "train_seconds": 2.4,
- "steps_per_s": 3434,
- "best_val_reward": -0.1361087020304708
-}

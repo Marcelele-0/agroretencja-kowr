@@ -136,11 +136,11 @@ artifacts/models/ppo_irrigator_weights.npz, artifacts/validation/rl_eval.json   
 ml/rl_irrigator/
   PLAN.md, EXPERIMENTS.md, README.md
   config/      crops.yaml, soils.yaml, rl.yaml
-  data/        weather/, soils/, cache/, MANIFEST.json   (dane w .gitignore, manifest w repo)
+  data/        weather/, forecasts/, holdout/, soils/, MANIFEST.json   (dane .parquet w repo, cache/ w .gitignore)
   kowr_rl/     data.py, simulator.py, baselines.py, env.py, train.py, evaluate.py, inference.py, api.py
   scripts/     fetch_training_data.py, benchmark_latency.py
   tests/
-  models/      najlepszy checkpoint + statystyki VecNormalize + policy.npz
+  models/      wdrożony model E6f_s2: checkpoint + statystyki VecNormalize + zapis walidacji
   reports/     evaluation.md, wykresy
   examples/    przykładowe odpowiedzi JSON
 ```

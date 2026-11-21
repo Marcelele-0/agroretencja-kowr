@@ -1,6 +1,0 @@
-{
- "run": "E1_s1",
- "train_seconds": 441.7,
- "steps_per_s": 6792,
- "best_val_reward": -0.09942523740177339
-}
