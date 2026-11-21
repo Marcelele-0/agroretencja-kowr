@@ -1,0 +1,8 @@
+{
+ "run": "E7_s1",
+ "train_seconds": 2270.1,
+ "steps_per_s": 2643,
+ "best_val_reward": -0.12410570775180872,
+ "best_dominant_val_reward": -0.12540312938059406,
+ "best_dominant_all_crops_val_reward": -0.1255608321218794
+}

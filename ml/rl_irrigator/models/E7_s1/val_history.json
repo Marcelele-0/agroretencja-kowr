@@ -1,0 +1,5998 @@
+{
+ "reference": {
+  "none": {
+   "reward": -0.24708975652300202,
+   "yield": 0.7860008390650192,
+   "yield_p05": 0.5689776769322485,
+   "water_mm": 0.0,
+   "dp_mm": 28.763357340056604,
+   "stress_days": 65.32666666666667
+  },
+  "calendar": {
+   "reward": -0.17808989972802416,
+   "yield": 0.9218305708736728,
+   "yield_p05": 0.7163519595519168,
+   "water_mm": 135.0,
+   "dp_mm": 76.55557796683733,
+   "stress_days": 31.088166666666666
+  },
+  "fao_rule": {
+   "reward": -0.12908899988510977,
+   "yield": 0.9394849171818606,
+   "yield_p05": 0.7469324306846493,
+   "water_mm": 102.7025,
+   "dp_mm": 32.465201969975176,
+   "stress_days": 26.255916666666668
+  },
+  "fao_forecast": {
+   "reward": -0.12864213591350207,
+   "yield": 0.938571863438636,
+   "yield_p05": 0.7472214319686473,
+   "water_mm": 100.38083333333333,
+   "dp_mm": 31.512420299248507,
+   "stress_days": 27.680666666666667
+  },
+  "fao_small": {
+   "reward": -0.1259792543064504,
+   "yield": 0.9405403948648295,
+   "yield_p05": 0.7473267441306479,
+   "water_mm": 99.8425,
+   "dp_mm": 30.740179873877942,
+   "stress_days": 26.804
+  }
+ },
+ "history": [
+  {
+   "reward": -0.12593102765486736,
+   "yield": 0.9406543867418201,
+   "yield_p05": 0.7473267441306479,
+   "water_mm": 99.995,
+   "dp_mm": 30.740530420667127,
+   "stress_days": 26.637333333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.055046096212408246,
+     "d_water_mm": -0.18666666666666668
+    },
+    "100.0": {
+     "d_yield_pp": 0.14151452392007588,
+     "d_water_mm": -1.0733333333333333
+    },
+    "150.0": {
+     "d_yield_pp": 0.1543509519520749,
+     "d_water_mm": -3.2333333333333334
+    },
+    "250.0": {
+     "d_yield_pp": 0.11687625189927872,
+     "d_water_mm": -6.336666666666667
+    }
+   },
+   "dominant": true,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.13994183411006283,
+     "d_water_mm": -2.7625
+    },
+    "chmiel": {
+     "d_yield_pp": 0.07658348606748155,
+     "d_water_mm": -0.7
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.05525643257990448,
+     "d_water_mm": -1.3375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.09880814432036587,
+     "d_water_mm": -2.425
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.1594645416861377,
+     "d_water_mm": -2.525
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": 0.1738895200814548,
+     "d_water_mm": -2.4875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.05344593157397057,
+     "d_water_mm": -2.975
+    },
+    "rzepak": {
+     "d_yield_pp": 0.19193737330542576,
+     "d_water_mm": -2.0
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.0965971818742708,
+     "d_water_mm": -4.5125
+    },
+    "truskawki": {
+     "d_yield_pp": 0.30476048521190285,
+     "d_water_mm": -8.4
+    },
+    "tyton": {
+     "d_yield_pp": 0.11597034417688641,
+     "d_water_mm": 0.0875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.13488236493050815,
+     "d_water_mm": -1.15
+    },
+    "warzywa": {
+     "d_yield_pp": 0.1369809205508809,
+     "d_water_mm": -3.6625
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.09594721654508491,
+     "d_water_mm": -2.175
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.11293292667359577,
+     "d_water_mm": -3.5875
+    }
+   },
+   "n_crops_dominant": 13,
+   "dominant_all_crops": false,
+   "timesteps": 0,
+   "eval_s": 2.45,
+   "best": true,
+   "best_dominant": true,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12551443940106485,
+   "yield": 0.9407495929938645,
+   "yield_p05": 0.7473214858987743,
+   "water_mm": 99.3825,
+   "dp_mm": 30.718009223712134,
+   "stress_days": 26.821916666666667,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05316091443006463,
+     "d_water_mm": -0.31
+    },
+    "100.0": {
+     "d_yield_pp": 0.13786583436901007,
+     "d_water_mm": -1.4333333333333333
+    },
+    "150.0": {
+     "d_yield_pp": 0.15350990794426772,
+     "d_water_mm": -3.9966666666666666
+    },
+    "250.0": {
+     "d_yield_pp": 0.16133366805825947,
+     "d_water_mm": -7.54
+    }
+   },
+   "dominant": true,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.131381478387151,
+     "d_water_mm": -3.6375
+    },
+    "chmiel": {
+     "d_yield_pp": 0.06737867840893347,
+     "d_water_mm": -1.4625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.04307821263233255,
+     "d_water_mm": -1.5375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.08921685586133857,
+     "d_water_mm": -3.0125
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.209480011022603,
+     "d_water_mm": -2.5125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": 0.22090861861063638,
+     "d_water_mm": -2.8625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.024566657943234482,
+     "d_water_mm": -3.875
+    },
+    "rzepak": {
+     "d_yield_pp": 0.13139810391400092,
+     "d_water_mm": -3.875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.008742566925515519,
+     "d_water_mm": -4.6875
+    },
+    "truskawki": {
+     "d_yield_pp": 0.3605180121357385,
+     "d_water_mm": -7.875
+    },
+    "tyton": {
+     "d_yield_pp": 0.09086311062425763,
+     "d_water_mm": -1.2375
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.1138578720119017,
+     "d_water_mm": -2.0375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.1282641613910201,
+     "d_water_mm": -4.325
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.11569509353951009,
+     "d_water_mm": -2.925
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.17914941844886395,
+     "d_water_mm": -3.9375
+    }
+   },
+   "n_crops_dominant": 14,
+   "dominant_all_crops": false,
+   "timesteps": 100000,
+   "eval_s": 2.39,
+   "best": true,
+   "best_dominant": true,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1255608321218794,
+   "yield": 0.9408181318324901,
+   "yield_p05": 0.7472628175530803,
+   "water_mm": 99.56083333333333,
+   "dp_mm": 30.82862809234043,
+   "stress_days": 26.20575,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.048465846353833615,
+     "d_water_mm": -0.33666666666666667
+    },
+    "100.0": {
+     "d_yield_pp": 0.13490989023534686,
+     "d_water_mm": -1.37
+    },
+    "150.0": {
+     "d_yield_pp": 0.1602811503334387,
+     "d_water_mm": -3.79
+    },
+    "250.0": {
+     "d_yield_pp": 0.18962897332918688,
+     "d_water_mm": -7.07
+    }
+   },
+   "dominant": true,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.1354332976700775,
+     "d_water_mm": -3.5375
+    },
+    "chmiel": {
+     "d_yield_pp": 0.09277267458444333,
+     "d_water_mm": -1.1
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.06304357081828822,
+     "d_water_mm": -1.5125
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.11964789096677445,
+     "d_water_mm": -2.8125
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.1215788309325403,
+     "d_water_mm": -3.875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": 0.13183464856639238,
+     "d_water_mm": -4.4875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.031188732265655595,
+     "d_water_mm": -3.8125
+    },
+    "rzepak": {
+     "d_yield_pp": 0.12602993019950368,
+     "d_water_mm": -3.8375
+    },
+    "straczkowe": {
+     "d_yield_pp": 0.04018737919774229,
+     "d_water_mm": -4.0125
+    },
+    "truskawki": {
+     "d_yield_pp": 0.4307919828982165,
+     "d_water_mm": -4.5125
+    },
+    "tyton": {
+     "d_yield_pp": 0.13514634382063967,
+     "d_water_mm": -0.3625
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.11343763950162841,
+     "d_water_mm": -2.2875
+    },
+    "warzywa": {
+     "d_yield_pp": 0.18915379223106277,
+     "d_water_mm": -4.0
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.03256070475966384,
+     "d_water_mm": -3.325
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.2370145575316438,
+     "d_water_mm": -3.65
+    }
+   },
+   "n_crops_dominant": 15,
+   "dominant_all_crops": true,
+   "timesteps": 200000,
+   "eval_s": 2.41,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": true
+  },
+  {
+   "reward": -0.12560303643197399,
+   "yield": 0.9402259482238164,
+   "yield_p05": 0.747256200647411,
+   "water_mm": 98.39833333333333,
+   "dp_mm": 30.735821883602572,
+   "stress_days": 26.958916666666667,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.04607671880646815,
+     "d_water_mm": -0.38666666666666666
+    },
+    "100.0": {
+     "d_yield_pp": 0.11171411802371736,
+     "d_water_mm": -1.82
+    },
+    "150.0": {
+     "d_yield_pp": 0.09478515599746781,
+     "d_water_mm": -5.033333333333333
+    },
+    "250.0": {
+     "d_yield_pp": 0.04383642395470595,
+     "d_water_mm": -9.976666666666667
+    }
+   },
+   "dominant": true,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.13141082572132456,
+     "d_water_mm": -4.4625
+    },
+    "chmiel": {
+     "d_yield_pp": 0.07259665769375838,
+     "d_water_mm": -1.8
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.057782436378950294,
+     "d_water_mm": -1.65
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.1097986581911045,
+     "d_water_mm": -3.375
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.02455336368377635,
+     "d_water_mm": -5.75
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.036983738041172706,
+     "d_water_mm": -6.8625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.08021292571476847,
+     "d_water_mm": -5.575
+    },
+    "rzepak": {
+     "d_yield_pp": 0.047275131156730904,
+     "d_water_mm": -5.675
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.07096526382978925,
+     "d_water_mm": -5.975
+    },
+    "truskawki": {
+     "d_yield_pp": 0.4332472897507377,
+     "d_water_mm": -4.925
+    },
+    "tyton": {
+     "d_yield_pp": 0.13762551221854533,
+     "d_water_mm": -0.95
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.09389752455262759,
+     "d_water_mm": -2.8875
+    },
+    "warzywa": {
+     "d_yield_pp": 0.19163624663738305,
+     "d_water_mm": -4.3
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.1611168644664487,
+     "d_water_mm": -5.65
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.2101084363686405,
+     "d_water_mm": -4.725
+    }
+   },
+   "n_crops_dominant": 10,
+   "dominant_all_crops": false,
+   "timesteps": 300000,
+   "eval_s": 2.53,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12587694000225655,
+   "yield": 0.9400547025074467,
+   "yield_p05": 0.7472464412633316,
+   "water_mm": 98.56333333333333,
+   "dp_mm": 30.747527422898994,
+   "stress_days": 27.205333333333332,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.03827811655182784,
+     "d_water_mm": -0.43
+    },
+    "100.0": {
+     "d_yield_pp": 0.09004257168693845,
+     "d_water_mm": -1.7733333333333334
+    },
+    "150.0": {
+     "d_yield_pp": 0.06712281795070019,
+     "d_water_mm": -4.836666666666667
+    },
+    "250.0": {
+     "d_yield_pp": 0.032470624045008556,
+     "d_water_mm": -9.516666666666667
+    }
+   },
+   "dominant": true,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.12553182649689965,
+     "d_water_mm": -4.4375
+    },
+    "chmiel": {
+     "d_yield_pp": 0.05412838334211225,
+     "d_water_mm": -1.425
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.052385667431920344,
+     "d_water_mm": -1.5375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.09533197571213078,
+     "d_water_mm": -3.1875
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.06215217320975721,
+     "d_water_mm": -5.8875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.07873184552948072,
+     "d_water_mm": -7.2375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.10230565290644587,
+     "d_water_mm": -5.4125
+    },
+    "rzepak": {
+     "d_yield_pp": 0.01539332651069321,
+     "d_water_mm": -5.675
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.06654084486281046,
+     "d_water_mm": -5.5
+    },
+    "truskawki": {
+     "d_yield_pp": 0.43320845366051125,
+     "d_water_mm": -4.0125
+    },
+    "tyton": {
+     "d_yield_pp": 0.1284109470599189,
+     "d_water_mm": -0.6125
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.07170869658429267,
+     "d_water_mm": -2.875
+    },
+    "warzywa": {
+     "d_yield_pp": 0.19119801029782618,
+     "d_water_mm": -4.125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.22100863672395368,
+     "d_water_mm": -5.55
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.2181198545154241,
+     "d_water_mm": -4.6125
+    }
+   },
+   "n_crops_dominant": 10,
+   "dominant_all_crops": false,
+   "timesteps": 400000,
+   "eval_s": 2.3,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12540312938059406,
+   "yield": 0.9400841680382624,
+   "yield_p05": 0.7472607482456631,
+   "water_mm": 97.67583333333333,
+   "dp_mm": 30.754125670770843,
+   "stress_days": 26.998166666666666,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.028157569909350182,
+     "d_water_mm": -0.6366666666666667
+    },
+    "100.0": {
+     "d_yield_pp": 0.07751285061299094,
+     "d_water_mm": -2.3333333333333335
+    },
+    "150.0": {
+     "d_yield_pp": 0.07297531375436143,
+     "d_water_mm": -5.8966666666666665
+    },
+    "250.0": {
+     "d_yield_pp": 0.06105460828409849,
+     "d_water_mm": -11.24
+    }
+   },
+   "dominant": true,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.10969416358680732,
+     "d_water_mm": -5.3375
+    },
+    "chmiel": {
+     "d_yield_pp": 0.01434915950935034,
+     "d_water_mm": -3.1125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.05215889211395617,
+     "d_water_mm": -1.55
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.07284571054027937,
+     "d_water_mm": -4.3625
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.0919202536095321,
+     "d_water_mm": -5.2875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": 0.063201399961559,
+     "d_water_mm": -6.9625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.13056433282701324,
+     "d_water_mm": -6.3375
+    },
+    "rzepak": {
+     "d_yield_pp": -0.10453930505649443,
+     "d_water_mm": -7.6625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.009273750035213968,
+     "d_water_mm": -5.325
+    },
+    "truskawki": {
+     "d_yield_pp": 0.3941547924700195,
+     "d_water_mm": -6.175
+    },
+    "tyton": {
+     "d_yield_pp": 0.05104314707897585,
+     "d_water_mm": -3.6625
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.051329559390524866,
+     "d_water_mm": -3.5375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.14051269353550938,
+     "d_water_mm": -5.65
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.10494544733069186,
+     "d_water_mm": -5.3
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.20698934805590358,
+     "d_water_mm": -5.1375
+    }
+   },
+   "n_crops_dominant": 11,
+   "dominant_all_crops": false,
+   "timesteps": 500000,
+   "eval_s": 2.3,
+   "best": true,
+   "best_dominant": true,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12544676037050467,
+   "yield": 0.9397702021190099,
+   "yield_p05": 0.7472265904794599,
+   "water_mm": 97.1225,
+   "dp_mm": 30.674077388708827,
+   "stress_days": 27.508166666666668,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.029429311086566583,
+     "d_water_mm": -0.69
+    },
+    "100.0": {
+     "d_yield_pp": 0.06855633959315903,
+     "d_water_mm": -2.566666666666667
+    },
+    "150.0": {
+     "d_yield_pp": 0.03168502590200674,
+     "d_water_mm": -6.55
+    },
+    "250.0": {
+     "d_yield_pp": -0.015556701722025426,
+     "d_water_mm": -12.513333333333334
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11002243206999465,
+     "d_water_mm": -5.35
+    },
+    "chmiel": {
+     "d_yield_pp": -0.008429112851144505,
+     "d_water_mm": -3.0875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.03593900086477196,
+     "d_water_mm": -1.6375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.0510509349462928,
+     "d_water_mm": -4.5
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.054026353398401325,
+     "d_water_mm": -5.8
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": 0.015532289733873286,
+     "d_water_mm": -7.7375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.20933030757167703,
+     "d_water_mm": -7.6875
+    },
+    "rzepak": {
+     "d_yield_pp": -0.1543333966783989,
+     "d_water_mm": -8.7875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.08441727765485278,
+     "d_water_mm": -6.95
+    },
+    "truskawki": {
+     "d_yield_pp": 0.40076386868111563,
+     "d_water_mm": -6.8125
+    },
+    "tyton": {
+     "d_yield_pp": 0.057306332863700085,
+     "d_water_mm": -3.5875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.035157974431753614,
+     "d_water_mm": -3.6375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.13785035996454592,
+     "d_water_mm": -5.7375
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.19613246042023488,
+     "d_water_mm": -6.7125
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.1829204139457598,
+     "d_water_mm": -5.675
+    }
+   },
+   "n_crops_dominant": 10,
+   "dominant_all_crops": false,
+   "timesteps": 600000,
+   "eval_s": 2.33,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12544903009363248,
+   "yield": 0.9393353550874391,
+   "yield_p05": 0.7472267981314208,
+   "water_mm": 96.14666666666666,
+   "dp_mm": 30.72049437717691,
+   "stress_days": 27.503833333333333,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.029744342859119113,
+     "d_water_mm": -0.78
+    },
+    "100.0": {
+     "d_yield_pp": 0.07027542527614417,
+     "d_water_mm": -2.8
+    },
+    "150.0": {
+     "d_yield_pp": 0.021325378988976858,
+     "d_water_mm": -7.1866666666666665
+    },
+    "250.0": {
+     "d_yield_pp": -0.18116998489275726,
+     "d_water_mm": -15.456666666666667
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.09515279313026716,
+     "d_water_mm": -6.3625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.07139672149661493,
+     "d_water_mm": -4.9125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.04318691164693668,
+     "d_water_mm": -1.8125
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.030766031599240865,
+     "d_water_mm": -5.3125
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.030889987124634602,
+     "d_water_mm": -6.7125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.06914455606279007,
+     "d_water_mm": -9.4125
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.29022300028570197,
+     "d_water_mm": -8.925
+    },
+    "rzepak": {
+     "d_yield_pp": -0.34754923400998194,
+     "d_water_mm": -10.6875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.05158723771236225,
+     "d_water_mm": -6.9625
+    },
+    "truskawki": {
+     "d_yield_pp": 0.35623574486910947,
+     "d_water_mm": -6.7625
+    },
+    "tyton": {
+     "d_yield_pp": -0.026631362589477806,
+     "d_water_mm": -5.7375
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.0029969551708025205,
+     "d_water_mm": -4.425
+    },
+    "warzywa": {
+     "d_yield_pp": 0.1256892682704223,
+     "d_water_mm": -6.5625
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.2394493488131792,
+     "d_water_mm": -7.3
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.19271453786836035,
+     "d_water_mm": -6.45
+    }
+   },
+   "n_crops_dominant": 7,
+   "dominant_all_crops": false,
+   "timesteps": 700000,
+   "eval_s": 2.33,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12502395955435416,
+   "yield": 0.9393353004287174,
+   "yield_p05": 0.7472907673775849,
+   "water_mm": 95.43083333333334,
+   "dp_mm": 30.513424420427675,
+   "stress_days": 27.479916666666668,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.04009413192116167,
+     "d_water_mm": -0.8633333333333333
+    },
+    "100.0": {
+     "d_yield_pp": 0.08441068372890274,
+     "d_water_mm": -3.203333333333333
+    },
+    "150.0": {
+     "d_yield_pp": 0.026349458148745536,
+     "d_water_mm": -8.03
+    },
+    "250.0": {
+     "d_yield_pp": -0.2107009750560936,
+     "d_water_mm": -16.99
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.06744772832876735,
+     "d_water_mm": -7.2375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.13992564524309603,
+     "d_water_mm": -6.1
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.06633535003164531,
+     "d_water_mm": -1.9125
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.035236699956957884,
+     "d_water_mm": -6.0875
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.13676851929920023,
+     "d_water_mm": -6.2625
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": 0.0332399777043062,
+     "d_water_mm": -9.0625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.3409424502525899,
+     "d_water_mm": -9.7625
+    },
+    "rzepak": {
+     "d_yield_pp": -0.4578654328302308,
+     "d_water_mm": -12.0
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.027627611453612113,
+     "d_water_mm": -7.2125
+    },
+    "truskawki": {
+     "d_yield_pp": 0.369828459863065,
+     "d_water_mm": -8.925
+    },
+    "tyton": {
+     "d_yield_pp": -0.14834100331866318,
+     "d_water_mm": -8.025
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.019181016465527098,
+     "d_water_mm": -4.75
+    },
+    "warzywa": {
+     "d_yield_pp": 0.08155296238613889,
+     "d_water_mm": -7.8125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.13590322151019463,
+     "d_water_mm": -7.05
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.21658952085796512,
+     "d_water_mm": -6.875
+    }
+   },
+   "n_crops_dominant": 9,
+   "dominant_all_crops": false,
+   "timesteps": 800000,
+   "eval_s": 2.29,
+   "best": true,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12472087538935872,
+   "yield": 0.9401450177986475,
+   "yield_p05": 0.7472576684821503,
+   "water_mm": 96.49,
+   "dp_mm": 30.679930344559203,
+   "stress_days": 26.667666666666666,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05106177214374723,
+     "d_water_mm": -0.6633333333333333
+    },
+    "100.0": {
+     "d_yield_pp": 0.12280285289429692,
+     "d_water_mm": -2.6766666666666667
+    },
+    "150.0": {
+     "d_yield_pp": 0.11052665904825376,
+     "d_water_mm": -6.99
+    },
+    "250.0": {
+     "d_yield_pp": -0.02035103737154222,
+     "d_water_mm": -14.52
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11933023078906539,
+     "d_water_mm": -6.1375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.0035931185440849773,
+     "d_water_mm": -4.6125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.0755855015404971,
+     "d_water_mm": -1.5625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.07017420387990156,
+     "d_water_mm": -5.3875
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.15165361105552766,
+     "d_water_mm": -5.9
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": 0.08414603468455847,
+     "d_water_mm": -8.6
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.14235841448698838,
+     "d_water_mm": -7.9625
+    },
+    "rzepak": {
+     "d_yield_pp": -0.186506549134389,
+     "d_water_mm": -9.9375
+    },
+    "straczkowe": {
+     "d_yield_pp": 0.07904858051122718,
+     "d_water_mm": -6.225
+    },
+    "truskawki": {
+     "d_yield_pp": 0.3906832508995328,
+     "d_water_mm": -7.6625
+    },
+    "tyton": {
+     "d_yield_pp": -0.0034633864119647667,
+     "d_water_mm": -5.8875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.017245649354986542,
+     "d_water_mm": -4.25
+    },
+    "warzywa": {
+     "d_yield_pp": 0.12987639854296124,
+     "d_water_mm": -6.5375
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.04623472984441651,
+     "d_water_mm": -6.3625
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.2545636623439195,
+     "d_water_mm": -6.1625
+    }
+   },
+   "n_crops_dominant": 10,
+   "dominant_all_crops": false,
+   "timesteps": 900000,
+   "eval_s": 2.27,
+   "best": true,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12457153285802504,
+   "yield": 0.939845051564319,
+   "yield_p05": 0.7472686809256768,
+   "water_mm": 95.54916666666666,
+   "dp_mm": 30.649695079128357,
+   "stress_days": 26.708916666666667,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05384933156694832,
+     "d_water_mm": -0.73
+    },
+    "100.0": {
+     "d_yield_pp": 0.1305517256336629,
+     "d_water_mm": -2.9266666666666667
+    },
+    "150.0": {
+     "d_yield_pp": 0.11133932146311734,
+     "d_water_mm": -7.706666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.15168662568036684,
+     "d_water_mm": -17.25
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11316009747530649,
+     "d_water_mm": -6.7875
+    },
+    "chmiel": {
+     "d_yield_pp": -0.06763748587950491,
+     "d_water_mm": -6.2875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.07880330002170537,
+     "d_water_mm": -1.475
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.04505379735615804,
+     "d_water_mm": -6.175
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.16989556101021708,
+     "d_water_mm": -6.125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": 0.07202706829216199,
+     "d_water_mm": -9.3
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.1727019878394194,
+     "d_water_mm": -8.7125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.2757705508838769,
+     "d_water_mm": -10.925
+    },
+    "straczkowe": {
+     "d_yield_pp": 0.0654814105882403,
+     "d_water_mm": -6.85
+    },
+    "truskawki": {
+     "d_yield_pp": 0.3328416524993058,
+     "d_water_mm": -9.8375
+    },
+    "tyton": {
+     "d_yield_pp": -0.10761741220013946,
+     "d_water_mm": -8.475
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.013300685360244743,
+     "d_water_mm": -4.8375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.09096445193715982,
+     "d_water_mm": -7.525
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.028721737521632193,
+     "d_water_mm": -6.85
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.23772409419216917,
+     "d_water_mm": -7.1375
+    }
+   },
+   "n_crops_dominant": 9,
+   "dominant_all_crops": false,
+   "timesteps": 1000000,
+   "eval_s": 2.27,
+   "best": true,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1246274796321992,
+   "yield": 0.9393835133390666,
+   "yield_p05": 0.7472438119840257,
+   "water_mm": 94.69333333333333,
+   "dp_mm": 30.560810577322098,
+   "stress_days": 27.18475,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05616022370255039,
+     "d_water_mm": -0.7833333333333333
+    },
+    "100.0": {
+     "d_yield_pp": 0.12424200254300527,
+     "d_water_mm": -3.23
+    },
+    "150.0": {
+     "d_yield_pp": 0.07193029109039695,
+     "d_water_mm": -8.58
+    },
+    "250.0": {
+     "d_yield_pp": -0.29289405445353295,
+     "d_water_mm": -19.44333333333333
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.1033465780919461,
+     "d_water_mm": -7.4625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.08601036665212548,
+     "d_water_mm": -6.8125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.07615113280409722,
+     "d_water_mm": -1.625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.018787607566997308,
+     "d_water_mm": -7.1125
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.05625230381138057,
+     "d_water_mm": -8.05
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.08518640158432167,
+     "d_water_mm": -11.5375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.21035100160879208,
+     "d_water_mm": -9.0
+    },
+    "rzepak": {
+     "d_yield_pp": -0.2892665569790618,
+     "d_water_mm": -11.0125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.01919231525272433,
+     "d_water_mm": -7.675
+    },
+    "truskawki": {
+     "d_yield_pp": 0.32160159130717075,
+     "d_water_mm": -11.15
+    },
+    "tyton": {
+     "d_yield_pp": -0.0981060340183703,
+     "d_water_mm": -8.9375
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.05966461632804828,
+     "d_water_mm": -5.7125
+    },
+    "warzywa": {
+     "d_yield_pp": 0.07618019835544339,
+     "d_water_mm": -8.075
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.15081196842354339,
+     "d_water_mm": -7.7625
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.19416408471902558,
+     "d_water_mm": -8.2125
+    }
+   },
+   "n_crops_dominant": 7,
+   "dominant_all_crops": false,
+   "timesteps": 1100000,
+   "eval_s": 2.31,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12450526668162895,
+   "yield": 0.9391277739277393,
+   "yield_p05": 0.7472682462547249,
+   "water_mm": 93.89666666666666,
+   "dp_mm": 30.554302764919907,
+   "stress_days": 27.308166666666665,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.0517470427169767,
+     "d_water_mm": -0.8933333333333333
+    },
+    "100.0": {
+     "d_yield_pp": 0.12229220873858106,
+     "d_water_mm": -3.6233333333333335
+    },
+    "150.0": {
+     "d_yield_pp": 0.0631668841230275,
+     "d_water_mm": -9.386666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.38006343722707936,
+     "d_water_mm": -21.32
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11680438638944746,
+     "d_water_mm": -7.3125
+    },
+    "chmiel": {
+     "d_yield_pp": -0.136687147532005,
+     "d_water_mm": -9.375
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.09694518429542683,
+     "d_water_mm": -1.6125
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.03117141241228255,
+     "d_water_mm": -7.075
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.04443741008609302,
+     "d_water_mm": -8.2375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.18496565362400413,
+     "d_water_mm": -12.9375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.20705168462211376,
+     "d_water_mm": -9.5625
+    },
+    "rzepak": {
+     "d_yield_pp": -0.2974180964270383,
+     "d_water_mm": -11.55
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.07506548296947572,
+     "d_water_mm": -8.6875
+    },
+    "truskawki": {
+     "d_yield_pp": 0.2370123534138964,
+     "d_water_mm": -13.125
+    },
+    "tyton": {
+     "d_yield_pp": -0.19060355103732302,
+     "d_water_mm": -11.2
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.03367318484894953,
+     "d_water_mm": -5.4875
+    },
+    "warzywa": {
+     "d_yield_pp": 0.08143841652075458,
+     "d_water_mm": -8.1625
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.1617219427450065,
+     "d_water_mm": -8.3375
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.14366269950616203,
+     "d_water_mm": -9.425
+    }
+   },
+   "n_crops_dominant": 7,
+   "dominant_all_crops": false,
+   "timesteps": 1200000,
+   "eval_s": 2.29,
+   "best": true,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1241059162583731,
+   "yield": 0.939643527735698,
+   "yield_p05": 0.7472927663133581,
+   "water_mm": 94.23333333333333,
+   "dp_mm": 30.538499168677024,
+   "stress_days": 26.932666666666666,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.052103810183072544,
+     "d_water_mm": -0.92
+    },
+    "100.0": {
+     "d_yield_pp": 0.12301368438754003,
+     "d_water_mm": -3.7133333333333334
+    },
+    "150.0": {
+     "d_yield_pp": 0.08911046838134923,
+     "d_water_mm": -9.35
+    },
+    "250.0": {
+     "d_yield_pp": -0.2007837414169511,
+     "d_water_mm": -19.893333333333334
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11916985823649873,
+     "d_water_mm": -7.525
+    },
+    "chmiel": {
+     "d_yield_pp": -0.07647815111217052,
+     "d_water_mm": -8.775
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.09322155214073868,
+     "d_water_mm": -1.925
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.029933246101333272,
+     "d_water_mm": -7.475
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.09105082223064635,
+     "d_water_mm": -8.1
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.0704591309724763,
+     "d_water_mm": -12.175
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.08884811678516093,
+     "d_water_mm": -8.25
+    },
+    "rzepak": {
+     "d_yield_pp": -0.17198362474566903,
+     "d_water_mm": -10.4625
+    },
+    "straczkowe": {
+     "d_yield_pp": 0.05571803197358744,
+     "d_water_mm": -7.45
+    },
+    "truskawki": {
+     "d_yield_pp": 0.2432922663478302,
+     "d_water_mm": -12.925
+    },
+    "tyton": {
+     "d_yield_pp": -0.16282154177186828,
+     "d_water_mm": -11.1875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.07119582255780853,
+     "d_water_mm": -6.15
+    },
+    "warzywa": {
+     "d_yield_pp": 0.0800035554841254,
+     "d_water_mm": -8.4625
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.001791685727673034,
+     "d_water_mm": -7.0125
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.16910457191435685,
+     "d_water_mm": -9.1625
+    }
+   },
+   "n_crops_dominant": 8,
+   "dominant_all_crops": false,
+   "timesteps": 1300000,
+   "eval_s": 2.25,
+   "best": true,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12410570775180872,
+   "yield": 0.9392882382570716,
+   "yield_p05": 0.7472935859808294,
+   "water_mm": 93.43833333333333,
+   "dp_mm": 30.558280579740746,
+   "stress_days": 26.967666666666666,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.045579120437096124,
+     "d_water_mm": -1.07
+    },
+    "100.0": {
+     "d_yield_pp": 0.09977787093440037,
+     "d_water_mm": -4.116666666666666
+    },
+    "150.0": {
+     "d_yield_pp": 0.042237608014805854,
+     "d_water_mm": -10.363333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -0.2662661693018069,
+     "d_water_mm": -21.506666666666668
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.10114779868372792,
+     "d_water_mm": -8.025
+    },
+    "chmiel": {
+     "d_yield_pp": -0.13497176705720687,
+     "d_water_mm": -10.75
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.10359739092548499,
+     "d_water_mm": -1.8375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.020160609294420886,
+     "d_water_mm": -7.95
+    },
+    "kukurydza": {
+     "d_yield_pp": 0.0954196765268092,
+     "d_water_mm": -8.15
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.1266013962692359,
+     "d_water_mm": -13.075
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.1136632955870351,
+     "d_water_mm": -8.75
+    },
+    "rzepak": {
+     "d_yield_pp": -0.25963279669690603,
+     "d_water_mm": -11.6125
+    },
+    "straczkowe": {
+     "d_yield_pp": 0.04152803329390192,
+     "d_water_mm": -7.7875
+    },
+    "truskawki": {
+     "d_yield_pp": 0.16935581815772,
+     "d_water_mm": -14.5375
+    },
+    "tyton": {
+     "d_yield_pp": -0.29673865691418877,
+     "d_water_mm": -13.575
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.07482145233439735,
+     "d_water_mm": -6.375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.058220238349605886,
+     "d_water_mm": -8.95
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.0026852483331917393,
+     "d_water_mm": -7.2625
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.11929616411096532,
+     "d_water_mm": -10.325
+    }
+   },
+   "n_crops_dominant": 9,
+   "dominant_all_crops": false,
+   "timesteps": 1400000,
+   "eval_s": 2.24,
+   "best": true,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12444129232712448,
+   "yield": 0.9390822014974906,
+   "yield_p05": 0.7473267956890125,
+   "water_mm": 93.67916666666666,
+   "dp_mm": 30.507796530711854,
+   "stress_days": 27.490333333333332,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.02592790832276973,
+     "d_water_mm": -1.2166666666666666
+    },
+    "100.0": {
+     "d_yield_pp": 0.03557829843586625,
+     "d_water_mm": -4.3966666666666665
+    },
+    "150.0": {
+     "d_yield_pp": -0.027928377592273044,
+     "d_water_mm": -10.52
+    },
+    "250.0": {
+     "d_yield_pp": -0.19466410291432257,
+     "d_water_mm": -19.96
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11451758848014831,
+     "d_water_mm": -8.075
+    },
+    "chmiel": {
+     "d_yield_pp": -0.0490612273131024,
+     "d_water_mm": -8.05
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.08061631412135578,
+     "d_water_mm": -2.225
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.005710625815929474,
+     "d_water_mm": -7.975
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.13318387262817682,
+     "d_water_mm": -10.6125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.34048659828560335,
+     "d_water_mm": -14.6625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.09573035436761694,
+     "d_water_mm": -8.4125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.09788474592416904,
+     "d_water_mm": -10.1
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.09388601873173909,
+     "d_water_mm": -8.775
+    },
+    "truskawki": {
+     "d_yield_pp": 0.15297713342305416,
+     "d_water_mm": -13.6875
+    },
+    "tyton": {
+     "d_yield_pp": -0.05924043951347841,
+     "d_water_mm": -9.5125
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.11657047478187679,
+     "d_water_mm": -6.7875
+    },
+    "warzywa": {
+     "d_yield_pp": 0.07282702479857478,
+     "d_water_mm": -8.35
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.12303483976516469,
+     "d_water_mm": -8.0375
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.07835635811701626,
+     "d_water_mm": -10.0875
+    }
+   },
+   "n_crops_dominant": 6,
+   "dominant_all_crops": false,
+   "timesteps": 1500000,
+   "eval_s": 2.24,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12461405988649854,
+   "yield": 0.9389546739832227,
+   "yield_p05": 0.7472806452905689,
+   "water_mm": 93.61416666666666,
+   "dp_mm": 30.717553118816262,
+   "stress_days": 27.34475,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.005628998977581053,
+     "d_water_mm": -1.2366666666666666
+    },
+    "100.0": {
+     "d_yield_pp": 0.007868598043121622,
+     "d_water_mm": -4.583333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.058621729754503686,
+     "d_water_mm": -10.77
+    },
+    "250.0": {
+     "d_yield_pp": -0.16697314672127977,
+     "d_water_mm": -19.763333333333332
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11685599527644741,
+     "d_water_mm": -7.825
+    },
+    "chmiel": {
+     "d_yield_pp": -0.040428733803545946,
+     "d_water_mm": -8.9
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.0746476667410771,
+     "d_water_mm": -1.9375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.021331937814847116,
+     "d_water_mm": -7.675
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.19199233907442692,
+     "d_water_mm": -11.1125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.44641876547088555,
+     "d_water_mm": -15.55
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.06210379924751586,
+     "d_water_mm": -8.0375
+    },
+    "rzepak": {
+     "d_yield_pp": -0.07724574950842099,
+     "d_water_mm": -9.9625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.10491208141247699,
+     "d_water_mm": -9.0375
+    },
+    "truskawki": {
+     "d_yield_pp": 0.11123262889736193,
+     "d_water_mm": -13.6625
+    },
+    "tyton": {
+     "d_yield_pp": -0.07598248438751187,
+     "d_water_mm": -9.8625
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.08719884360459998,
+     "d_water_mm": -6.3375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.08719225370206822,
+     "d_water_mm": -7.8875
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.15424519982100088,
+     "d_water_mm": -8.1625
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.033902715942030176,
+     "d_water_mm": -10.375
+    }
+   },
+   "n_crops_dominant": 6,
+   "dominant_all_crops": false,
+   "timesteps": 1600000,
+   "eval_s": 2.27,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12462686600593915,
+   "yield": 0.9387832935042825,
+   "yield_p05": 0.7472938419318425,
+   "water_mm": 93.3175,
+   "dp_mm": 30.619777468495414,
+   "stress_days": 27.58125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.018300141422626443,
+     "d_water_mm": -1.2033333333333334
+    },
+    "100.0": {
+     "d_yield_pp": 0.026330231441874408,
+     "d_water_mm": -4.52
+    },
+    "150.0": {
+     "d_yield_pp": -0.06498163565565934,
+     "d_water_mm": -11.023333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -0.26029820824008715,
+     "d_water_mm": -20.793333333333333
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.12154749762763378,
+     "d_water_mm": -7.25
+    },
+    "chmiel": {
+     "d_yield_pp": -0.05654150954890856,
+     "d_water_mm": -9.875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.09036592028693001,
+     "d_water_mm": -1.475
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.014306076832105788,
+     "d_water_mm": -7.575
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.19976233446115185,
+     "d_water_mm": -10.8625
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.5114100960801691,
+     "d_water_mm": -15.85
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.04859144424458815,
+     "d_water_mm": -8.0
+    },
+    "rzepak": {
+     "d_yield_pp": -0.07840049128918102,
+     "d_water_mm": -10.175
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.1570402610265087,
+     "d_water_mm": -9.8
+    },
+    "truskawki": {
+     "d_yield_pp": 0.0469269458043636,
+     "d_water_mm": -16.025
+    },
+    "tyton": {
+     "d_yield_pp": -0.14419176359995078,
+     "d_water_mm": -10.7875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.061175378691418585,
+     "d_water_mm": -5.8
+    },
+    "warzywa": {
+     "d_yield_pp": 0.07775692400956412,
+     "d_water_mm": -7.7625
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.1420281126202635,
+     "d_water_mm": -8.4875
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.004197489365628207,
+     "d_water_mm": -11.05
+    }
+   },
+   "n_crops_dominant": 5,
+   "dominant_all_crops": false,
+   "timesteps": 1700000,
+   "eval_s": 2.3,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12444281342196269,
+   "yield": 0.9395848867850397,
+   "yield_p05": 0.7471800024705527,
+   "water_mm": 94.60333333333334,
+   "dp_mm": 30.80717052699647,
+   "stress_days": 26.823,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.012005943881207485,
+     "d_water_mm": -1.02
+    },
+    "100.0": {
+     "d_yield_pp": 0.04812738853129926,
+     "d_water_mm": -4.006666666666667
+    },
+    "150.0": {
+     "d_yield_pp": 0.021379846274992873,
+     "d_water_mm": -9.673333333333334
+    },
+    "250.0": {
+     "d_yield_pp": -0.04152533741585294,
+     "d_water_mm": -17.696666666666665
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11795188357754981,
+     "d_water_mm": -6.85
+    },
+    "chmiel": {
+     "d_yield_pp": 0.014321933418815755,
+     "d_water_mm": -7.8125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.055802311412102255,
+     "d_water_mm": -1.325
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.01663047382803237,
+     "d_water_mm": -7.0125
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.03763063536858831,
+     "d_water_mm": -8.9375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.21791642461337873,
+     "d_water_mm": -13.2
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.019632126022216284,
+     "d_water_mm": -7.0
+    },
+    "rzepak": {
+     "d_yield_pp": 0.012278078538337163,
+     "d_water_mm": -9.0375
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.015081229245888977,
+     "d_water_mm": -8.2625
+    },
+    "truskawki": {
+     "d_yield_pp": 0.13660457396928058,
+     "d_water_mm": -13.675
+    },
+    "tyton": {
+     "d_yield_pp": -0.05908667420447816,
+     "d_water_mm": -8.9375
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.05550807145895706,
+     "d_water_mm": -5.375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.0862893635643294,
+     "d_water_mm": -7.1625
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.0008767964327010547,
+     "d_water_mm": -7.1875
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.0765434917620037,
+     "d_water_mm": -9.7125
+    }
+   },
+   "n_crops_dominant": 9,
+   "dominant_all_crops": false,
+   "timesteps": 1800000,
+   "eval_s": 2.25,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1246246171180035,
+   "yield": 0.939116377834928,
+   "yield_p05": 0.7473013570858437,
+   "water_mm": 93.91416666666667,
+   "dp_mm": 30.844972667945637,
+   "stress_days": 26.9425,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.015019673261494282,
+     "d_water_mm": -1.16
+    },
+    "100.0": {
+     "d_yield_pp": 0.03113937624585871,
+     "d_water_mm": -4.33
+    },
+    "150.0": {
+     "d_yield_pp": -0.024670131880569886,
+     "d_water_mm": -10.383333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -0.16890465639976127,
+     "d_water_mm": -19.28
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.09839187674199877,
+     "d_water_mm": -7.55
+    },
+    "chmiel": {
+     "d_yield_pp": -0.04186815263396307,
+     "d_water_mm": -9.0625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.07615845381020514,
+     "d_water_mm": -1.55
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.013517725818236431,
+     "d_water_mm": -7.3625
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.07743713699731916,
+     "d_water_mm": -9.5375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.3164035073205481,
+     "d_water_mm": -14.05
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.0920416152372693,
+     "d_water_mm": -8.4
+    },
+    "rzepak": {
+     "d_yield_pp": -0.12078701014384885,
+     "d_water_mm": -10.525
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.057549306364144154,
+     "d_water_mm": -8.9
+    },
+    "truskawki": {
+     "d_yield_pp": 0.15266038170439564,
+     "d_water_mm": -12.9375
+    },
+    "tyton": {
+     "d_yield_pp": -0.13967262227330132,
+     "d_water_mm": -10.2625
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.057472299202065445,
+     "d_water_mm": -5.8
+    },
+    "warzywa": {
+     "d_yield_pp": 0.06694201953828062,
+     "d_water_mm": -7.7
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.10400980160406119,
+     "d_water_mm": -8.3125
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.04676197376473591,
+     "d_water_mm": -9.875
+    }
+   },
+   "n_crops_dominant": 6,
+   "dominant_all_crops": false,
+   "timesteps": 1900000,
+   "eval_s": 2.24,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12514650931834123,
+   "yield": 0.9386350366756376,
+   "yield_p05": 0.747205139217256,
+   "water_mm": 93.83166666666666,
+   "dp_mm": 30.956971583859964,
+   "stress_days": 27.2515,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.0006483356025386633,
+     "d_water_mm": -1.09
+    },
+    "100.0": {
+     "d_yield_pp": 0.009931257506186194,
+     "d_water_mm": -4.276666666666666
+    },
+    "150.0": {
+     "d_yield_pp": -0.057815317086493644,
+     "d_water_mm": -10.196666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.2914198073062812,
+     "d_water_mm": -19.92
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.04418239306801304,
+     "d_water_mm": -7.8375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.1061479595847817,
+     "d_water_mm": -9.6625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.04972792498825986,
+     "d_water_mm": -1.6375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.04643938455164409,
+     "d_water_mm": -7.7625
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.13404063728744658,
+     "d_water_mm": -9.8375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.3794680256102013,
+     "d_water_mm": -14.3
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.138236816150407,
+     "d_water_mm": -8.5625
+    },
+    "rzepak": {
+     "d_yield_pp": -0.2648115295430415,
+     "d_water_mm": -11.5
+    },
+    "straczkowe": {
+     "d_yield_pp": 0.010043046498202743,
+     "d_water_mm": -7.8125
+    },
+    "truskawki": {
+     "d_yield_pp": 0.13920412852704833,
+     "d_water_mm": -11.35
+    },
+    "tyton": {
+     "d_yield_pp": -0.20795607051068257,
+     "d_water_mm": -10.825
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.19894815587579118,
+     "d_water_mm": -6.85
+    },
+    "warzywa": {
+     "d_yield_pp": 0.03531685114552609,
+     "d_water_mm": -7.7
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.15298999283057851,
+     "d_water_mm": -8.35
+    },
+    "ziemniak": {
+     "d_yield_pp": 0.07574346838329665,
+     "d_water_mm": -9.075
+    }
+   },
+   "n_crops_dominant": 6,
+   "dominant_all_crops": false,
+   "timesteps": 2000000,
+   "eval_s": 2.23,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12543077439112058,
+   "yield": 0.937763175522206,
+   "yield_p05": 0.7472116682323401,
+   "water_mm": 92.54166666666667,
+   "dp_mm": 30.85542236939318,
+   "stress_days": 27.824583333333333,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.001947240401356772,
+     "d_water_mm": -1.2033333333333334
+    },
+    "100.0": {
+     "d_yield_pp": -0.010321256321058292,
+     "d_water_mm": -4.683333333333334
+    },
+    "150.0": {
+     "d_yield_pp": -0.1274704319143834,
+     "d_water_mm": -11.466666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.5489577352249996,
+     "d_water_mm": -23.29
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.001965942968875853,
+     "d_water_mm": -8.8375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.21864144512702466,
+     "d_water_mm": -11.525
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.043082727562849726,
+     "d_water_mm": -2.0625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.07023006957033487,
+     "d_water_mm": -8.4625
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.20377556015614504,
+     "d_water_mm": -10.7
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.5602727443128421,
+     "d_water_mm": -16.125
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.272783725151043,
+     "d_water_mm": -10.0
+    },
+    "rzepak": {
+     "d_yield_pp": -0.4135469028311111,
+     "d_water_mm": -12.8
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.13173732340565028,
+     "d_water_mm": -9.3125
+    },
+    "truskawki": {
+     "d_yield_pp": 0.0685003358645455,
+     "d_water_mm": -13.375
+    },
+    "tyton": {
+     "d_yield_pp": -0.35425214762669743,
+     "d_water_mm": -13.2625
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.17648185581976938,
+     "d_water_mm": -7.175
+    },
+    "warzywa": {
+     "d_yield_pp": -0.017415698659878742,
+     "d_water_mm": -8.8875
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.2550774403950064,
+     "d_water_mm": -9.225
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.021946582822510732,
+     "d_water_mm": -10.6625
+    }
+   },
+   "n_crops_dominant": 3,
+   "dominant_all_crops": false,
+   "timesteps": 2100000,
+   "eval_s": 2.2,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12590552158246002,
+   "yield": 0.93650662219732,
+   "yield_p05": 0.747205139217256,
+   "water_mm": 90.73083333333334,
+   "dp_mm": 30.844158549415667,
+   "stress_days": 28.46775,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.013555381677969776,
+     "d_water_mm": -1.49
+    },
+    "100.0": {
+     "d_yield_pp": -0.06655113740836473,
+     "d_water_mm": -5.616666666666666
+    },
+    "150.0": {
+     "d_yield_pp": -0.25359953608491625,
+     "d_water_mm": -13.436666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.857611938644982,
+     "d_water_mm": -27.343333333333334
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.07093388548167072,
+     "d_water_mm": -10.3625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.4055455027717103,
+     "d_water_mm": -14.425
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.047345489591420764,
+     "d_water_mm": -2.2625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.16421306868741098,
+     "d_water_mm": -10.0875
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.24102895085559467,
+     "d_water_mm": -11.625
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.7443612269157098,
+     "d_water_mm": -18.325
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.435587014228619,
+     "d_water_mm": -11.825
+    },
+    "rzepak": {
+     "d_yield_pp": -0.684519797630883,
+     "d_water_mm": -15.2125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.19444888523812198,
+     "d_water_mm": -10.2125
+    },
+    "truskawki": {
+     "d_yield_pp": -0.08068162898439936,
+     "d_water_mm": -15.975
+    },
+    "tyton": {
+     "d_yield_pp": -0.6060605727615158,
+     "d_water_mm": -17.3375
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.3091175754054285,
+     "d_water_mm": -8.8625
+    },
+    "warzywa": {
+     "d_yield_pp": -0.0892457044415234,
+     "d_water_mm": -10.4375
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.36470722983810355,
+     "d_water_mm": -10.45
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.12433692316160257,
+     "d_water_mm": -12.175
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 2200000,
+   "eval_s": 2.24,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12675834120887658,
+   "yield": 0.9347554234611046,
+   "yield_p05": 0.7473028002097406,
+   "water_mm": 88.68583333333333,
+   "dp_mm": 30.668508666806826,
+   "stress_days": 29.736166666666666,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.027960391253529372,
+     "d_water_mm": -1.7366666666666666
+    },
+    "100.0": {
+     "d_yield_pp": -0.1344514003061603,
+     "d_water_mm": -6.633333333333334
+    },
+    "150.0": {
+     "d_yield_pp": -0.4204306401652467,
+     "d_water_mm": -15.566666666666666
+    },
+    "250.0": {
+     "d_yield_pp": -1.3089550565774413,
+     "d_water_mm": -32.13
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.11242759781188169,
+     "d_water_mm": -11.1625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.6199207711441879,
+     "d_water_mm": -16.9625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.02808861437675959,
+     "d_water_mm": -2.55
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.2719015812573444,
+     "d_water_mm": -11.5125
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.39220313616984015,
+     "d_water_mm": -13.3375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.0420541610807152,
+     "d_water_mm": -20.8375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.5936529303695561,
+     "d_water_mm": -13.175
+    },
+    "rzepak": {
+     "d_yield_pp": -0.8513853026361901,
+     "d_water_mm": -16.5375
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.5352235917404057,
+     "d_water_mm": -12.95
+    },
+    "truskawki": {
+     "d_yield_pp": -0.41606087561575816,
+     "d_water_mm": -22.6
+    },
+    "tyton": {
+     "d_yield_pp": -0.7963160561703067,
+     "d_water_mm": -19.825
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.33226220751455626,
+     "d_water_mm": -9.325
+    },
+    "warzywa": {
+     "d_yield_pp": -0.20785035639212132,
+     "d_water_mm": -12.0125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.5651936924082881,
+     "d_water_mm": -11.875
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.38587693519952293,
+     "d_water_mm": -15.5875
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 2300000,
+   "eval_s": 2.25,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1271261876625521,
+   "yield": 0.9339566815731122,
+   "yield_p05": 0.7473015180347576,
+   "water_mm": 87.63083333333333,
+   "dp_mm": 30.696274849547116,
+   "stress_days": 30.35625,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.056962208844192355,
+     "d_water_mm": -2.0633333333333335
+    },
+    "100.0": {
+     "d_yield_pp": -0.22696608970283533,
+     "d_water_mm": -7.63
+    },
+    "150.0": {
+     "d_yield_pp": -0.5570271921463035,
+     "d_water_mm": -17.186666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -1.3703387528060151,
+     "d_water_mm": -33.406666666666666
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.23011617652453387,
+     "d_water_mm": -12.7
+    },
+    "chmiel": {
+     "d_yield_pp": -0.8096825728072887,
+     "d_water_mm": -19.425
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.0012123853735227924,
+     "d_water_mm": -2.925
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.402184006144997,
+     "d_water_mm": -13.0875
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.29877555675266243,
+     "d_water_mm": -12.5
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.9641038600198006,
+     "d_water_mm": -20.775
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.7166822894716423,
+     "d_water_mm": -14.325
+    },
+    "rzepak": {
+     "d_yield_pp": -1.1107669267451286,
+     "d_water_mm": -18.525
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.4186084040148131,
+     "d_water_mm": -12.3375
+    },
+    "truskawki": {
+     "d_yield_pp": -0.4688235591545213,
+     "d_water_mm": -23.475
+    },
+    "tyton": {
+     "d_yield_pp": -1.0894289677804108,
+     "d_water_mm": -23.4125
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.518884457831198,
+     "d_water_mm": -11.0625
+    },
+    "warzywa": {
+     "d_yield_pp": -0.3408455901251026,
+     "d_water_mm": -13.85
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.5154854425999447,
+     "d_water_mm": -11.6625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.40917798852402676,
+     "d_water_mm": -16.0125
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 2400000,
+   "eval_s": 2.26,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12653196251771817,
+   "yield": 0.9346109809035235,
+   "yield_p05": 0.7473015180347576,
+   "water_mm": 87.89083333333333,
+   "dp_mm": 30.680000965528034,
+   "stress_days": 30.000166666666665,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.06094857305214272,
+     "d_water_mm": -2.1466666666666665
+    },
+    "100.0": {
+     "d_yield_pp": -0.21279685667022,
+     "d_water_mm": -7.76
+    },
+    "150.0": {
+     "d_yield_pp": -0.5074476231529332,
+     "d_water_mm": -17.17
+    },
+    "250.0": {
+     "d_yield_pp": -1.1683814584595114,
+     "d_water_mm": -32.17
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.1757475872080559,
+     "d_water_mm": -12.5125
+    },
+    "chmiel": {
+     "d_yield_pp": -0.7780026146040171,
+     "d_water_mm": -19.15
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.01826530014254016,
+     "d_water_mm": -2.85
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.35686698208573464,
+     "d_water_mm": -12.9625
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.1435168206553062,
+     "d_water_mm": -11.3625
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.6907266370909045,
+     "d_water_mm": -18.7625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.5804965220975573,
+     "d_water_mm": -13.275
+    },
+    "rzepak": {
+     "d_yield_pp": -0.9670839323632795,
+     "d_water_mm": -17.6375
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.37315519318381896,
+     "d_water_mm": -11.9875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.6202583494579409,
+     "d_water_mm": -26.25
+    },
+    "tyton": {
+     "d_yield_pp": -1.0984268361396323,
+     "d_water_mm": -23.55
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.4270165094921768,
+     "d_water_mm": -10.5375
+    },
+    "warzywa": {
+     "d_yield_pp": -0.34076697284460317,
+     "d_water_mm": -14.35
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.36171296311019974,
+     "d_water_mm": -10.55
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.4153917973148397,
+     "d_water_mm": -16.4375
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 2500000,
+   "eval_s": 2.29,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1266072151388407,
+   "yield": 0.9344759216066914,
+   "yield_p05": 0.7473028002097406,
+   "water_mm": 87.70666666666666,
+   "dp_mm": 30.752121781845577,
+   "stress_days": 30.02325,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.10230403692144947,
+     "d_water_mm": -2.5933333333333333
+    },
+    "100.0": {
+     "d_yield_pp": -0.30545098648833613,
+     "d_water_mm": -8.62
+    },
+    "150.0": {
+     "d_yield_pp": -0.5923446049612304,
+     "d_water_mm": -17.963333333333335
+    },
+    "250.0": {
+     "d_yield_pp": -1.0034986016965883,
+     "d_water_mm": -30.80666666666667
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.15967949395578257,
+     "d_water_mm": -12.875
+    },
+    "chmiel": {
+     "d_yield_pp": -0.7760126649325868,
+     "d_water_mm": -19.1875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.03780876243925155,
+     "d_water_mm": -2.6125
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.3460055997398154,
+     "d_water_mm": -13.125
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.22756462577871395,
+     "d_water_mm": -12.6875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.8196086625080423,
+     "d_water_mm": -20.125
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.6547287286701889,
+     "d_water_mm": -14.125
+    },
+    "rzepak": {
+     "d_yield_pp": -1.0785747866814077,
+     "d_water_mm": -18.4625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.36889711417870175,
+     "d_water_mm": -12.1125
+    },
+    "truskawki": {
+     "d_yield_pp": -0.49500658985904494,
+     "d_water_mm": -23.9875
+    },
+    "tyton": {
+     "d_yield_pp": -1.0361969235725326,
+     "d_water_mm": -23.2625
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.4694410782116451,
+     "d_water_mm": -11.4125
+    },
+    "warzywa": {
+     "d_yield_pp": -0.2771921332450791,
+     "d_water_mm": -13.9375
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.47415355671139053,
+     "d_water_mm": -11.5625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.36824016714783553,
+     "d_water_mm": -15.4625
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 2600000,
+   "eval_s": 2.24,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12634872982117576,
+   "yield": 0.934756716011735,
+   "yield_p05": 0.7473028002097406,
+   "water_mm": 87.85583333333334,
+   "dp_mm": 30.66994511658583,
+   "stress_days": 29.869333333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.07904594295255242,
+     "d_water_mm": -2.4
+    },
+    "100.0": {
+     "d_yield_pp": -0.25607889968474107,
+     "d_water_mm": -8.253333333333334
+    },
+    "150.0": {
+     "d_yield_pp": -0.5298865811286748,
+     "d_water_mm": -17.5
+    },
+    "250.0": {
+     "d_yield_pp": -1.0262690442841798,
+     "d_water_mm": -31.233333333333334
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.13838610607350846,
+     "d_water_mm": -13.0
+    },
+    "chmiel": {
+     "d_yield_pp": -0.7260514286654727,
+     "d_water_mm": -18.3375
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.030621625856695187,
+     "d_water_mm": -2.925
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.3221889370313159,
+     "d_water_mm": -13.0625
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.22962614309096901,
+     "d_water_mm": -13.2125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.8086832485555759,
+     "d_water_mm": -20.1875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.6324123819469234,
+     "d_water_mm": -13.9
+    },
+    "rzepak": {
+     "d_yield_pp": -0.983436687298443,
+     "d_water_mm": -17.9625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.37017851328697626,
+     "d_water_mm": -12.2
+    },
+    "truskawki": {
+     "d_yield_pp": -0.45983449396992937,
+     "d_water_mm": -23.1
+    },
+    "tyton": {
+     "d_yield_pp": -0.9493249775626871,
+     "d_water_mm": -22.425
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.43463626236070685,
+     "d_water_mm": -11.4375
+    },
+    "warzywa": {
+     "d_yield_pp": -0.2584133407020841,
+     "d_water_mm": -14.1125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.46189671858150305,
+     "d_water_mm": -11.525
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.34785414191865494,
+     "d_water_mm": -15.3125
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 2700000,
+   "eval_s": 2.23,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12637418656626012,
+   "yield": 0.9348861554202071,
+   "yield_p05": 0.7473009800764336,
+   "water_mm": 88.18916666666667,
+   "dp_mm": 30.669501523100994,
+   "stress_days": 30.078416666666666,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.05748764765546118,
+     "d_water_mm": -2.11
+    },
+    "100.0": {
+     "d_yield_pp": -0.2251390119265576,
+     "d_water_mm": -7.766666666666667
+    },
+    "150.0": {
+     "d_yield_pp": -0.5120486273611039,
+     "d_water_mm": -17.04
+    },
+    "250.0": {
+     "d_yield_pp": -1.0448294177181832,
+     "d_water_mm": -31.136666666666667
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.07005238251629595,
+     "d_water_mm": -12.375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.663614144561768,
+     "d_water_mm": -17.125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.03549950077508367,
+     "d_water_mm": -2.625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.2700469444028239,
+     "d_water_mm": -12.2875
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.27492098465469383,
+     "d_water_mm": -13.8
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.8498069848425579,
+     "d_water_mm": -20.3375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.7019759883410362,
+     "d_water_mm": -14.3125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.9783674666456212,
+     "d_water_mm": -17.8625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.47857653151050256,
+     "d_water_mm": -13.0375
+    },
+    "truskawki": {
+     "d_yield_pp": -0.3325784370593888,
+     "d_water_mm": -21.8375
+    },
+    "tyton": {
+     "d_yield_pp": -0.7743363476174805,
+     "d_water_mm": -20.325
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.4226189474788572,
+     "d_water_mm": -10.925
+    },
+    "warzywa": {
+     "d_yield_pp": -0.17737881395603086,
+     "d_water_mm": -13.1125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.6242400400636247,
+     "d_water_mm": -12.7
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.3151281296042989,
+     "d_water_mm": -15.0375
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 2800000,
+   "eval_s": 2.25,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12588602521723125,
+   "yield": 0.9357995751611354,
+   "yield_p05": 0.7473009800764336,
+   "water_mm": 89.22,
+   "dp_mm": 30.675628708573306,
+   "stress_days": 29.52675,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.03212976035998921,
+     "d_water_mm": -1.8333333333333333
+    },
+    "100.0": {
+     "d_yield_pp": -0.1476033970826305,
+     "d_water_mm": -6.903333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.39246070030561847,
+     "d_water_mm": -15.71
+    },
+    "250.0": {
+     "d_yield_pp": -0.9019429505417509,
+     "d_water_mm": -29.483333333333334
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.017432012876735792,
+     "d_water_mm": -11.4125
+    },
+    "chmiel": {
+     "d_yield_pp": -0.4915209338787212,
+     "d_water_mm": -15.2
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.038358222879798884,
+     "d_water_mm": -2.5125
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.19057835571093185,
+     "d_water_mm": -11.3
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.29604136864071706,
+     "d_water_mm": -13.7
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.8284363264432205,
+     "d_water_mm": -19.95
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.5607897198547137,
+     "d_water_mm": -13.25
+    },
+    "rzepak": {
+     "d_yield_pp": -0.7370766517067441,
+     "d_water_mm": -16.0125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.41069867328031395,
+     "d_water_mm": -12.4
+    },
+    "truskawki": {
+     "d_yield_pp": -0.20898254601338842,
+     "d_water_mm": -20.0375
+    },
+    "tyton": {
+     "d_yield_pp": -0.5791268332636026,
+     "d_water_mm": -17.9875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.33291104624058854,
+     "d_water_mm": -9.9
+    },
+    "warzywa": {
+     "d_yield_pp": -0.09921908003339,
+     "d_water_mm": -11.825
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.5521977066743361,
+     "d_water_mm": -12.1625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.2613599993498538,
+     "d_water_mm": -14.5875
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 2900000,
+   "eval_s": 2.3,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12580948601034994,
+   "yield": 0.9360692934556472,
+   "yield_p05": 0.7473004157156896,
+   "water_mm": 89.645,
+   "dp_mm": 30.697320518288006,
+   "stress_days": 29.36475,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.028053855051605958,
+     "d_water_mm": -1.73
+    },
+    "100.0": {
+     "d_yield_pp": -0.1349179366676186,
+     "d_water_mm": -6.6066666666666665
+    },
+    "150.0": {
+     "d_yield_pp": -0.36643371209845554,
+     "d_water_mm": -15.266666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.8368439866676763,
+     "d_water_mm": -28.626666666666665
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.016462274298687005,
+     "d_water_mm": -10.5
+    },
+    "chmiel": {
+     "d_yield_pp": -0.38107432240939343,
+     "d_water_mm": -14.0375
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.04258585129719515,
+     "d_water_mm": -2.4375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.14329207319268827,
+     "d_water_mm": -10.5
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.4133418373538582,
+     "d_water_mm": -14.1875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.9482015839940365,
+     "d_water_mm": -20.5125
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.47495061262616256,
+     "d_water_mm": -12.5875
+    },
+    "rzepak": {
+     "d_yield_pp": -0.5461215946570019,
+     "d_water_mm": -14.5875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.4902928077582014,
+     "d_water_mm": -13.0625
+    },
+    "truskawki": {
+     "d_yield_pp": -0.21303334251511788,
+     "d_water_mm": -20.5625
+    },
+    "tyton": {
+     "d_yield_pp": -0.4317859066858625,
+     "d_water_mm": -15.95
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.2398650620846385,
+     "d_water_mm": -8.625
+    },
+    "warzywa": {
+     "d_yield_pp": -0.040994134792321044,
+     "d_water_mm": -10.9125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.5440317502407054,
+     "d_water_mm": -12.125
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.31549868660598124,
+     "d_water_mm": -15.275
+    }
+   },
+   "n_crops_dominant": 2,
+   "dominant_all_crops": false,
+   "timesteps": 3000000,
+   "eval_s": 2.25,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12581664804310697,
+   "yield": 0.9359792286218085,
+   "yield_p05": 0.74730106338834,
+   "water_mm": 89.42,
+   "dp_mm": 30.76849525684359,
+   "stress_days": 29.173916666666667,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.02114730518844249,
+     "d_water_mm": -1.7033333333333334
+    },
+    "100.0": {
+     "d_yield_pp": -0.12542407828104177,
+     "d_water_mm": -6.683333333333334
+    },
+    "150.0": {
+     "d_yield_pp": -0.3710846947323617,
+     "d_water_mm": -15.453333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -0.8846193458189784,
+     "d_water_mm": -29.29
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.007602381478633138,
+     "d_water_mm": -11.2625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.4270221103348024,
+     "d_water_mm": -14.825
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.04274024340187922,
+     "d_water_mm": -2.525
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.13342950419994115,
+     "d_water_mm": -10.5375
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.41453039234190037,
+     "d_water_mm": -14.475
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.0134696876992293,
+     "d_water_mm": -21.1625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.5388835214198916,
+     "d_water_mm": -13.175
+    },
+    "rzepak": {
+     "d_yield_pp": -0.6767930816271052,
+     "d_water_mm": -15.7125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.4024003604004852,
+     "d_water_mm": -12.6625
+    },
+    "truskawki": {
+     "d_yield_pp": -0.06271376173147715,
+     "d_water_mm": -18.5375
+    },
+    "tyton": {
+     "d_yield_pp": -0.4961115445462485,
+     "d_water_mm": -16.9125
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.2616263707495598,
+     "d_water_mm": -9.1875
+    },
+    "warzywa": {
+     "d_yield_pp": -0.021724498036486156,
+     "d_water_mm": -10.875
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.6023210066836145,
+     "d_water_mm": -12.625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.242644862230596,
+     "d_water_mm": -14.7625
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 3100000,
+   "eval_s": 2.27,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12596686935756396,
+   "yield": 0.9360348781119434,
+   "yield_p05": 0.7473004157156896,
+   "water_mm": 89.85166666666667,
+   "dp_mm": 30.74244191867086,
+   "stress_days": 29.4085,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.02880513870353544,
+     "d_water_mm": -1.67
+    },
+    "100.0": {
+     "d_yield_pp": -0.14418266543349428,
+     "d_water_mm": -6.483333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.3763925220280837,
+     "d_water_mm": -15.043333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -0.8306353018016808,
+     "d_water_mm": -28.206666666666667
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.006374510240838099,
+     "d_water_mm": -10.4125
+    },
+    "chmiel": {
+     "d_yield_pp": -0.3627652726165064,
+     "d_water_mm": -13.85
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.0182662608754008,
+     "d_water_mm": -2.65
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.1518512172022671,
+     "d_water_mm": -10.475
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.5261496965022372,
+     "d_water_mm": -14.8375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.1029641530214853,
+     "d_water_mm": -21.45
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.4267290681895633,
+     "d_water_mm": -12.05
+    },
+    "rzepak": {
+     "d_yield_pp": -0.4774885801947951,
+     "d_water_mm": -14.0125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.4913619939608949,
+     "d_water_mm": -12.925
+    },
+    "truskawki": {
+     "d_yield_pp": -0.12762471477680398,
+     "d_water_mm": -18.9125
+    },
+    "tyton": {
+     "d_yield_pp": -0.3872682569392424,
+     "d_water_mm": -15.2375
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.2596185923619052,
+     "d_water_mm": -8.7875
+    },
+    "warzywa": {
+     "d_yield_pp": -0.03434602595058203,
+     "d_water_mm": -10.4625
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.5356452302510823,
+     "d_water_mm": -11.8875
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.31588657402435205,
+     "d_water_mm": -14.8125
+    }
+   },
+   "n_crops_dominant": 2,
+   "dominant_all_crops": false,
+   "timesteps": 3200000,
+   "eval_s": 2.25,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12600261540969562,
+   "yield": 0.9357675725216956,
+   "yield_p05": 0.7473003406986061,
+   "water_mm": 89.37916666666666,
+   "dp_mm": 30.672768674041276,
+   "stress_days": 29.483,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.01736850218910154,
+     "d_water_mm": -1.61
+    },
+    "100.0": {
+     "d_yield_pp": -0.11768739279891384,
+     "d_water_mm": -6.4366666666666665
+    },
+    "150.0": {
+     "d_yield_pp": -0.38167116317639854,
+     "d_water_mm": -15.303333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -0.9702108059015702,
+     "d_water_mm": -29.94333333333333
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.02295772351802275,
+     "d_water_mm": -10.55
+    },
+    "chmiel": {
+     "d_yield_pp": -0.38238409699360165,
+     "d_water_mm": -14.4125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.0293077502170936,
+     "d_water_mm": -2.6625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.12401880484798672,
+     "d_water_mm": -10.425
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.6009140793113704,
+     "d_water_mm": -15.6625
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.2818670764058198,
+     "d_water_mm": -22.8875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.4399508093624256,
+     "d_water_mm": -12.3
+    },
+    "rzepak": {
+     "d_yield_pp": -0.46684720975733024,
+     "d_water_mm": -14.0
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.5969763509647619,
+     "d_water_mm": -13.7875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.1425553398559291,
+     "d_water_mm": -20.1
+    },
+    "tyton": {
+     "d_yield_pp": -0.417757549756937,
+     "d_water_mm": -15.95
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.18495623237344377,
+     "d_water_mm": -8.3
+    },
+    "warzywa": {
+     "d_yield_pp": -0.01567229796427988,
+     "d_water_mm": -10.6
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.6215298558824864,
+     "d_water_mm": -12.55
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.3528527605061841,
+     "d_water_mm": -15.6625
+    }
+   },
+   "n_crops_dominant": 2,
+   "dominant_all_crops": false,
+   "timesteps": 3300000,
+   "eval_s": 2.25,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12657527697292922,
+   "yield": 0.9347740019601992,
+   "yield_p05": 0.7473003406986061,
+   "water_mm": 88.36333333333333,
+   "dp_mm": 30.622410748708212,
+   "stress_days": 29.908833333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.02551468284760231,
+     "d_water_mm": -1.68
+    },
+    "100.0": {
+     "d_yield_pp": -0.15103402072859495,
+     "d_water_mm": -6.78
+    },
+    "150.0": {
+     "d_yield_pp": -0.4659912229655946,
+     "d_water_mm": -16.293333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -1.2418261621226945,
+     "d_water_mm": -32.60333333333333
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.031038994398687392,
+     "d_water_mm": -11.275
+    },
+    "chmiel": {
+     "d_yield_pp": -0.5057847232334372,
+     "d_water_mm": -16.1875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.010321866903527904,
+     "d_water_mm": -2.95
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.19747180474604153,
+     "d_water_mm": -11.4125
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.7224275299020142,
+     "d_water_mm": -16.525
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.4738273122814325,
+     "d_water_mm": -24.225
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.5081562693989756,
+     "d_water_mm": -12.75
+    },
+    "rzepak": {
+     "d_yield_pp": -0.5749223420584996,
+     "d_water_mm": -14.8125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.7319348186531978,
+     "d_water_mm": -14.525
+    },
+    "truskawki": {
+     "d_yield_pp": -0.265093550856232,
+     "d_water_mm": -21.8375
+    },
+    "tyton": {
+     "d_yield_pp": -0.5815525072643998,
+     "d_water_mm": -18.225
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.23474293219077996,
+     "d_water_mm": -9.0125
+    },
+    "warzywa": {
+     "d_yield_pp": -0.10066947854772547,
+     "d_water_mm": -11.7875
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.6806597933025738,
+     "d_water_mm": -12.75
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.46841264256135456,
+     "d_water_mm": -16.8125
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 3400000,
+   "eval_s": 2.28,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12680551031730813,
+   "yield": 0.9351479889155541,
+   "yield_p05": 0.747300605129359,
+   "water_mm": 89.51583333333333,
+   "dp_mm": 30.807571035968735,
+   "stress_days": 29.583833333333335,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.05717189424584494,
+     "d_water_mm": -1.7166666666666666
+    },
+    "100.0": {
+     "d_yield_pp": -0.22771078408062748,
+     "d_water_mm": -6.783333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.5153915632788904,
+     "d_water_mm": -15.736666666666666
+    },
+    "250.0": {
+     "d_yield_pp": -0.9344970649172301,
+     "d_water_mm": -28.51
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.010886132578615676,
+     "d_water_mm": -10.225
+    },
+    "chmiel": {
+     "d_yield_pp": -0.29262742465403047,
+     "d_water_mm": -13.3375
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.0036628161215263026,
+     "d_water_mm": -3.0
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.11482362856810317,
+     "d_water_mm": -10.05
+    },
+    "kukurydza": {
+     "d_yield_pp": -1.1544084747094976,
+     "d_water_mm": -19.275
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.8541721633805928,
+     "d_water_mm": -26.0125
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.3554972083785588,
+     "d_water_mm": -11.3625
+    },
+    "rzepak": {
+     "d_yield_pp": -0.2465548079306316,
+     "d_water_mm": -11.875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.7839526424901686,
+     "d_water_mm": -14.7625
+    },
+    "truskawki": {
+     "d_yield_pp": -0.0994265800786455,
+     "d_water_mm": -17.9
+    },
+    "tyton": {
+     "d_yield_pp": -0.2407946970387419,
+     "d_water_mm": -13.1875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.1479418513994849,
+     "d_water_mm": -7.8125
+    },
+    "warzywa": {
+     "d_yield_pp": -0.0019290684019610954,
+     "d_water_mm": -9.5125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.751865760310817,
+     "d_water_mm": -13.1625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.47594704081863104,
+     "d_water_mm": -16.325
+    }
+   },
+   "n_crops_dominant": 2,
+   "dominant_all_crops": false,
+   "timesteps": 3500000,
+   "eval_s": 2.29,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12739979709022525,
+   "yield": 0.9343990724040374,
+   "yield_p05": 0.747301224337254,
+   "water_mm": 89.0125,
+   "dp_mm": 30.866209186217485,
+   "stress_days": 30.019833333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.07171368865910763,
+     "d_water_mm": -1.7833333333333334
+    },
+    "100.0": {
+     "d_yield_pp": -0.2715897267549984,
+     "d_water_mm": -7.026666666666666
+    },
+    "150.0": {
+     "d_yield_pp": -0.5893928349822103,
+     "d_water_mm": -16.223333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -1.1016416607329036,
+     "d_water_mm": -29.726666666666667
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.01906243587336559,
+     "d_water_mm": -10.375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.35341730137668453,
+     "d_water_mm": -14.0375
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.014852156722998985,
+     "d_water_mm": -3.0375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.15381507308241496,
+     "d_water_mm": -10.2625
+    },
+    "kukurydza": {
+     "d_yield_pp": -1.2974749288167111,
+     "d_water_mm": -20.0875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -2.076071522158756,
+     "d_water_mm": -27.4375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.42878663339067263,
+     "d_water_mm": -11.825
+    },
+    "rzepak": {
+     "d_yield_pp": -0.3594745252141798,
+     "d_water_mm": -12.8625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.8588215480889008,
+     "d_water_mm": -15.1125
+    },
+    "truskawki": {
+     "d_yield_pp": -0.12573241164773696,
+     "d_water_mm": -17.85
+    },
+    "tyton": {
+     "d_yield_pp": -0.2962643728063341,
+     "d_water_mm": -13.8375
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.20688102392438196,
+     "d_water_mm": -8.125
+    },
+    "warzywa": {
+     "d_yield_pp": -0.027353142942305633,
+     "d_water_mm": -9.8125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.8867794912272078,
+     "d_water_mm": -13.8875
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.5239805994619231,
+     "d_water_mm": -16.8
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 3600000,
+   "eval_s": 4.67,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12668158309497576,
+   "yield": 0.9353891756725974,
+   "yield_p05": 0.747301224337254,
+   "water_mm": 89.74166666666666,
+   "dp_mm": 30.904038766925567,
+   "stress_days": 29.3775,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.054370673345309345,
+     "d_water_mm": -1.7166666666666666
+    },
+    "100.0": {
+     "d_yield_pp": -0.2184351080697052,
+     "d_water_mm": -6.716666666666667
+    },
+    "150.0": {
+     "d_yield_pp": -0.48767461174469623,
+     "d_water_mm": -15.47
+    },
+    "250.0": {
+     "d_yield_pp": -0.8778162105455397,
+     "d_water_mm": -27.94
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.024728969018446192,
+     "d_water_mm": -9.6875
+    },
+    "chmiel": {
+     "d_yield_pp": -0.2947098780604061,
+     "d_water_mm": -13.3
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.013575266125554541,
+     "d_water_mm": -2.5625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.11481030364351905,
+     "d_water_mm": -9.75
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.98643862541693,
+     "d_water_mm": -18.15
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.6793889861513793,
+     "d_water_mm": -25.3125
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.35379483989964305,
+     "d_water_mm": -11.225
+    },
+    "rzepak": {
+     "d_yield_pp": -0.27507582087601595,
+     "d_water_mm": -12.1875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.7563906582128861,
+     "d_water_mm": -14.525
+    },
+    "truskawki": {
+     "d_yield_pp": -0.16250990013793398,
+     "d_water_mm": -18.6
+    },
+    "tyton": {
+     "d_yield_pp": -0.25927693675316804,
+     "d_water_mm": -13.4125
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.14559537284685542,
+     "d_water_mm": -7.275
+    },
+    "warzywa": {
+     "d_yield_pp": -0.0059811486187944934,
+     "d_water_mm": -9.525
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.6858252489217878,
+     "d_water_mm": -12.7625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.46211877949937097,
+     "d_water_mm": -16.1375
+    }
+   },
+   "n_crops_dominant": 2,
+   "dominant_all_crops": false,
+   "timesteps": 3700000,
+   "eval_s": 4.56,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12595207486531504,
+   "yield": 0.9366782277370762,
+   "yield_p05": 0.7473011633706022,
+   "water_mm": 91.07166666666667,
+   "dp_mm": 31.013811616043604,
+   "stress_days": 28.31725,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.047793075150096065,
+     "d_water_mm": -1.6733333333333333
+    },
+    "100.0": {
+     "d_yield_pp": -0.1582054178898545,
+     "d_water_mm": -6.213333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.3429810121672963,
+     "d_water_mm": -13.966666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.5736962727064833,
+     "d_water_mm": -24.67
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.07669369588573341,
+     "d_water_mm": -8.3875
+    },
+    "chmiel": {
+     "d_yield_pp": -0.21905207662568663,
+     "d_water_mm": -12.625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.031047228143473382,
+     "d_water_mm": -2.1375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.0782755928694182,
+     "d_water_mm": -8.975
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.7108638980315202,
+     "d_water_mm": -15.65
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.3425051302826505,
+     "d_water_mm": -22.8625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.15338263119900433,
+     "d_water_mm": -9.5375
+    },
+    "rzepak": {
+     "d_yield_pp": -0.08695174097229444,
+     "d_water_mm": -10.4625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.5290075256104,
+     "d_water_mm": -12.85
+    },
+    "truskawki": {
+     "d_yield_pp": -0.11817856323251222,
+     "d_water_mm": -17.2375
+    },
+    "tyton": {
+     "d_yield_pp": -0.23137270062054696,
+     "d_water_mm": -12.9875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.08472317912994422,
+     "d_water_mm": -6.2375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.023015076160428305,
+     "d_water_mm": -8.55
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.41434336945273254,
+     "d_water_mm": -10.8125
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.3721337593394126,
+     "d_water_mm": -15.15
+    }
+   },
+   "n_crops_dominant": 3,
+   "dominant_all_crops": false,
+   "timesteps": 3800000,
+   "eval_s": 4.54,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12525965317836646,
+   "yield": 0.9378257418607652,
+   "yield_p05": 0.747301224337254,
+   "water_mm": 92.14166666666667,
+   "dp_mm": 31.13913023545501,
+   "stress_days": 27.6,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.04597420183462928,
+     "d_water_mm": -1.7333333333333334
+    },
+    "100.0": {
+     "d_yield_pp": -0.12877995087732186,
+     "d_water_mm": -6.036666666666667
+    },
+    "150.0": {
+     "d_yield_pp": -0.23592339911704718,
+     "d_water_mm": -13.083333333333334
+    },
+    "250.0": {
+     "d_yield_pp": -0.25299257660910945,
+     "d_water_mm": -21.39
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.03613639917007207,
+     "d_water_mm": -9.2375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.18326438412390897,
+     "d_water_mm": -11.45
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.009512069799941694,
+     "d_water_mm": -2.7875
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.09616997217327351,
+     "d_water_mm": -9.4375
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.3870095186880102,
+     "d_water_mm": -13.2875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.7853164120909039,
+     "d_water_mm": -18.95
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.06017775914718109,
+     "d_water_mm": -8.1375
+    },
+    "rzepak": {
+     "d_yield_pp": -0.03348055634638315,
+     "d_water_mm": -9.6125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.16977605051250683,
+     "d_water_mm": -9.6875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.0717071408817049,
+     "d_water_mm": -14.775
+    },
+    "tyton": {
+     "d_yield_pp": -0.24060181761793534,
+     "d_water_mm": -12.975
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.15972221376077322,
+     "d_water_mm": -7.5375
+    },
+    "warzywa": {
+     "d_yield_pp": -0.0070133813203283315,
+     "d_water_mm": -9.3125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.1198484350357056,
+     "d_water_mm": -8.1125
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.2203238089143029,
+     "d_water_mm": -13.1125
+    }
+   },
+   "n_crops_dominant": 2,
+   "dominant_all_crops": false,
+   "timesteps": 3900000,
+   "eval_s": 4.52,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12498853422305081,
+   "yield": 0.9388944980580667,
+   "yield_p05": 0.747301224337254,
+   "water_mm": 93.9025,
+   "dp_mm": 31.24470962031304,
+   "stress_days": 26.912583333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.05242858919416988,
+     "d_water_mm": -1.71
+    },
+    "100.0": {
+     "d_yield_pp": -0.10763311434275581,
+     "d_water_mm": -5.53
+    },
+    "150.0": {
+     "d_yield_pp": -0.13907770192666238,
+     "d_water_mm": -11.55
+    },
+    "250.0": {
+     "d_yield_pp": 0.0629717559460259,
+     "d_water_mm": -16.41
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.06246373998445755,
+     "d_water_mm": -8.2375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.05691012157118819,
+     "d_water_mm": -8.3875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.022058665682817225,
+     "d_water_mm": -2.325
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.03343527982555626,
+     "d_water_mm": -8.05
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.21268327141927504,
+     "d_water_mm": -11.275
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.4435906462666103,
+     "d_water_mm": -15.35
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.008987246784763148,
+     "d_water_mm": -6.925
+    },
+    "rzepak": {
+     "d_yield_pp": 0.04113904518251861,
+     "d_water_mm": -8.425
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.04763797841218116,
+     "d_water_mm": -8.2375
+    },
+    "truskawki": {
+     "d_yield_pp": 0.03256253204623559,
+     "d_water_mm": -12.6125
+    },
+    "tyton": {
+     "d_yield_pp": -0.09292425297162143,
+     "d_water_mm": -9.8625
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.08827011906002327,
+     "d_water_mm": -6.4625
+    },
+    "warzywa": {
+     "d_yield_pp": 0.02773467425303391,
+     "d_water_mm": -8.05
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.018285254487323196,
+     "d_water_mm": -6.9625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.0868376656109053,
+     "d_water_mm": -10.8375
+    }
+   },
+   "n_crops_dominant": 6,
+   "dominant_all_crops": false,
+   "timesteps": 4000000,
+   "eval_s": 4.78,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1245805892649111,
+   "yield": 0.9392043613217349,
+   "yield_p05": 0.74730106338834,
+   "water_mm": 93.87,
+   "dp_mm": 31.090464876328436,
+   "stress_days": 26.603833333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.024429256335947367,
+     "d_water_mm": -1.55
+    },
+    "100.0": {
+     "d_yield_pp": -0.04832096486606842,
+     "d_water_mm": -5.2
+    },
+    "150.0": {
+     "d_yield_pp": -0.07149897985588535,
+     "d_water_mm": -11.116666666666667
+    },
+    "250.0": {
+     "d_yield_pp": 0.03202685700762979,
+     "d_water_mm": -17.463333333333335
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.12355721270022302,
+     "d_water_mm": -7.425
+    },
+    "chmiel": {
+     "d_yield_pp": -0.052789589312115325,
+     "d_water_mm": -8.6875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.03679845334385129,
+     "d_water_mm": -2.2
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.013336208973122252,
+     "d_water_mm": -7.5
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.08061234822128781,
+     "d_water_mm": -10.0
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.3181195719552745,
+     "d_water_mm": -14.5875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.043850715409626914,
+     "d_water_mm": -6.8125
+    },
+    "rzepak": {
+     "d_yield_pp": 0.12767331648284108,
+     "d_water_mm": -7.7
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.1110260695341641,
+     "d_water_mm": -9.125
+    },
+    "truskawki": {
+     "d_yield_pp": -0.07939783006060817,
+     "d_water_mm": -16.0875
+    },
+    "tyton": {
+     "d_yield_pp": -0.09382325379062774,
+     "d_water_mm": -10.325
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.01620516855813582,
+     "d_water_mm": -5.2625
+    },
+    "warzywa": {
+     "d_yield_pp": 0.04528471066966726,
+     "d_water_mm": -8.325
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.06060464375471417,
+     "d_water_mm": -6.5
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.15237555720662171,
+     "d_water_mm": -11.95
+    }
+   },
+   "n_crops_dominant": 8,
+   "dominant_all_crops": false,
+   "timesteps": 4100000,
+   "eval_s": 4.53,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12473557122812759,
+   "yield": 0.9386301315817828,
+   "yield_p05": 0.7473010024216882,
+   "water_mm": 92.94666666666667,
+   "dp_mm": 31.025709164110555,
+   "stress_days": 27.098583333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.040881439176657805,
+     "d_water_mm": -1.7833333333333334
+    },
+    "100.0": {
+     "d_yield_pp": -0.10552282735410287,
+     "d_water_mm": -5.91
+    },
+    "150.0": {
+     "d_yield_pp": -0.1633568635669685,
+     "d_water_mm": -12.423333333333334
+    },
+    "250.0": {
+     "d_yield_pp": -0.032153109933357134,
+     "d_water_mm": -18.906666666666666
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.08068725986263502,
+     "d_water_mm": -8.6125
+    },
+    "chmiel": {
+     "d_yield_pp": -0.11417615559271782,
+     "d_water_mm": -9.9875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.03158048998471144,
+     "d_water_mm": -2.45
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.02438838241476128,
+     "d_water_mm": -8.5
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.17272071870316685,
+     "d_water_mm": -11.1875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.46623331692562814,
+     "d_water_mm": -15.9875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.024784333394296684,
+     "d_water_mm": -7.75
+    },
+    "rzepak": {
+     "d_yield_pp": 0.04119137407815514,
+     "d_water_mm": -8.775
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.16855345021004137,
+     "d_water_mm": -9.6125
+    },
+    "truskawki": {
+     "d_yield_pp": -0.0706400671112859,
+     "d_water_mm": -16.1875
+    },
+    "tyton": {
+     "d_yield_pp": -0.16689652230345578,
+     "d_water_mm": -11.7
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.02741409170585669,
+     "d_water_mm": -6.1375
+    },
+    "warzywa": {
+     "d_yield_pp": 0.021407132856971905,
+     "d_water_mm": -9.3125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.036776830814488265,
+     "d_water_mm": -7.4375
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.1844607877233484,
+     "d_water_mm": -12.7
+    }
+   },
+   "n_crops_dominant": 4,
+   "dominant_all_crops": false,
+   "timesteps": 4200000,
+   "eval_s": 4.55,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12439158199357461,
+   "yield": 0.9388910128561847,
+   "yield_p05": 0.7472998424992012,
+   "water_mm": 92.975,
+   "dp_mm": 30.798763881429306,
+   "stress_days": 27.11275,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.01401953282005898,
+     "d_water_mm": -1.6333333333333333
+    },
+    "100.0": {
+     "d_yield_pp": -0.04735897243677334,
+     "d_water_mm": -5.49
+    },
+    "150.0": {
+     "d_yield_pp": -0.10937439909930356,
+     "d_water_mm": -12.076666666666666
+    },
+    "250.0": {
+     "d_yield_pp": -0.06680882591417088,
+     "d_water_mm": -19.71
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.1546937125485276,
+     "d_water_mm": -7.4375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.08178771039954,
+     "d_water_mm": -9.7625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.05210238824480514,
+     "d_water_mm": -2.1625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": 0.022896001056711565,
+     "d_water_mm": -7.85
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.043128205028654776,
+     "d_water_mm": -9.975
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.3055626378323405,
+     "d_water_mm": -14.8875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.045609862209470706,
+     "d_water_mm": -7.1125
+    },
+    "rzepak": {
+     "d_yield_pp": 0.17585231345971714,
+     "d_water_mm": -7.1
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.3129147272419813,
+     "d_water_mm": -11.0375
+    },
+    "truskawki": {
+     "d_yield_pp": -0.3316744276078319,
+     "d_water_mm": -21.85
+    },
+    "tyton": {
+     "d_yield_pp": -0.13007294732519323,
+     "d_water_mm": -11.5
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.0809035662010161,
+     "d_water_mm": -4.4125
+    },
+    "warzywa": {
+     "d_yield_pp": 0.026450222848286478,
+     "d_water_mm": -9.6875
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.05874225416501231,
+     "d_water_mm": -6.7
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.30296615381165565,
+     "d_water_mm": -14.4375
+    }
+   },
+   "n_crops_dominant": 8,
+   "dominant_all_crops": false,
+   "timesteps": 4300000,
+   "eval_s": 4.69,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12476782745588699,
+   "yield": 0.9384722058800652,
+   "yield_p05": 0.7473004489152273,
+   "water_mm": 92.7825,
+   "dp_mm": 30.824250307816538,
+   "stress_days": 27.21625,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.027228841196614655,
+     "d_water_mm": -1.6266666666666667
+    },
+    "100.0": {
+     "d_yield_pp": -0.09179293177615157,
+     "d_water_mm": -5.673333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.16827431037778928,
+     "d_water_mm": -12.32
+    },
+    "250.0": {
+     "d_yield_pp": -0.11778843736757695,
+     "d_water_mm": -20.06
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.12742180552587307,
+     "d_water_mm": -7.8125
+    },
+    "chmiel": {
+     "d_yield_pp": -0.07780162835442284,
+     "d_water_mm": -9.6125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.034596503596058745,
+     "d_water_mm": -2.2625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.010788989636062937,
+     "d_water_mm": -8.275
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.18448448922381958,
+     "d_water_mm": -11.175
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.4748505552968663,
+     "d_water_mm": -16.1375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.046823578525505116,
+     "d_water_mm": -6.6125
+    },
+    "rzepak": {
+     "d_yield_pp": 0.17489641433334172,
+     "d_water_mm": -6.725
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.37944407236174665,
+     "d_water_mm": -11.4
+    },
+    "truskawki": {
+     "d_yield_pp": -0.3554879501234357,
+     "d_water_mm": -21.55
+    },
+    "tyton": {
+     "d_yield_pp": -0.12245066538561075,
+     "d_water_mm": -11.3875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.062127234372369305,
+     "d_water_mm": -4.5125
+    },
+    "warzywa": {
+     "d_yield_pp": 0.0023831167120707403,
+     "d_water_mm": -9.6625
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.0009524875415472672,
+     "d_water_mm": -6.875
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.36105476783470347,
+     "d_water_mm": -14.8
+    }
+   },
+   "n_crops_dominant": 6,
+   "dominant_all_crops": false,
+   "timesteps": 4400000,
+   "eval_s": 4.55,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12509053695667804,
+   "yield": 0.9375265669384348,
+   "yield_p05": 0.747300347080488,
+   "water_mm": 91.36416666666666,
+   "dp_mm": 30.784896935075977,
+   "stress_days": 27.823166666666665,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.036046296924501085,
+     "d_water_mm": -1.7066666666666668
+    },
+    "100.0": {
+     "d_yield_pp": -0.13226615125863428,
+     "d_water_mm": -6.286666666666667
+    },
+    "150.0": {
+     "d_yield_pp": -0.26750859186322373,
+     "d_water_mm": -13.94
+    },
+    "250.0": {
+     "d_yield_pp": -0.34751905732390825,
+     "d_water_mm": -23.42
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.0739354455335303,
+     "d_water_mm": -8.85
+    },
+    "chmiel": {
+     "d_yield_pp": -0.20539384151701845,
+     "d_water_mm": -11.7625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.018242746717994876,
+     "d_water_mm": -2.6
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.07485484878774727,
+     "d_water_mm": -9.5
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.27524243851577235,
+     "d_water_mm": -12.4125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.6859100371904894,
+     "d_water_mm": -18.4625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.040016810970756586,
+     "d_water_mm": -7.7875
+    },
+    "rzepak": {
+     "d_yield_pp": 0.08814881692806399,
+     "d_water_mm": -7.9625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.5091018406360807,
+     "d_water_mm": -12.6
+    },
+    "truskawki": {
+     "d_yield_pp": -0.4682573391279478,
+     "d_water_mm": -23.425
+    },
+    "tyton": {
+     "d_yield_pp": -0.2779020720442951,
+     "d_water_mm": -14.1875
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.02908942114987961,
+     "d_water_mm": -5.3125
+    },
+    "warzywa": {
+     "d_yield_pp": -0.06475725279567408,
+     "d_water_mm": -11.1125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.08113725654441158,
+     "d_water_mm": -7.7625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.464368057337778,
+     "d_water_mm": -16.3375
+    }
+   },
+   "n_crops_dominant": 4,
+   "dominant_all_crops": false,
+   "timesteps": 4500000,
+   "eval_s": 4.5,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12478072163425755,
+   "yield": 0.9382140882992935,
+   "yield_p05": 0.747300347080488,
+   "water_mm": 92.12333333333333,
+   "dp_mm": 31.005556331502984,
+   "stress_days": 27.1585,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.024144172537683018,
+     "d_water_mm": -1.5466666666666666
+    },
+    "100.0": {
+     "d_yield_pp": -0.08322673066515146,
+     "d_water_mm": -5.72
+    },
+    "150.0": {
+     "d_yield_pp": -0.1789688803055217,
+     "d_water_mm": -12.96
+    },
+    "250.0": {
+     "d_yield_pp": -0.2219917695184193,
+     "d_water_mm": -22.09
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.11453925709159597,
+     "d_water_mm": -8.725
+    },
+    "chmiel": {
+     "d_yield_pp": -0.14438143420149502,
+     "d_water_mm": -11.15
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.031403533606693707,
+     "d_water_mm": -2.425
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.03587979325362407,
+     "d_water_mm": -9.325
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.19486396783948504,
+     "d_water_mm": -12.1375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.5525472784548011,
+     "d_water_mm": -17.7
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.07789720790167341,
+     "d_water_mm": -6.1375
+    },
+    "rzepak": {
+     "d_yield_pp": 0.1782028451176404,
+     "d_water_mm": -6.2375
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.3733042707664548,
+     "d_water_mm": -11.25
+    },
+    "truskawki": {
+     "d_yield_pp": -0.4001835460852277,
+     "d_water_mm": -21.65
+    },
+    "tyton": {
+     "d_yield_pp": -0.23837829404833166,
+     "d_water_mm": -13.7625
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.05502350866655582,
+     "d_water_mm": -5.0625
+    },
+    "warzywa": {
+     "d_yield_pp": -0.03617137242117678,
+     "d_water_mm": -10.9875
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.0241844485237198,
+     "d_water_mm": -6.475
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.4117841676876911,
+     "d_water_mm": -15.6625
+    }
+   },
+   "n_crops_dominant": 6,
+   "dominant_all_crops": false,
+   "timesteps": 4600000,
+   "eval_s": 4.61,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12471279558473745,
+   "yield": 0.9384308738409767,
+   "yield_p05": 0.7472998813305061,
+   "water_mm": 92.46,
+   "dp_mm": 31.02204866266968,
+   "stress_days": 27.051,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.04051948094305904,
+     "d_water_mm": -1.7633333333333334
+    },
+    "100.0": {
+     "d_yield_pp": -0.10104551456097263,
+     "d_water_mm": -5.993333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.17586105771937235,
+     "d_water_mm": -12.96
+    },
+    "250.0": {
+     "d_yield_pp": -0.10419128313013579,
+     "d_water_mm": -20.253333333333334
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": 0.055121450628396435,
+     "d_water_mm": -9.4
+    },
+    "chmiel": {
+     "d_yield_pp": -0.15772693328176357,
+     "d_water_mm": -10.8125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": 0.010026664291879886,
+     "d_water_mm": -2.8875
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.06948316054450579,
+     "d_water_mm": -9.5
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.06894060919187249,
+     "d_water_mm": -10.4375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.2978774638872439,
+     "d_water_mm": -14.9625
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": 0.041249292000053936,
+     "d_water_mm": -6.3375
+    },
+    "rzepak": {
+     "d_yield_pp": 0.11592810750863368,
+     "d_water_mm": -7.1125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.2332458402493015,
+     "d_water_mm": -9.7125
+    },
+    "truskawki": {
+     "d_yield_pp": -0.3356885640685502,
+     "d_water_mm": -20.025
+    },
+    "tyton": {
+     "d_yield_pp": -0.309168324876345,
+     "d_water_mm": -14.675
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": 0.0028832270944838256,
+     "d_water_mm": -6.0125
+    },
+    "warzywa": {
+     "d_yield_pp": -0.08624775434976877,
+     "d_water_mm": -11.725
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.08039017491991932,
+     "d_water_mm": -5.7
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.32828527731979007,
+     "d_water_mm": -14.3375
+    }
+   },
+   "n_crops_dominant": 6,
+   "dominant_all_crops": false,
+   "timesteps": 4700000,
+   "eval_s": 4.52,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1257845615690603,
+   "yield": 0.9371074150557462,
+   "yield_p05": 0.7471617484360714,
+   "water_mm": 91.58083333333333,
+   "dp_mm": 31.178590225551286,
+   "stress_days": 28.066583333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.10893133739239381,
+     "d_water_mm": -2.24
+    },
+    "100.0": {
+     "d_yield_pp": -0.2690834609696662,
+     "d_water_mm": -7.206666666666667
+    },
+    "150.0": {
+     "d_yield_pp": -0.3822449407848893,
+     "d_water_mm": -14.483333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -0.1907411112987706,
+     "d_water_mm": -20.55666666666667
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.07937230293717805,
+     "d_water_mm": -10.8625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.2704570671713171,
+     "d_water_mm": -11.3
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.05255860356448537,
+     "d_water_mm": -3.5125
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.1840500426484724,
+     "d_water_mm": -10.4375
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.25020921473941243,
+     "d_water_mm": -11.75
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.5053727826750782,
+     "d_water_mm": -16.2
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.1394016730013641,
+     "d_water_mm": -7.775
+    },
+    "rzepak": {
+     "d_yield_pp": -0.04142883778132764,
+     "d_water_mm": -8.6625
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.38673285022550863,
+     "d_water_mm": -10.625
+    },
+    "truskawki": {
+     "d_yield_pp": -0.4062290648934014,
+     "d_water_mm": -19.5875
+    },
+    "tyton": {
+     "d_yield_pp": -0.3794821237320929,
+     "d_water_mm": -14.825
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.10976640032046038,
+     "d_water_mm": -7.3375
+    },
+    "warzywa": {
+     "d_yield_pp": -0.2178722965018416,
+     "d_water_mm": -12.45
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.10043207287925851,
+     "d_water_mm": -7.0
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.4428878561002507,
+     "d_water_mm": -14.5
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 4800000,
+   "eval_s": 4.56,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1256839723768365,
+   "yield": 0.9367118581927105,
+   "yield_p05": 0.7471709084268253,
+   "water_mm": 90.56916666666666,
+   "dp_mm": 31.0846684593994,
+   "stress_days": 28.325666666666667,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.11146396374387375,
+     "d_water_mm": -2.4433333333333334
+    },
+    "100.0": {
+     "d_yield_pp": -0.2824156656073514,
+     "d_water_mm": -7.783333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.4247950048434329,
+     "d_water_mm": -15.573333333333334
+    },
+    "250.0": {
+     "d_yield_pp": -0.2905489614653343,
+     "d_water_mm": -22.733333333333334
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.09699272391195131,
+     "d_water_mm": -11.4625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.3911072300665384,
+     "d_water_mm": -13.475
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.034624955467839544,
+     "d_water_mm": -3.3375
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.2068041252149469,
+     "d_water_mm": -11.1625
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.17525930134584997,
+     "d_water_mm": -11.2375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.4766291737722355,
+     "d_water_mm": -16.4375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.21202185087837608,
+     "d_water_mm": -9.0625
+    },
+    "rzepak": {
+     "d_yield_pp": -0.17565339514465905,
+     "d_water_mm": -10.5875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.35397782982373677,
+     "d_water_mm": -11.05
+    },
+    "truskawki": {
+     "d_yield_pp": -0.5323497152613283,
+     "d_water_mm": -22.575
+    },
+    "tyton": {
+     "d_yield_pp": -0.570391364104248,
+     "d_water_mm": -17.85
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.13762856761357012,
+     "d_water_mm": -7.7875
+    },
+    "warzywa": {
+     "d_yield_pp": -0.25254010177493497,
+     "d_water_mm": -13.3125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.09595657380245773,
+     "d_water_mm": -7.3875
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.4476515755422985,
+     "d_water_mm": -15.275
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 4900000,
+   "eval_s": 4.61,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12607617097767973,
+   "yield": 0.9358647635762933,
+   "yield_p05": 0.747172066793209,
+   "water_mm": 89.51083333333334,
+   "dp_mm": 31.047222769891867,
+   "stress_days": 28.773833333333332,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.10612524691331861,
+     "d_water_mm": -2.3566666666666665
+    },
+    "100.0": {
+     "d_yield_pp": -0.2976279647965124,
+     "d_water_mm": -7.9
+    },
+    "150.0": {
+     "d_yield_pp": -0.49802398708391327,
+     "d_water_mm": -16.356666666666666
+    },
+    "250.0": {
+     "d_yield_pp": -0.5462842434331477,
+     "d_water_mm": -26.153333333333332
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.1316649596415974,
+     "d_water_mm": -12.2625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.46834390811863996,
+     "d_water_mm": -14.7125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.04627807404424422,
+     "d_water_mm": -3.5875
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.22454961782793822,
+     "d_water_mm": -11.65
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.3636503146817621,
+     "d_water_mm": -13.6125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.800602075820609,
+     "d_water_mm": -19.3375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.32426063170096187,
+     "d_water_mm": -10.525
+    },
+    "rzepak": {
+     "d_yield_pp": -0.30018320600780546,
+     "d_water_mm": -12.0125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.4909706342140761,
+     "d_water_mm": -12.1875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.4603560219629166,
+     "d_water_mm": -21.7
+    },
+    "tyton": {
+     "d_yield_pp": -0.6261972188622769,
+     "d_water_mm": -18.925
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.1588657085995409,
+     "d_water_mm": -8.3375
+    },
+    "warzywa": {
+     "d_yield_pp": -0.26443896064704775,
+     "d_water_mm": -13.8125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.2564959615642522,
+     "d_water_mm": -8.9625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.513373114657176,
+     "d_water_mm": -16.25
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5000000,
+   "eval_s": 4.64,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12670930131373112,
+   "yield": 0.9346177479774223,
+   "yield_p05": 0.7471733360950783,
+   "water_mm": 88.0725,
+   "dp_mm": 30.975079152615596,
+   "stress_days": 29.42866666666667,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.12344714462310534,
+     "d_water_mm": -2.51
+    },
+    "100.0": {
+     "d_yield_pp": -0.36257762353724976,
+     "d_water_mm": -8.633333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.6469038494079006,
+     "d_water_mm": -18.13
+    },
+    "250.0": {
+     "d_yield_pp": -0.8139390642070523,
+     "d_water_mm": -29.246666666666666
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.13735672855083353,
+     "d_water_mm": -12.625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.630777258950235,
+     "d_water_mm": -16.7
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.039263495228049936,
+     "d_water_mm": -3.55
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.2606166053164433,
+     "d_water_mm": -12.2
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.47759224662898975,
+     "d_water_mm": -14.85
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -1.0591013549119013,
+     "d_water_mm": -21.525
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.46242737074961027,
+     "d_water_mm": -11.9375
+    },
+    "rzepak": {
+     "d_yield_pp": -0.4188919760060013,
+     "d_water_mm": -13.4125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.8062652038541106,
+     "d_water_mm": -14.875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.695974774676704,
+     "d_water_mm": -25.775
+    },
+    "tyton": {
+     "d_yield_pp": -0.7045586344629561,
+     "d_water_mm": -19.9
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.16323908193358339,
+     "d_water_mm": -8.475
+    },
+    "warzywa": {
+     "d_yield_pp": -0.302003608056382,
+     "d_water_mm": -14.4875
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.44165789650679155,
+     "d_water_mm": -10.775
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.7010275708248135,
+     "d_water_mm": -18.3625
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5100000,
+   "eval_s": 4.65,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1264796104476189,
+   "yield": 0.934669721548808,
+   "yield_p05": 0.747172066793209,
+   "water_mm": 87.84333333333333,
+   "dp_mm": 30.788511165631363,
+   "stress_days": 29.669833333333333,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.10428281093724043,
+     "d_water_mm": -2.493333333333333
+    },
+    "100.0": {
+     "d_yield_pp": -0.3251069918432824,
+     "d_water_mm": -8.56
+    },
+    "150.0": {
+     "d_yield_pp": -0.6082866100597482,
+     "d_water_mm": -18.046666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.8884018403807521,
+     "d_water_mm": -30.336666666666666
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.18727850345832497,
+     "d_water_mm": -13.675
+    },
+    "chmiel": {
+     "d_yield_pp": -0.6751367996343827,
+     "d_water_mm": -17.1625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.06292938066215983,
+     "d_water_mm": -4.225
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.3061963662861522,
+     "d_water_mm": -12.875
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.3339831504235714,
+     "d_water_mm": -13.7625
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.8480610991391383,
+     "d_water_mm": -20.15
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.4276117835233636,
+     "d_water_mm": -11.625
+    },
+    "rzepak": {
+     "d_yield_pp": -0.40093456363144797,
+     "d_water_mm": -13.05
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.7210662279187656,
+     "d_water_mm": -14.0625
+    },
+    "truskawki": {
+     "d_yield_pp": -0.8336834048268891,
+     "d_water_mm": -27.775
+    },
+    "tyton": {
+     "d_yield_pp": -0.8240491578407629,
+     "d_water_mm": -21.275
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.18713599559449648,
+     "d_water_mm": -9.175
+    },
+    "warzywa": {
+     "d_yield_pp": -0.3836487436345283,
+     "d_water_mm": -15.8875
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.30593308073497144,
+     "d_water_mm": -9.625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.7251451922698819,
+     "d_water_mm": -18.5625
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5200000,
+   "eval_s": 4.58,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1261299713434701,
+   "yield": 0.9352785488864503,
+   "yield_p05": 0.7469112660178966,
+   "water_mm": 88.45416666666667,
+   "dp_mm": 30.841774262854397,
+   "stress_days": 29.33175,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.11005884524881288,
+     "d_water_mm": -2.52
+    },
+    "100.0": {
+     "d_yield_pp": -0.3186151570825057,
+     "d_water_mm": -8.423333333333334
+    },
+    "150.0": {
+     "d_yield_pp": -0.542797334784178,
+     "d_water_mm": -17.41
+    },
+    "250.0": {
+     "d_yield_pp": -0.7110759810485726,
+     "d_water_mm": -28.64
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.1902569477121943,
+     "d_water_mm": -13.2625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.676775236017826,
+     "d_water_mm": -17.0125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.0935194858202027,
+     "d_water_mm": -4.5875
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.31801732043165354,
+     "d_water_mm": -12.7875
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.16432458087227947,
+     "d_water_mm": -11.7125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.5802221405359888,
+     "d_water_mm": -17.675
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.39680303432213204,
+     "d_water_mm": -11.55
+    },
+    "rzepak": {
+     "d_yield_pp": -0.3707071961519003,
+     "d_water_mm": -13.05
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.4903340965379686,
+     "d_water_mm": -12.5875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.7027470397075237,
+     "d_water_mm": -26.25
+    },
+    "tyton": {
+     "d_yield_pp": -0.9147538069556429,
+     "d_water_mm": -22.1
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.20637442320139993,
+     "d_water_mm": -9.2625
+    },
+    "warzywa": {
+     "d_yield_pp": -0.4213195363004902,
+     "d_water_mm": -16.1125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.14526753652151986,
+     "d_water_mm": -8.3875
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.6381300620265378,
+     "d_water_mm": -17.3875
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5300000,
+   "eval_s": 4.5,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12588903006944627,
+   "yield": 0.9357663938477392,
+   "yield_p05": 0.7471739767508705,
+   "water_mm": 89.03583333333333,
+   "dp_mm": 30.879607584612405,
+   "stress_days": 29.057,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.06989213792793603,
+     "d_water_mm": -2.046666666666667
+    },
+    "100.0": {
+     "d_yield_pp": -0.21921982271582846,
+     "d_water_mm": -7.443333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.4311692375191404,
+     "d_water_mm": -16.30666666666667
+    },
+    "250.0": {
+     "d_yield_pp": -0.7671281354856596,
+     "d_water_mm": -28.87
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.0982002715143494,
+     "d_water_mm": -11.9125
+    },
+    "chmiel": {
+     "d_yield_pp": -0.6030623521075064,
+     "d_water_mm": -16.4125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.07958709223394879,
+     "d_water_mm": -4.3625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.23023631451143334,
+     "d_water_mm": -11.65
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.09879271128968013,
+     "d_water_mm": -10.9125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.520839513783796,
+     "d_water_mm": -17.0375
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.37581920699362203,
+     "d_water_mm": -11.65
+    },
+    "rzepak": {
+     "d_yield_pp": -0.29922357098394203,
+     "d_water_mm": -12.4125
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.5326717547549227,
+     "d_water_mm": -12.8625
+    },
+    "truskawki": {
+     "d_yield_pp": -0.6840989256393886,
+     "d_water_mm": -26.1125
+    },
+    "tyton": {
+     "d_yield_pp": -0.8544565279822949,
+     "d_water_mm": -21.2375
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.098716630484611,
+     "d_water_mm": -7.825
+    },
+    "warzywa": {
+     "d_yield_pp": -0.340589400349567,
+     "d_water_mm": -14.75
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.11373421332420589,
+     "d_water_mm": -8.375
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.6477565152288489,
+     "d_water_mm": -17.4875
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5400000,
+   "eval_s": 4.62,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12598713403678957,
+   "yield": 0.9354136885381492,
+   "yield_p05": 0.7473003608190895,
+   "water_mm": 88.51916666666666,
+   "dp_mm": 30.771088425749536,
+   "stress_days": 29.468,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.06733979278521335,
+     "d_water_mm": -2.15
+    },
+    "100.0": {
+     "d_yield_pp": -0.23527079349264274,
+     "d_water_mm": -7.733333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.4789029673739925,
+     "d_water_mm": -16.93
+    },
+    "250.0": {
+     "d_yield_pp": -0.8469779038326408,
+     "d_water_mm": -29.92
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.031003108893018688,
+     "d_water_mm": -11.3375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.6316979891484489,
+     "d_water_mm": -17.125
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.0667113512555322,
+     "d_water_mm": -4.0875
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.21989601221534016,
+     "d_water_mm": -11.7125
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.08280886957620316,
+     "d_water_mm": -11.15
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.5447465080544791,
+     "d_water_mm": -17.5875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.3666272617838662,
+     "d_water_mm": -11.8125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.22045658501091847,
+     "d_water_mm": -11.725
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.7450269998117323,
+     "d_water_mm": -14.75
+    },
+    "truskawki": {
+     "d_yield_pp": -1.0385516353248065,
+     "d_water_mm": -30.1
+    },
+    "tyton": {
+     "d_yield_pp": -0.8291791300864392,
+     "d_water_mm": -21.25
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.04524443602315484,
+     "d_water_mm": -7.0375
+    },
+    "warzywa": {
+     "d_yield_pp": -0.33655237410817673,
+     "d_water_mm": -15.0875
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.1359330169001627,
+     "d_water_mm": -8.85
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.8124076873745558,
+     "d_water_mm": -19.1375
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5500000,
+   "eval_s": 4.55,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12553615507698146,
+   "yield": 0.9361485550119272,
+   "yield_p05": 0.7471728183844868,
+   "water_mm": 89.23,
+   "dp_mm": 30.769479342762512,
+   "stress_days": 28.885083333333334,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.0603823201775113,
+     "d_water_mm": -2.0833333333333335
+    },
+    "100.0": {
+     "d_yield_pp": -0.20419075865038472,
+     "d_water_mm": -7.426666666666667
+    },
+    "150.0": {
+     "d_yield_pp": -0.4082750551589233,
+     "d_water_mm": -16.213333333333335
+    },
+    "250.0": {
+     "d_yield_pp": -0.6616967339865167,
+     "d_water_mm": -28.166666666666668
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.02895599183047079,
+     "d_water_mm": -11.3625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.5101564645232198,
+     "d_water_mm": -15.6
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.051828286404623336,
+     "d_water_mm": -4.1625
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.19108633139677778,
+     "d_water_mm": -11.4125
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.1842345462486745,
+     "d_water_mm": -12.2
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.6185993811244823,
+     "d_water_mm": -18.1875
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.22089286241247733,
+     "d_water_mm": -10.3125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.0822483036714181,
+     "d_water_mm": -10.3875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.5473075941880867,
+     "d_water_mm": -13.1625
+    },
+    "truskawki": {
+     "d_yield_pp": -0.8035733432945381,
+     "d_water_mm": -27.55
+    },
+    "tyton": {
+     "d_yield_pp": -0.6463495458736999,
+     "d_water_mm": -19.3125
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.0883659748271561,
+     "d_water_mm": -7.8
+    },
+    "warzywa": {
+     "d_yield_pp": -0.2634874469119187,
+     "d_water_mm": -14.2125
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.07058947905040468,
+     "d_water_mm": -8.1625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.696867703142062,
+     "d_water_mm": -18.2625
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5600000,
+   "eval_s": 4.65,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12618486610431356,
+   "yield": 0.9351623952248191,
+   "yield_p05": 0.747172066793209,
+   "water_mm": 88.41166666666666,
+   "dp_mm": 30.6762305829418,
+   "stress_days": 29.65525,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.08172868614023138,
+     "d_water_mm": -2.2666666666666666
+    },
+    "100.0": {
+     "d_yield_pp": -0.26947741132185865,
+     "d_water_mm": -7.923333333333333
+    },
+    "150.0": {
+     "d_yield_pp": -0.5153361293670418,
+     "d_water_mm": -17.063333333333333
+    },
+    "250.0": {
+     "d_yield_pp": -0.8624665559874037,
+     "d_water_mm": -29.91
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.17362518397437615,
+     "d_water_mm": -13.0875
+    },
+    "chmiel": {
+     "d_yield_pp": -0.623635686082382,
+     "d_water_mm": -16.55
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.11553208925048067,
+     "d_water_mm": -4.85
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.29628133687625735,
+     "d_water_mm": -12.575
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.340434219753669,
+     "d_water_mm": -13.425
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.8123654423397458,
+     "d_water_mm": -19.475
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.34116609854359364,
+     "d_water_mm": -11.1125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.22355683857846198,
+     "d_water_mm": -11.5
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.6044755345900408,
+     "d_water_mm": -13.2875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.6968503469598506,
+     "d_water_mm": -26.1625
+    },
+    "tyton": {
+     "d_yield_pp": -0.7802038349927771,
+     "d_water_mm": -20.5
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.18207619842898098,
+     "d_water_mm": -9.1125
+    },
+    "warzywa": {
+     "d_yield_pp": -0.37445197080022186,
+     "d_water_mm": -15.4
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.17030834166523826,
+     "d_water_mm": -8.8125
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.7488198127259322,
+     "d_water_mm": -18.5125
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5700000,
+   "eval_s": 2.29,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12666160653853156,
+   "yield": 0.9343068536034062,
+   "yield_p05": 0.7471743203832434,
+   "water_mm": 87.50333333333333,
+   "dp_mm": 30.620971609479174,
+   "stress_days": 30.302666666666667,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.07918686009142333,
+     "d_water_mm": -2.1366666666666667
+    },
+    "100.0": {
+     "d_yield_pp": -0.2750900704325889,
+     "d_water_mm": -7.99
+    },
+    "150.0": {
+     "d_yield_pp": -0.5728349855011862,
+     "d_water_mm": -17.823333333333334
+    },
+    "250.0": {
+     "d_yield_pp": -1.144113515356537,
+     "d_water_mm": -32.846666666666664
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.22451373707729883,
+     "d_water_mm": -13.7625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.7623660724312814,
+     "d_water_mm": -17.875
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.17821261208352163,
+     "d_water_mm": -5.45
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.37095397883182313,
+     "d_water_mm": -13.375
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.25602367008151344,
+     "d_water_mm": -12.7875
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.7244198413790579,
+     "d_water_mm": -18.85
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.48392488289169683,
+     "d_water_mm": -12.4125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.3550029267393327,
+     "d_water_mm": -12.875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.7206153110047119,
+     "d_water_mm": -14.3875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.9437877124023344,
+     "d_water_mm": -29.075
+    },
+    "tyton": {
+     "d_yield_pp": -0.926186404017048,
+     "d_water_mm": -21.975
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.2025241650140036,
+     "d_water_mm": -9.25
+    },
+    "warzywa": {
+     "d_yield_pp": -0.49598163017454866,
+     "d_water_mm": -16.8375
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.23194486578675394,
+     "d_water_mm": -9.4
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.8906375577665813,
+     "d_water_mm": -19.675
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5800000,
+   "eval_s": 2.29,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.1263355436487166,
+   "yield": 0.9349384019281957,
+   "yield_p05": 0.7471743203832434,
+   "water_mm": 88.18916666666667,
+   "dp_mm": 30.71988718097748,
+   "stress_days": 29.711666666666666,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.08240241635342133,
+     "d_water_mm": -2.1733333333333333
+    },
+    "100.0": {
+     "d_yield_pp": -0.26067653072180585,
+     "d_water_mm": -7.86
+    },
+    "150.0": {
+     "d_yield_pp": -0.5246156473955166,
+     "d_water_mm": -17.196666666666665
+    },
+    "250.0": {
+     "d_yield_pp": -0.9509115069952241,
+     "d_water_mm": -30.823333333333334
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.19501971051678368,
+     "d_water_mm": -13.3625
+    },
+    "chmiel": {
+     "d_yield_pp": -0.6941065221441605,
+     "d_water_mm": -16.825
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.14695273991779995,
+     "d_water_mm": -5.075
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.33836328339631183,
+     "d_water_mm": -12.9375
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.18892644509152226,
+     "d_water_mm": -12.2375
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.6097123773183768,
+     "d_water_mm": -17.975
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.40491122196943874,
+     "d_water_mm": -11.7125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.26900916270270336,
+     "d_water_mm": -11.9375
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.6150022756992735,
+     "d_water_mm": -13.5875
+    },
+    "truskawki": {
+     "d_yield_pp": -0.8908005349550343,
+     "d_water_mm": -28.2875
+    },
+    "tyton": {
+     "d_yield_pp": -0.8500065074856077,
+     "d_water_mm": -21.025
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.18033403339920825,
+     "d_water_mm": -8.95
+    },
+    "warzywa": {
+     "d_yield_pp": -0.4770764434160686,
+     "d_water_mm": -16.3625
+    },
+    "zboza_jare": {
+     "d_yield_pp": -0.1326394145109992,
+     "d_water_mm": -8.4875
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.8269122079740905,
+     "d_water_mm": -18.9375
+    }
+   },
+   "n_crops_dominant": 0,
+   "dominant_all_crops": false,
+   "timesteps": 5900000,
+   "eval_s": 2.28,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12600203476182134,
+   "yield": 0.9355433165148657,
+   "yield_p05": 0.7471721777286947,
+   "water_mm": 88.835,
+   "dp_mm": 30.762138832030885,
+   "stress_days": 29.322333333333333,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.07686987946426979,
+     "d_water_mm": -2.1633333333333336
+    },
+    "100.0": {
+     "d_yield_pp": -0.2319247201982815,
+     "d_water_mm": -7.676666666666667
+    },
+    "150.0": {
+     "d_yield_pp": -0.4649223316730327,
+     "d_water_mm": -16.5
+    },
+    "250.0": {
+     "d_yield_pp": -0.8029233354623553,
+     "d_water_mm": -29.13
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.18565528288993285,
+     "d_water_mm": -13.1375
+    },
+    "chmiel": {
+     "d_yield_pp": -0.6559329821634816,
+     "d_water_mm": -16.5625
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.13230643436621475,
+     "d_water_mm": -4.8875
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.30896501493747175,
+     "d_water_mm": -12.55
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.038049440268435625,
+     "d_water_mm": -10.35
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.3863484863222234,
+     "d_water_mm": -15.95
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.28747199969204285,
+     "d_water_mm": -10.4125
+    },
+    "rzepak": {
+     "d_yield_pp": -0.2002232400461908,
+     "d_water_mm": -11.0375
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.4612033234222108,
+     "d_water_mm": -12.15
+    },
+    "truskawki": {
+     "d_yield_pp": -0.9878674749434259,
+     "d_water_mm": -29.5125
+    },
+    "tyton": {
+     "d_yield_pp": -0.9273202938314096,
+     "d_water_mm": -21.75
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.13885044482320308,
+     "d_water_mm": -8.2375
+    },
+    "warzywa": {
+     "d_yield_pp": -0.4800313937482452,
+     "d_water_mm": -16.5
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.031247969913700598,
+     "d_water_mm": -6.625
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.7534231589514848,
+     "d_water_mm": -18.35
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 6000000,
+   "eval_s": 2.28,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  },
+  {
+   "reward": -0.12587835201631695,
+   "yield": 0.9357755239061967,
+   "yield_p05": 0.7471721777286947,
+   "water_mm": 89.10333333333334,
+   "dp_mm": 30.759290280575602,
+   "stress_days": 29.2025,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": -0.07499333235628249,
+     "d_water_mm": -2.1666666666666665
+    },
+    "100.0": {
+     "d_yield_pp": -0.22359601053960604,
+     "d_water_mm": -7.57
+    },
+    "150.0": {
+     "d_yield_pp": -0.440630840451787,
+     "d_water_mm": -16.256666666666668
+    },
+    "250.0": {
+     "d_yield_pp": -0.7445371269178176,
+     "d_water_mm": -28.403333333333332
+    }
+   },
+   "dominant": false,
+   "per_crop_vs_fao": {
+    "burak_cukrowy": {
+     "d_yield_pp": -0.17816998749309265,
+     "d_water_mm": -12.9
+    },
+    "chmiel": {
+     "d_yield_pp": -0.6271484476603602,
+     "d_water_mm": -16.3375
+    },
+    "drzewa_owocowe": {
+     "d_yield_pp": -0.12225573190101835,
+     "d_water_mm": -4.825
+    },
+    "krzewy_owocowe": {
+     "d_yield_pp": -0.29551335281133906,
+     "d_water_mm": -12.4
+    },
+    "kukurydza": {
+     "d_yield_pp": -0.016725616674778843,
+     "d_water_mm": -10.0125
+    },
+    "kukurydza_kiszonka": {
+     "d_yield_pp": -0.3410952432136321,
+     "d_water_mm": -15.45
+    },
+    "pszenica_ozima": {
+     "d_yield_pp": -0.27654817977907764,
+     "d_water_mm": -10.25
+    },
+    "rzepak": {
+     "d_yield_pp": -0.18893447502974112,
+     "d_water_mm": -10.9875
+    },
+    "straczkowe": {
+     "d_yield_pp": -0.4190166730473959,
+     "d_water_mm": -11.9125
+    },
+    "truskawki": {
+     "d_yield_pp": -0.9460719881166803,
+     "d_water_mm": -28.8375
+    },
+    "tyton": {
+     "d_yield_pp": -0.8975448635592248,
+     "d_water_mm": -21.35
+    },
+    "uzytki_zielone": {
+     "d_yield_pp": -0.12969895450622687,
+     "d_water_mm": -8.0375
+    },
+    "warzywa": {
+     "d_yield_pp": -0.458066342638165,
+     "d_water_mm": -16.225
+    },
+    "zboza_jare": {
+     "d_yield_pp": 0.04804299760883937,
+     "d_water_mm": -6.5
+    },
+    "ziemniak": {
+     "d_yield_pp": -0.7153430546737058,
+     "d_water_mm": -17.9625
+    }
+   },
+   "n_crops_dominant": 1,
+   "dominant_all_crops": false,
+   "timesteps": 6004736,
+   "eval_s": 2.33,
+   "best": false,
+   "best_dominant": false,
+   "best_dominant_all_crops": false
+  }
+ ]
+}

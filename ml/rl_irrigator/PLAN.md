@@ -214,3 +214,8 @@ Różnice: wszystkie 15 upraw w epizodach i 6 mln kroków, 3 ziarna.
 - **powtórka:** punkty treningowe w latach 2025–2026.
 
 Raportuję też wynik dla każdej uprawy.
+
+**Wybór E7 (walidacja 2024, 15 upraw; zapisane przed testem):**
+- Checkpointy `@domc` (przewaga przy każdym budżecie i dla każdej uprawy): E7_s1 −0,1256, **E7_s2 −0,1252**; E7_s3 takiego nie ma (`@dom` −0,1250). Najlepszy kandydat E7: **E7_s2@domc** (1,3 mln kroków; ΔY/ΔW przy 50/100/150/250 mm: +0,02/−0,6, +0,09/−2,2, +0,12/−5,4, +0,20/−9,8; 15/15 upraw).
+- E6f_s2@dom na tej samej walidacji ma nagrodę **−0,1240** (oszczędza więcej wody: 94,3 mm wobec 98,2 mm, ale w części nowych upraw ma niższy plon niż FAO). Zgodnie z punktem 3 **zostaje wdrożony E6f_s2@dom**, teraz z parametrami 15 upraw. E7_s2@domc jest raportowany jako alternatywa „przewaga w każdej uprawie”.
+- Test (holdout i punkty treningowe, 15 upraw): decyzja dla E6f_s2@dom, wynik E7_s2@domc obok.
