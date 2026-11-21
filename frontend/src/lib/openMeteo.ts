@@ -28,15 +28,15 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Same-origin proxy of our server (/om/…); without it (plain static hosting) the browser calls Open-Meteo directly. */
 let proxyOk = true;
 async function viaServer(url: string): Promise<{ status: number; ok: boolean; text: string }> {
-  if (proxyOk) {
+  if (typeof window !== "undefined" && proxyOk) {
     const local = url.replace(ARCHIVE_URL, "/om/archive").replace(FORECAST_URL, "/om/forecast");
-    try {
-      const r = await request(local, 12000);
-      if (r.status !== 404 && !r.text.trimStart().startsWith("<")) return r;
-    } catch { /* fall through to the direct call */ }
+    const r = await request(local, 20000);
+    const head = r.text.trimStart().toLowerCase();
+    // Only disable the proxy when running on plain static hosting without Vite middleware (404 / SPA HTML fallback).
+    if (r.status !== 404 && !head.startsWith("<!") && !head.startsWith("<html")) return r;
     proxyOk = false;
   }
-  return request(url, 12000);
+  return request(url, 20000);
 }
 /** Open-Meteo limits each network address to about 600 calls a minute: on 429 or a timeout, wait and try again (3 attempts). */
 async function getJson(url: string): Promise<OmDaily> {
@@ -100,8 +100,18 @@ function archiveChunk(lat: number, lon: number, from: Iso, to: Iso): Promise<Chu
   if (hit) return hit;
   try {
     const raw = localStorage.getItem(LS + key);
-    if (raw) { const c = Promise.resolve(JSON.parse(raw) as Chunk); mem.set(key, c); return c; }
-  } catch { /* storage blocked: fetch instead */ }
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Chunk> | null;
+      if (parsed && typeof parsed.from === "string" && Array.isArray(parsed.p) && Array.isArray(parsed.e) && parsed.p.length > 0) {
+        const c = Promise.resolve(parsed as Chunk);
+        mem.set(key, c);
+        return c;
+      }
+      localStorage.removeItem(LS + key);
+    }
+  } catch {
+    try { localStorage.removeItem(LS + key); } catch { /* storage blocked: fetch instead */ }
+  }
   const p = getJson(`${ARCHIVE_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&daily=${DAILY}&timezone=Europe%2FWarsaw&start_date=${from}&end_date=${to}`).then(toChunk);
   mem.set(key, p);
   p.then((c) => { try { localStorage.setItem(LS + key, JSON.stringify(c)); } catch { /* quota: memory only */ } }, () => mem.delete(key));
@@ -148,12 +158,28 @@ export function cachedWeatherFor(lat: number, lon: number, date: Iso, today: Iso
   return null;
 }
 
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]!);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 async function load(lat: number, lon: number, date: Iso, today: Iso): Promise<DailySeries> {
   const archiveEnd = addDays(today, -ARCHIVE_LAG_DAYS);
   const ranges = neededRanges(date, today);
   const needForecast = ranges.some(([, b]) => b > archiveEnd) || date >= addDays(today, -2);
-  const arch = ranges.filter(([a]) => a <= archiveEnd).map(([a, b]) => archiveChunk(lat, lon, a, b > archiveEnd ? archiveEnd : b));
-  const [archive, fc] = await Promise.all([Promise.all(arch), needForecast ? forecastChunk(lat, lon, today).then((c) => c, () => null) : Promise.resolve(null)]);
+  const archSpecs = ranges.filter(([a]) => a <= archiveEnd).map(([a, b]) => [a, b > archiveEnd ? archiveEnd : b] as const);
+  const [archive, fc] = await Promise.all([
+    mapLimit(archSpecs, 4, ([a, b]) => archiveChunk(lat, lon, a, b)),
+    needForecast ? forecastChunk(lat, lon, today).then((c) => c, () => null) : Promise.resolve(null),
+  ]);
   const from = ranges[0]?.[0] ?? addDays(date, -59);
   const startDay = toDay(from);
   const n = toDay(addDays(today, 15)) - startDay + 1;
