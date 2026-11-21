@@ -84,6 +84,8 @@ tensorboard --logdir runs
 4. `baselines.py` (brak nawadniania, kalendarz, reguła FAO, FAO + prognoza, FAO małe dawki + prognoza, wyrocznia DP) oraz `evaluate.py` porównują strategie na latach testowych 2025–2026 z prawdziwymi prognozami ECMWF i bootstrapem po punktach i latach. Robią to na punktach treningowych i na zestawie holdout z nowymi lokalizacjami.
 5. `inference.py` i `api.py` (`/rl/recommend`, `/rl/compare`) odtwarzają sezon działki do wskazanej daty. Domyślnie używają agenta RL w czystym numpy (`artifacts/models/ppo_irrigator_weights.npz`), a na życzenie (`policy=...`) dowolnej reguły bazowej.
 
+Pełne rozbicie, co agent bierze pod uwagę przy decyzji, ze wszystkimi wzorami: [`docs/RL_IRRIGATION_DECISION_MODEL.md`](../../docs/RL_IRRIGATION_DECISION_MODEL.md).
+
 ---
 
 ## 3. Model i parametry
