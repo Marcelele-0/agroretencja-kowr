@@ -1,12 +1,13 @@
 # RL irrigation module configuration. Every change of reward or hyperparameters is
 # logged in EXPERIMENTS.md together with the validation result.
 
-# Policy used by recommend() by default: "rl" or "fao_rule". Set by the M5 decision point.
-# Test 2025-2026 (reports/evaluation.md): RL (E5_s3) vs FAO overall +0.09 pp yield, -5.9 mm water
-# (both significant), significant wins at budgets 100/150/250 mm, but a statistical TIE at 50 mm.
-# The pre-registered rule requires a significant win at EVERY budget -> "not ready": FAO stays the
-# default and the RL agent is available as experimental via policy="rl".
-default_policy: fao_rule
+# Policy used by recommend() by default: "rl" or "fao_rule". Set by the decision point.
+# E5 (first test, reports/evaluation_E5.md): tie at the 50 mm budget -> "not ready", fao_rule.
+# E6 (PLAN.md section 5, rule unchanged, model chosen on validation 2024 only): agent E6f_s2@dom
+# on the CLEAN spatial hold-out (50 new locations x 2025-2026, reports/evaluation_holdout.md)
+# beats the FAO rule significantly at EVERY budget, in yield AND water: overall +0.23 pp yield,
+# -6.0 mm; 50 mm +0.12 pp / -0.9 mm ... 250 mm +0.27 pp / -11.2 mm -> "ready": default = rl.
+default_policy: rl
 
 actions_mm: [0, 10, 20, 30]
 

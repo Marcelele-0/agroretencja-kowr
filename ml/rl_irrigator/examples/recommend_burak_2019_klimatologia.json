@@ -61,10 +61,10 @@
    "kc": 0.92
   },
   "policy": {
-   "used": "fao_rule",
-   "label": "Regula FAO-56 (Dr > RAW)",
-   "default": "fao_rule",
-   "rl_status": "eksperymentalny (domyslna jest regula FAO - patrz reports/evaluation.md)",
+   "used": "rl",
+   "label": "Agent RL (MaskablePPO)",
+   "default": "rl",
+   "rl_status": "domyslny",
    "rl_weights": "ppo_irrigator_weights.npz"
   },
   "recommendation": {
@@ -138,13 +138,13 @@
    ],
    "window": [],
    "scenarios_7d_mm": {
-    "bez_opadu": 0.0,
+    "bez_opadu": 10.0,
     "wg_prognozy": 0.0,
     "opad_x1_5": 0.0
    },
    "alternative": {
-    "policy": "rl",
-    "label": "Agent RL (MaskablePPO)",
+    "policy": "fao_rule",
+    "label": "Regula FAO-56 (Dr > RAW)",
     "dose_today_mm": 0.0,
     "total_7d_mm": 0.0
    }
@@ -165,13 +165,19 @@
    "budget_used_mm": 0.0,
    "budget_left_mm": 200.0,
    "irrigation_before_date_mm": 0.0,
-   "policy_action_probabilities": null
+   "policy_action_probabilities": {
+    "0_mm": 1.0,
+    "10_mm": 0.0,
+    "20_mm": 0.0,
+    "30_mm": 0.0
+   }
   },
   "forecast_mode": "climatology",
   "uncertainty": [
-   "Suma dawek na 7 dni: 0 mm gdyby nie padalo, 0 mm wg prognozy, 0 mm przy opadzie 1,5 x prognoza.",
+   "Suma dawek na 7 dni: 10 mm gdyby nie padalo, 0 mm wg prognozy, 0 mm przy opadzie 1,5 x prognoza.",
    "Prognoza: dla dat sprzed 2024 brak archiwalnych prognoz - uzyto klimatologii punktu (srednia z innych lat), bez zagladania w przyszlosc.",
-   "Przyjeto brak nawadniania od poczatku sezonu do daty analizy (budzet zuzyty = 0)."
+   "Przyjeto brak nawadniania od poczatku sezonu do daty analizy (budzet zuzyty = 0).",
+   "Pewnosc agenta RL dla dzisiejszej decyzji (prawdopodobienstwa akcji): {'0_mm': 1.0, '10_mm': 0.0, '20_mm': 0.0, '30_mm': 0.0}."
   ],
   "sources": [
    {
@@ -186,12 +192,12 @@
     "name": "Open-Meteo Historical Weather API (best_match: ERA5/ERA5-Land/ECMWF IFS)",
     "url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.5&longitude=17.7&start_date=2016-01-01&end_date=2026-11-20&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
     "retrieved_at": "2026-11-21T13:49:52+00:00",
-    "mode": "live",
+    "mode": "cache",
     "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
     "detail": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-20; punkt siatki 50.510N 17.650E"
    }
   ],
-  "timing_s": 0.48,
+  "timing_s": 0.028,
   "irrigation_advice": {
    "action_now": "Nie nawadniaj dzis",
    "recommended_mm": 0.0,

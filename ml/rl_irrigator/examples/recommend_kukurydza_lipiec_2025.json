@@ -34,7 +34,7 @@
    "Nawadnianie jest ostatnim krokiem po dzialaniach retencyjnych i agrotechnicznych - ta rekomendacja ich nie zastepuje."
   ],
   "status": "ok",
-  "message": "Nie nawadniaj dzis - zapas wody 53% TAW jest powyzej progu stresu (41% TAW); przy obecnym zuzyciu stres za ok. 5 dni bez deszczu. W kolejnych 6 dniach nie przewiduje sie nawadniania (jesli prognoza sie sprawdzi).",
+  "message": "Nie nawadniaj dzis - zapas wody 53% TAW jest powyzej progu stresu (41% TAW); przy obecnym zuzyciu stres za ok. 4 dni bez deszczu. Plan na kolejne dni (warunkowy, zalezy od opadu): 2025-07-18: 10 mm.",
   "location": {
    "lat": 52.6,
    "lon": 17.0,
@@ -62,23 +62,23 @@
    "kc": 1.2
   },
   "policy": {
-   "used": "fao_rule",
-   "label": "Regula FAO-56 (Dr > RAW)",
-   "default": "fao_rule",
-   "rl_status": "eksperymentalny (domyslna jest regula FAO - patrz reports/evaluation.md)",
+   "used": "rl",
+   "label": "Agent RL (MaskablePPO)",
+   "default": "rl",
+   "rl_status": "domyslny",
    "rl_weights": "ppo_irrigator_weights.npz"
   },
   "recommendation": {
    "action_now": "Nie nawadniaj dzis",
    "dose_today_mm": 0.0,
-   "total_7d_mm": 0.0,
+   "total_7d_mm": 10.0,
    "plan_7d": [
     {
      "day": 0,
      "dose_mm": 0.0,
      "precip_assumed_mm": 4.5,
      "et0_assumed_mm": 3.3,
-     "storage_pct_taw_start": 53.3,
+     "storage_pct_taw_start": 52.7,
      "stress_expected": false,
      "date": "2025-07-15"
     },
@@ -87,7 +87,7 @@
      "dose_mm": 0.0,
      "precip_assumed_mm": 1.2,
      "et0_assumed_mm": 3.3,
-     "storage_pct_taw_start": 53.6,
+     "storage_pct_taw_start": 53.0,
      "stress_expected": false,
      "date": "2025-07-16"
     },
@@ -96,16 +96,16 @@
      "dose_mm": 0.0,
      "precip_assumed_mm": 4.2,
      "et0_assumed_mm": 3.3,
-     "storage_pct_taw_start": 51.8,
+     "storage_pct_taw_start": 51.2,
      "stress_expected": false,
      "date": "2025-07-17"
     },
     {
      "day": 3,
-     "dose_mm": 0.0,
+     "dose_mm": 10.0,
      "precip_assumed_mm": 1.5,
      "et0_assumed_mm": 3.3,
-     "storage_pct_taw_start": 51.9,
+     "storage_pct_taw_start": 51.3,
      "stress_expected": false,
      "date": "2025-07-18"
     },
@@ -114,7 +114,7 @@
      "dose_mm": 0.0,
      "precip_assumed_mm": 0.0,
      "et0_assumed_mm": 3.3,
-     "storage_pct_taw_start": 50.2,
+     "storage_pct_taw_start": 56.3,
      "stress_expected": false,
      "date": "2025-07-19"
     },
@@ -123,7 +123,7 @@
      "dose_mm": 0.0,
      "precip_assumed_mm": 0.6,
      "et0_assumed_mm": 3.3,
-     "storage_pct_taw_start": 47.6,
+     "storage_pct_taw_start": 53.7,
      "stress_expected": false,
      "date": "2025-07-20"
     },
@@ -132,31 +132,33 @@
      "dose_mm": 0.0,
      "precip_assumed_mm": 13.5,
      "et0_assumed_mm": 3.3,
-     "storage_pct_taw_start": 45.3,
+     "storage_pct_taw_start": 51.4,
      "stress_expected": false,
      "date": "2025-07-21"
     }
    ],
-   "window": [],
+   "window": [
+    "2025-07-18"
+   ],
    "scenarios_7d_mm": {
     "bez_opadu": 30.0,
-    "wg_prognozy": 0.0,
+    "wg_prognozy": 10.0,
     "opad_x1_5": 0.0
    },
    "alternative": {
-    "policy": "rl",
-    "label": "Agent RL (MaskablePPO)",
+    "policy": "fao_rule",
+    "label": "Regula FAO-56 (Dr > RAW)",
     "dose_today_mm": 0.0,
     "total_7d_mm": 0.0
    }
   },
   "rationale": {
-   "soil_water_storage_pct_taw": 53.3,
-   "depletion_mm": 70.1,
+   "soil_water_storage_pct_taw": 52.7,
+   "depletion_mm": 71.0,
    "taw_mm": 150.0,
    "stress_threshold_storage_pct_taw": 40.9,
    "raw_mm": 88.6,
-   "days_to_stress_without_rain": 4.6,
+   "days_to_stress_without_rain": 4.4,
    "etc_estimate_mm_per_day": 3.99,
    "precip_last7_mm": 26.2,
    "et0_last7_mm": 23.2,
@@ -166,13 +168,19 @@
    "budget_used_mm": 30.0,
    "budget_left_mm": 120.0,
    "irrigation_before_date_mm": 30.0,
-   "policy_action_probabilities": null
+   "policy_action_probabilities": {
+    "0_mm": 1.0,
+    "10_mm": 0.0,
+    "20_mm": 0.0,
+    "30_mm": 0.0
+   }
   },
   "forecast_mode": "archived_ecmwf",
   "uncertainty": [
-   "Suma dawek na 7 dni: 30 mm gdyby nie padalo, 0 mm wg prognozy, 0 mm przy opadzie 1,5 x prognoza.",
+   "Suma dawek na 7 dni: 30 mm gdyby nie padalo, 10 mm wg prognozy, 0 mm przy opadzie 1,5 x prognoza.",
    "Prognoza: archiwalna prognoza ECMWF wydana dzien przed data analizy (Open-Meteo Previous Runs).",
-   "Historia nawodnien nie zostala podana: przyjeto, ze zuzyte 30 mm podano zgodnie z wybrana strategia."
+   "Historia nawodnien nie zostala podana: przyjeto, ze zuzyte 30 mm podano zgodnie z wybrana strategia.",
+   "Pewnosc agenta RL dla dzisiejszej decyzji (prawdopodobienstwa akcji): {'0_mm': 1.0, '10_mm': 0.0, '20_mm': 0.0, '30_mm': 0.0}."
   ],
   "sources": [
    {
@@ -200,11 +208,11 @@
     "detail": "archiwalne prognozy opadu, wyprzedzenie 1-7 dni, 2025-07-15..2025-07-21"
    }
   ],
-  "timing_s": 0.086,
+  "timing_s": 0.097,
   "irrigation_advice": {
    "action_now": "Nie nawadniaj dzis",
    "recommended_mm": 0.0,
-   "rationale": "Nie nawadniaj dzis - zapas wody 53% TAW jest powyzej progu stresu (41% TAW); przy obecnym zuzyciu stres za ok. 5 dni bez deszczu. W kolejnych 6 dniach nie przewiduje sie nawadniania (jesli prognoza sie sprawdzi).",
+   "rationale": "Nie nawadniaj dzis - zapas wody 53% TAW jest powyzej progu stresu (41% TAW); przy obecnym zuzyciu stres za ok. 4 dni bez deszczu. Plan na kolejne dni (warunkowy, zalezy od opadu): 2025-07-18: 10 mm.",
    "forecast_mode": "archived_ecmwf",
    "strategies_10y": []
   }

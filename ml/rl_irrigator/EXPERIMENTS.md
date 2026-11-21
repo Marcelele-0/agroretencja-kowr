@@ -113,3 +113,74 @@ Wyniki ziaren są spójne: −0,06 do −0,16 pkt proc. plonu i −6 do −10 mm
 Różnica RL − FAO: łącznie +0,09 pkt proc. [+0,06; +0,12] i −5,9 mm [−7,7; −4,2]. Według budżetów: 100 mm +0,17 / −2,3; 150 mm +0,25 / −6,7; 250 mm −0,08 / −14,7. **50 mm: +0,04 [−0,03; +0,09] / +0,1 [−0,3; +0,6], czyli remis.** Ziarna: woda 78,0 / 81,6 / 80,2 mm, plon 0,9693 / 0,9695 / 0,9699.
 
 **Werdykt wg kryterium ustalonego przed testem** (istotna wygrana przy każdym budżecie): **niegotowy**, bo przy 50 mm jest remis. Domyślna zostaje reguła FAO, a agent jest eksperymentalny (`policy="rl"`). Według dosłownego kryterium z promptu (same średnie) agent przeszedłby, ale nie zmieniam reguły po zobaczeniu wyniku. Decyzję o przełączeniu `default_policy: rl` zostawiam zespołowi lub mentorowi.
+
+---
+
+## E6: doszlifowanie agenta, cel „pokonać FAO przy każdym budżecie” (21.11.2026, prośba użytkownika)
+
+**Punkt wyjścia z walidacji 2024, nie z testu.** E5_s3 przy 50 mm: ziemniak na glebach 1–2 −0,23 pkt proc., kukurydza na glebie 1 −0,13. Przy 250 mm −0,60 pkt proc. za −24,6 mm. Diagnoza na sezonach walidacyjnych (ziemniak, gleba 1, 50 mm): wyrocznia podaje 4–5 dawek po ok. 10 mm, a FAO i E5 2 dawki po 21–25 mm. Duże dawki uzupełniają glebę do pełna i następny deszcz ucieka w perkolację (wyrocznia 16,7 mm, FAO 20,6 mm, E5 21,7 mm).
+
+Protokół wyboru i testu został zapisany w `PLAN.md` (sekcja 5) **przed** jakąkolwiek ewaluacją E6 na latach 2025–2026. Kandydatów porównuje `scripts/compare_val.py`: różnice wobec FAO na walidacji 2024 przy każdym budżecie, z 95% CI po punktach, i nagroda przy wspólnym `c_w` = 5e-4, `c_p` = 3e-4.
+
+| Wariant | Co zmienione względem E5 | Walidacja: nagroda (FAO −0,1383) | ΔY [pkt proc.] / ΔW [mm] przy 50 / 100 / 150 / 250 mm |
+|---|---|---|---|
+| E5_s3 | – | −0,1350 | −0,02/−0,8 · +0,00/−3,4 · −0,01/−9,3 · **−0,60**/−24,6 |
+| E6a_s1 | obserwacja v2 (+ prognoza na dzień 1 i 2, ETc do końca sezonu, budżet/ETc) + 30% epizodów z budżetem 20–100 mm | −0,1339 | +0,03/−0,9 · +0,06/−3,0 · +0,12/−7,0 · −0,01/−16,9 |
+| DAgger (imitacja akcji wyroczni) | start od wyroczni zamiast FAO | – | **nieudany:** student przestał podlewać (trafia 0,6% dni podlewania wyroczni), bo przy jego wiedzy „podlać” rzadko ma > 50% |
+| DAgger/AggreVaTe (żal wyroczni) | student minimalizuje oczekiwany żal Q* wyroczni | −0,1361 po starcie | **nieudany:** podlewa za mało (plon 0,927, 91 mm). Wyrocznia „wie”, że jutro poda wodę idealnie, więc czekanie wydaje się tanie |
+| `fao_small` (prosta reguła, nie RL) | 10 mm przy Dr > 0,9 RAW, pominięcie przy prognozie ≥ 5 mm na 2 dni | −0,1352 | +0,06/−0,3 · +0,13/−1,3 · +0,16/−3,5 · +0,07/−7,2 (**dominuje FAO**) |
+| E6d_s1 | E6a + start od `fao_small`, lr 1e-4 | −0,1341 | −0,01/−1,5 · −0,08/−4,9 · −0,18/−11,5 · −0,17/−21,3 |
+| E6e_s1 | E6a + start od `fao_small`, lr 3e-4 | −0,1328 | +0,05/−1,4 · +0,08/−4,3 · +0,04/−10,4 · −0,11/−21,9 |
+| **E6f_s2@dom** | E6e + checkpoint „dominujący” (najlepsza nagroda wśród checkpointów z ΔY ≥ 0 i ΔW ≤ 0 przy każdym budżecie) | **−0,1328** | **+0,07/−0,9 · +0,11/−3,4 · +0,13/−8,5 · +0,14/−17,1** |
+| E6f_s1@dom / s3@dom | jw., inne ziarna | −0,1344 / −0,1350 | wszystkie ΔY > 0, wszystkie ΔW < 0 |
+| ensemble E6f s1+s2+s3 @dom | średnia prawdopodobieństw akcji | −0,1342 | dominuje, ale gorzej niż najlepsze ziarno |
+| E6g_s1@dom | E6f z `c_w` = 3e-4 i lr malejącym liniowo | −0,1337 | +0,06/−0,6 · +0,13/−2,2 · +0,19/−5,5 · +0,28/−10,9 |
+
+Siatka parametrów `fao_small` na walidacji (próg 0,8–0,95 RAW, pominięcie przy 3/5/8 mm, horyzont 1–3 dni, dawka 10/20 mm) dała płaskie plateau (nagroda −0,1347 do −0,1352). Zostawiłem wariant sprawdzony jako pierwszy, sprzed siatki, żeby nie dopasowywać reguły pod walidację.
+
+**Co zadziałało:**
+1. Nowe cechy plus więcej trudnych przypadków w treningu (E6a).
+2. Start od reguły małych dawek zamiast od FAO (E6e).
+3. Wybór checkpointu, który na walidacji dominuje FAO przy każdym budżecie.
+
+Przy cenie wody `c_w` = 5e-4 PPO z czasem zaczyna przy dużych budżetach wymieniać plon na wodę, a ziarna mocno się różnią: przy 250 mm s2 i s3 dochodziły w trakcie treningu do −1,4 i −0,9 pkt proc. Wybór checkpointu „@dom” to stabilizuje.
+**Wybór (przed testem, `PLAN.md`):** E6f_s2@dom, checkpoint 2,8 mln kroków, trening 676 s. Ensemble odpadł, bo miał niższą nagrodę.
+
+### TEST E6: czysty test na nowych lokalizacjach (holdout) + powtórka starego testu
+
+`uv run python -m kowr_rl.evaluate --runs E6f_s1@dom E6f_s2@dom E6f_s3@dom --dataset holdout`
+
+Zestaw holdout ma 50 nowych punktów rolnych (16 województw). To siatka przesunięta o 0,35°, a najbliższy punkt treningowy jest co najmniej 35 km dalej (mediana 43 km). Lata 2025–2026, prawdziwe prognozy ECMWF, 6400 sezonów na strategię. Pełny raport: `reports/evaluation_holdout.md`.
+
+| Holdout 2025–2026 | Plon | Woda [mm] | Perkolacja [mm] |
+|---|---|---|---|
+| Reguła FAO | 0,967 | 87 | 41 |
+| FAO + prognoza | 0,967 | 84 | 40 |
+| FAO małe dawki + prognoza | 0,969 | 83 | 38 |
+| **Agent RL (E6f_s2@dom)** | **0,970** | **81** | 38 |
+| Wyrocznia | 0,972 | 76 | 37 |
+
+| Zakres | ΔPlon RL − FAO [pkt proc.] | ΔWoda RL − FAO [mm] | Wynik |
+|---|---|---|---|
+| łącznie | +0,23 [+0,14; +0,33] | −6,0 [−7,3; −5,1] | OK |
+| 50 mm | +0,12 [+0,07; +0,17] | −0,9 [−1,4; −0,5] | OK |
+| 100 mm | +0,26 [+0,12; +0,43] | −3,9 [−5,2; −2,8] | OK |
+| 150 mm | +0,28 [+0,13; +0,44] | −8,2 [−10,0; −6,5] | OK |
+| 250 mm | +0,27 [+0,20; +0,33] | −11,2 [−13,2; −9,6] | OK |
+
+Przy **każdym** budżecie agent ma istotnie wyższy plon **i** istotnie mniejsze zużycie wody, więc spełnia obie ścieżki kryterium naraz.
+
+- **RL wobec `fao_small`** (najlepsza prosta reguła): łącznie +0,11 pkt proc. i −2,0 mm, istotnie przy każdym budżecie.
+- **RL wobec FAO + prognoza:** +0,27 pkt proc. i −2,7 mm.
+- **Ziarna na holdoucie:** plon 0,9688 / 0,9697 / 0,9686, woda 81,5 / 80,9 / 82,9 mm. Wynik nie zależy od szczęśliwego ziarna.
+- **Wyrocznia:** agent zbiera ok. 55–60% jej przewagi nad FAO, jednocześnie w plonie i w wodzie.
+
+**Powtórka starego testu** (punkty treningowe 2025–2026, już widziane przy E5): łącznie +0,23 pkt proc. [+0,14; +0,34] i −5,6 mm [−6,8; −4,7]. Przy 50 mm +0,11 / −0,8, przy 100 mm +0,25 / −3,8, przy 150 mm +0,28 / −7,8, przy 250 mm +0,28 / −10,2. Wszystko istotne (`reports/evaluation.md`). Archiwum testu E5: `reports/evaluation_E5.md`.
+
+**Słabe miejsce:** pszenica ozima na glebie kat. I. Na holdoucie −0,19 pkt proc. plonu za −11,8 mm wody, a 9% takich sezonów traci ponad 1 pkt proc. Najgorszy sezon to −3,2 pkt proc., kiedy agent zostawił 30 mm budżetu niewykorzystane pod koniec sezonu. W pozostałych 15 kombinacjach uprawy i gleby średni plon jest wyższy niż przy FAO.
+
+**Werdykt (reguła z M5 bez zmian, na czystym teście):** agent **GOTOWY**, więc `default_policy: rl`. Reguły FAO, FAO + prognoza i `fao_small` pozostają dostępne jako `policy=...`.
+**Zastrzeżenia:**
+- Lata 2025–2026 były już raz oglądane przy E5, a pomysł na E6 wziął się z diagnozy, którą widać też na walidacji. Holdout jest niezależny przestrzennie, ale nie czasowo.
+- Wdrożone ziarno to najlepsze z trzech na walidacji.
+- Wszystko to wyniki modelu FAO-56/33, nie pomiary polowe.

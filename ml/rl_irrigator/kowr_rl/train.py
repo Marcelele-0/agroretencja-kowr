@@ -64,19 +64,36 @@ def summarize(res: Any) -> dict[str, float]:
 def make_validation_callback(val_batch: SeasonBatch, eval_freq: int, out_dir: Path, reward_cfg: dict[str, float], reference: dict[str, dict[str, float]]):
     from stable_baselines3.common.callbacks import BaseCallback
 
+    from .baselines import baseline_policies
     from .policy import SB3BatchPolicy
+
+    fao_res = simulate(val_batch, baseline_policies()["fao_rule"], reward_cfg=reward_cfg)
+    budgets = sorted(set(val_batch.budget.tolist()))
 
     class ValidationCallback(BaseCallback):
         def __init__(self) -> None:
             super().__init__()
             self.best = -np.inf
+            self.best_dom = -np.inf
             self.last = 0
             self.history: list[dict[str, Any]] = []
 
         def _evaluate(self) -> None:
             t0 = time.perf_counter()
             pol = SB3BatchPolicy(self.model, self.model.get_vec_normalize_env())
-            m = summarize(simulate(val_batch, pol, reward_cfg=reward_cfg))
+            res = simulate(val_batch, pol, reward_cfg=reward_cfg)
+            m = summarize(res)
+            # E6: per-budget mean differences vs the FAO rule; "dominant" = yield >= FAO and
+            # water <= FAO at EVERY budget level (the E6 model-selection criterion, PLAN.md 5)
+            per_b = {}
+            for b in budgets:
+                k = val_batch.budget == b
+                per_b[str(b)] = {
+                    "d_yield_pp": float(100 * (res.yield_rel[k] - fao_res.yield_rel[k]).mean()),
+                    "d_water_mm": float((res.water_mm[k] - fao_res.water_mm[k]).mean()),
+                }
+            m["per_budget_vs_fao"] = per_b
+            m["dominant"] = bool(all(v["d_yield_pp"] >= 0 and v["d_water_mm"] <= 0 for v in per_b.values()))
             m["timesteps"] = int(self.num_timesteps)
             m["eval_s"] = round(time.perf_counter() - t0, 2)
             for k, v in m.items():
@@ -90,13 +107,20 @@ def make_validation_callback(val_batch: SeasonBatch, eval_freq: int, out_dir: Pa
                 self.model.save(out_dir / "best_model.zip")
                 self.model.get_vec_normalize_env().save(str(out_dir / "best_vecnormalize.pkl"))
             m["best"] = bool(improved)
+            dom_improved = m["dominant"] and m["reward"] > self.best_dom
+            if dom_improved:
+                self.best_dom = m["reward"]
+                self.model.save(out_dir / "best_dominant_model.zip")
+                self.model.get_vec_normalize_env().save(str(out_dir / "best_dominant_vecnormalize.pkl"))
+            m["best_dominant"] = bool(dom_improved)
             self.history.append(m)
             (out_dir / "val_history.json").write_text(json.dumps({"reference": reference, "history": self.history}, indent=1), encoding="utf-8")
             fao = reference.get("fao_rule", {})
             print(
                 f"[val] {m['timesteps']:>9,d} steps  reward={m['reward']:+.4f}  yield={m['yield']:.4f} "
                 f"(FAO {fao.get('yield', float('nan')):.4f})  water={m['water_mm']:.1f} mm (FAO {fao.get('water_mm', float('nan')):.1f})"
-                f"  dp={m['dp_mm']:.1f}{'  *best*' if improved else ''}",
+                f"  dp={m['dp_mm']:.1f}{'  *best*' if improved else ''}{'  *best-dominant*' if dom_improved else ''}"
+                f"  dY/dW per budget: " + " ".join(f"{v['d_yield_pp']:+.2f}/{v['d_water_mm']:+.1f}" for v in per_b.values()),
                 flush=True,
             )
 
@@ -326,7 +350,13 @@ def main() -> None:
     model.save(out_dir / "last_model.zip")
     venv.save(str(out_dir / "last_vecnormalize.pkl"))
     venv.close()
-    summary = {"run": args.run, "train_seconds": round(train_s, 1), "steps_per_s": round(args.timesteps / max(train_s, 1e-9)), "best_val_reward": cb.best}
+    summary = {
+        "run": args.run,
+        "train_seconds": round(train_s, 1),
+        "steps_per_s": round(args.timesteps / max(train_s, 1e-9)),
+        "best_val_reward": cb.best,
+        "best_dominant_val_reward": cb.best_dom if np.isfinite(cb.best_dom) else None,
+    }
     (out_dir / "train_summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     print("done:", json.dumps(summary), flush=True)
 

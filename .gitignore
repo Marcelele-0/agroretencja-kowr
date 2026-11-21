@@ -44,3 +44,4 @@ ml/rl_irrigator/models/**/policy.npz
 ml/rl_irrigator/data/holdout/weather/*.parquet
 ml/rl_irrigator/data/holdout/forecasts/*.parquet
 ml/rl_irrigator/models/**/dagger_student.npz
+ml/rl_irrigator/models/**/policy_dominant.npz

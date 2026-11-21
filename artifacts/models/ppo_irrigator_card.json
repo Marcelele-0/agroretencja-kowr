@@ -1,34 +1,12 @@
 {
  "name": "FAO-RL-Irrigator (MaskablePPO)",
- "exported_at": "2026-11-21T14:49:39",
- "run": "E5_s3",
+ "exported_at": "2026-11-21T17:08:58",
+ "runs": [
+  "E6f_s2@dom"
+ ],
  "weights": "ppo_irrigator_weights.npz",
- "runtime": "NumPy only (kowr_rl.policy.NumpyPolicy); MLP actor + VecNormalize observation statistics",
- "train_config": {
-  "run": "E5_s3",
-  "seed": 3,
-  "timesteps": 3000000,
-  "n_envs": 16,
-  "eval_freq": 100000,
-  "c_w": 0.0005,
-  "c_p": 0.0003,
-  "ent_coef": 0.001,
-  "lr": 0.0003,
-  "gamma": 0.995,
-  "net": [
-   128,
-   128
-  ],
-  "n_steps": 512,
-  "batch_size": 4096,
-  "threads": 4,
-  "bc_seasons": 8000,
-  "bc_epochs": 8,
-  "reward": {
-   "c_w": 0.0005,
-   "c_p": 0.0003
-  }
- },
+ "runtime": "NumPy only (kowr_rl.policy.load_policy): MLP actor(s) + VecNormalize observation statistics",
+ "observation": "v2 (17 features, kowr_rl.simulator.OBS_NAMES)",
  "train_years": [
   2016,
   2017,
@@ -39,63 +17,142 @@
   2022,
   2023
  ],
- "validation": {
-  "year": [
-   2024
-  ],
-  "best": {
-   "reward": -0.13497382234834873,
-   "yield": 0.931722888484288,
-   "yield_p05": 0.7342827773345271,
-   "water_mm": 97.715625,
-   "dp_mm": 31.274505238255205,
-   "stress_days": 25.490625,
-   "timesteps": 1900000,
-   "eval_s": 0.87,
-   "best": true
-  },
-  "reference": {
-   "none": {
-    "reward": -0.2673334366893732,
-    "yield": 0.7682297129191434,
-    "yield_p05": 0.5517984632606621,
-    "water_mm": 0.0,
-    "dp_mm": 29.104454566422746,
-    "stress_days": 62.7375
+ "validation_year": [
+  2024
+ ],
+ "members": [
+  {
+   "run": "E6f_s2@dom",
+   "checkpoint": "best_dominant",
+   "validation_best": {
+    "reward": -0.13281184327054243,
+    "yield": 0.9344331308431981,
+    "yield_p05": 0.7359266477841337,
+    "water_mm": 99.759375,
+    "dp_mm": 30.611057014625494,
+    "stress_days": 25.1328125,
+    "per_budget_vs_fao": {
+     "50.0": {
+      "d_yield_pp": 0.0664469023825798,
+      "d_water_mm": -0.9125
+     },
+     "100.0": {
+      "d_yield_pp": 0.1131967546073557,
+      "d_water_mm": -3.425
+     },
+     "150.0": {
+      "d_yield_pp": 0.13057257990852167,
+      "d_water_mm": -8.5
+     },
+     "250.0": {
+      "d_yield_pp": 0.14127396623792474,
+      "d_water_mm": -17.15
+     }
+    },
+    "dominant": true,
+    "timesteps": 2800000,
+    "eval_s": 0.65,
+    "best": true,
+    "best_dominant": true
    },
-   "calendar": {
-    "reward": -0.18726765515518373,
-    "yield": 0.9150033233884066,
-    "yield_p05": 0.7138740619600892,
-    "water_mm": 137.5,
-    "dp_mm": 77.27384020218841,
-    "stress_days": 29.6778125
+   "train_config": {
+    "run": "E6f_s2",
+    "seed": 2,
+    "timesteps": 3000000,
+    "n_envs": 8,
+    "eval_freq": 100000,
+    "c_w": 0.0005,
+    "c_p": 0.0003,
+    "ent_coef": 0.001,
+    "lr": 0.0003,
+    "gamma": 0.995,
+    "net": [
+     128,
+     128
+    ],
+    "n_steps": 1024,
+    "batch_size": 4096,
+    "threads": 2,
+    "bc_seasons": 8000,
+    "bc_epochs": 8,
+    "teacher": "fao_small",
+    "dagger_seasons": 6000,
+    "dagger_betas": [
+     1.0,
+     0.5,
+     0.2,
+     0.0
+    ],
+    "dagger_epochs": 4,
+    "dagger_workers": null,
+    "low_budget_prob": 0.3,
+    "lr_schedule": "constant",
+    "reward": {
+     "c_w": 0.0005,
+     "c_p": 0.0003
+    }
    },
-   "fao_rule": {
-    "reward": -0.1382881897172025,
-    "yield": 0.9333044053353572,
-    "yield_p05": 0.7350574110030809,
-    "water_mm": 107.25625,
-    "dp_mm": 32.20650505258021,
-    "stress_days": 25.5415625
-   },
-   "fao_forecast": {
-    "reward": -0.13773741020933833,
-    "yield": 0.9323192048172395,
-    "yield_p05": 0.7352487443225182,
-    "water_mm": 104.53125,
-    "dp_mm": 31.310987349691512,
-    "stress_days": 26.9825
+   "reference": {
+    "none": {
+     "reward": -0.2673334366893732,
+     "yield": 0.7682297129191434,
+     "yield_p05": 0.5517984632606621,
+     "water_mm": 0.0,
+     "dp_mm": 29.104454566422746,
+     "stress_days": 62.7375
+    },
+    "calendar": {
+     "reward": -0.18726765515518373,
+     "yield": 0.9150033233884066,
+     "yield_p05": 0.7138740619600892,
+     "water_mm": 137.5,
+     "dp_mm": 77.27384020218841,
+     "stress_days": 29.6778125
+    },
+    "fao_rule": {
+     "reward": -0.1382881897172025,
+     "yield": 0.9333044053353572,
+     "yield_p05": 0.7350574110030809,
+     "water_mm": 107.25625,
+     "dp_mm": 32.20650505258021,
+     "stress_days": 25.5415625
+    },
+    "fao_forecast": {
+     "reward": -0.13773741020933833,
+     "yield": 0.9323192048172395,
+     "yield_p05": 0.7352487443225182,
+     "water_mm": 104.53125,
+     "dp_mm": 31.310987349691512,
+     "stress_days": 26.9825
+    },
+    "fao_small": {
+     "reward": -0.13521564340253234,
+     "yield": 0.9343344599958658,
+     "yield_p05": 0.7356454062553384,
+     "water_mm": 104.203125,
+     "dp_mm": 30.825324678685643,
+     "stress_days": 26.558125
+    }
    }
   }
- },
+ ],
  "test_decision": {
-  "ready": false,
-  "recommended_default_policy": "fao_rule",
-  "deployed_run": "E5_s3",
-  "generated_at": "2026-11-21T14:48:34"
+  "test_train_points": {
+   "ready": true,
+   "recommended_default_policy": "rl",
+   "deployed_run": "E6f_s2@dom",
+   "generated_at": "2026-11-21T17:07:49",
+   "dataset": "train_points"
+  },
+  "test_holdout": {
+   "ready": true,
+   "recommended_default_policy": "rl",
+   "deployed_run": "E6f_s2@dom",
+   "generated_at": "2026-11-21T17:07:32",
+   "dataset": "holdout"
+  }
  },
- "status": "experimental",
+ "status": "default",
  "intended_use": "Step 4 (optional irrigation) of the KOWR workflow, after water assessment, causes, retention and agrotechnics.",
  "limitations": "Trained on a single-layer FAO-56 bucket simulator with FAO-33 yield response; see ml/rl_irrigator/README.md."
 }

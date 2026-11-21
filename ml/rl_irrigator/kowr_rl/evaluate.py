@@ -57,10 +57,17 @@ METRICS = ("yield_rel", "water_mm", "dp_mm", "stress_days")
 # Policies
 # ======================================================================================
 def ensure_npz(run: str) -> Path:
-    """Export ``models/<run>/best_model.zip`` (+ VecNormalize) to ``policy.npz`` if needed."""
+    """Export ``models/<run>/best_model.zip`` (+ VecNormalize) to ``policy.npz`` if needed.
+
+    ``<run>@dom`` uses the E6 checkpoint ``best_dominant_model.zip`` (best validation reward
+    among checkpoints with yield >= FAO and water <= FAO at every budget level).
+    """
+    run, _, ckpt = run.partition("@")
     d = MODELS_DIR / run
-    npz = d / "policy.npz"
-    if npz.exists() and npz.stat().st_mtime >= (d / "best_model.zip").stat().st_mtime:
+    prefix = "best_dominant" if ckpt == "dom" else "best"
+    npz = d / ("policy_dominant.npz" if ckpt == "dom" else "policy.npz")
+    zip_path = d / f"{prefix}_model.zip"
+    if npz.exists() and npz.stat().st_mtime >= zip_path.stat().st_mtime:
         return npz
     from sb3_contrib import MaskablePPO
     from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
@@ -68,17 +75,23 @@ def ensure_npz(run: str) -> Path:
     from .env import KowrIrrigationEnv
     from .policy import export_npz
 
-    model = MaskablePPO.load(d / "best_model.zip", device="cpu")
-    venv = VecNormalize.load(str(d / "best_vecnormalize.pkl"), DummyVecEnv([lambda: KowrIrrigationEnv("val")]))
-    hist = json.loads((d / "val_history.json").read_text(encoding="utf-8"))
-    best = max(hist["history"], key=lambda h: h["reward"])
-    export_npz(model, venv, npz, meta={"run": run, "val": best, "exported_at": dt.datetime.now().isoformat(timespec="seconds")})
+    model = MaskablePPO.load(zip_path, device="cpu")
+    venv = VecNormalize.load(str(d / f"{prefix}_vecnormalize.pkl"), DummyVecEnv([lambda: KowrIrrigationEnv("val")]))
+    hist = json.loads((d / "val_history.json").read_text(encoding="utf-8"))["history"]
+    if ckpt == "dom":
+        hist = [h for h in hist if h.get("dominant")] or hist
+    best = max(hist, key=lambda h: h["reward"])
+    meta = {"run": run, "checkpoint": prefix, "val": best, "exported_at": dt.datetime.now().isoformat(timespec="seconds")}
+    export_npz(model, venv, npz, meta=meta)
     return npz
 
 
 def best_run(runs: list[str]) -> str:
     def score(r: str) -> float:
-        h = json.loads((MODELS_DIR / r / "val_history.json").read_text(encoding="utf-8"))["history"]
+        name, _, ckpt = r.partition("@")
+        h = json.loads((MODELS_DIR / name / "val_history.json").read_text(encoding="utf-8"))["history"]
+        if ckpt == "dom":
+            h = [x for x in h if x.get("dominant")] or h
         return max(x["reward"] for x in h)
 
     return max(runs, key=score)
@@ -144,7 +157,7 @@ def _style(ax: Any) -> None:
     ax.set_axisbelow(True)
 
 
-def fig_strategies(summary: dict[str, dict[str, Any]], order: list[str], path: Path) -> None:
+def fig_strategies(summary: dict[str, dict[str, Any]], order: list[str], path: Path, caption: str | None = None) -> None:
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 3.8), facecolor=SURFACE)
@@ -173,7 +186,8 @@ def fig_strategies(summary: dict[str, dict[str, Any]], order: list[str], path: P
             ax.set_xlim(max(0.0, lo_all - 0.05), 1.03)
         else:
             ax.set_xlim(0, max(summary[s][metric][2] for s in order) * 1.18)
-    fig.text(0.01, 0.01, "Lata testowe 2025-2026, prawdziwe prognozy ECMWF; slupki bledu: 95% bootstrap po punktach i latach.", fontsize=8, color=INK2)
+    caption = caption or "Lata testowe 2025-2026, prawdziwe prognozy ECMWF"
+    fig.text(0.01, 0.01, f"{caption}; slupki bledu: 95% bootstrap po punktach i latach.", fontsize=8, color=INK2)
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)
@@ -418,7 +432,9 @@ def run_evaluation(
 
     figdir = REPORTS_DIR / "figures"
     figdir.mkdir(parents=True, exist_ok=True)
-    fig_strategies(summary, order, figdir / f"strategies{tag or '_test'}.png")
+    where = "nowe lokalizacje (holdout)" if dataset != "train_points" else "punkty treningowe"
+    caption = f"Lata {', '.join(map(str, years))}, {where}, prawdziwe prognozy ECMWF"
+    fig_strategies(summary, order, figdir / f"strategies{tag or '_test'}.png", caption)
     fig_budget(per_budget, [s for s in order if s not in ("calendar",)], budgets, figdir / f"budget_curves{tag or '_test'}.png")
     fig_seasons(cases, figdir / f"example_seasons{tag}.png")
 

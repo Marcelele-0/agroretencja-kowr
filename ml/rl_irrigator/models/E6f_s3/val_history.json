@@ -1,0 +1,1038 @@
+{
+ "reference": {
+  "none": {
+   "reward": -0.2673334366893732,
+   "yield": 0.7682297129191434,
+   "yield_p05": 0.5517984632606621,
+   "water_mm": 0.0,
+   "dp_mm": 29.104454566422746,
+   "stress_days": 62.7375
+  },
+  "calendar": {
+   "reward": -0.18726765515518373,
+   "yield": 0.9150033233884066,
+   "yield_p05": 0.7138740619600892,
+   "water_mm": 137.5,
+   "dp_mm": 77.27384020218841,
+   "stress_days": 29.6778125
+  },
+  "fao_rule": {
+   "reward": -0.1382881897172025,
+   "yield": 0.9333044053353572,
+   "yield_p05": 0.7350574110030809,
+   "water_mm": 107.25625,
+   "dp_mm": 32.20650505258021,
+   "stress_days": 25.5415625
+  },
+  "fao_forecast": {
+   "reward": -0.13773741020933833,
+   "yield": 0.9323192048172395,
+   "yield_p05": 0.7352487443225182,
+   "water_mm": 104.53125,
+   "dp_mm": 31.310987349691512,
+   "stress_days": 26.9825
+  },
+  "fao_small": {
+   "reward": -0.13521564340253234,
+   "yield": 0.9343344599958658,
+   "yield_p05": 0.7356454062553384,
+   "water_mm": 104.203125,
+   "dp_mm": 30.825324678685643,
+   "stress_days": 26.558125
+  }
+ },
+ "history": [
+  {
+   "reward": -0.13501842673813028,
+   "yield": 0.9344674536306462,
+   "yield_p05": 0.7356676344496107,
+   "water_mm": 104.1125,
+   "dp_mm": 30.80776455649946,
+   "stress_days": 26.4259375,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.06276902312251746,
+     "d_water_mm": -0.325
+    },
+    "100.0": {
+     "d_yield_pp": 0.13049808681328717,
+     "d_water_mm": -1.35
+    },
+    "150.0": {
+     "d_yield_pp": 0.17105649394494776,
+     "d_water_mm": -3.5125
+    },
+    "250.0": {
+     "d_yield_pp": 0.1008957142348424,
+     "d_water_mm": -7.3875
+    }
+   },
+   "dominant": true,
+   "timesteps": 0,
+   "eval_s": 1.45,
+   "best": true,
+   "best_dominant": true
+  },
+  {
+   "reward": -0.13522355252298096,
+   "yield": 0.9338170931030851,
+   "yield_p05": 0.7357115085495768,
+   "water_mm": 103.11875,
+   "dp_mm": 30.770949928934535,
+   "stress_days": 27.345625,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05453028810668077,
+     "d_water_mm": -0.375
+    },
+    "100.0": {
+     "d_yield_pp": 0.1122545228262392,
+     "d_water_mm": -1.6625
+    },
+    "150.0": {
+     "d_yield_pp": 0.10762994764107169,
+     "d_water_mm": -4.4625
+    },
+    "250.0": {
+     "d_yield_pp": -0.06933965148288998,
+     "d_water_mm": -10.05
+    }
+   },
+   "dominant": false,
+   "timesteps": 100000,
+   "eval_s": 0.63,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.1352807374139049,
+   "yield": 0.9344452629722296,
+   "yield_p05": 0.7357012859866201,
+   "water_mm": 104.525,
+   "dp_mm": 30.911072517390117,
+   "stress_days": 26.47,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05048713985272042,
+     "d_water_mm": -0.325
+    },
+    "100.0": {
+     "d_yield_pp": 0.10420364076107785,
+     "d_water_mm": -1.3625
+    },
+    "150.0": {
+     "d_yield_pp": 0.14150690366555363,
+     "d_water_mm": -3.325
+    },
+    "250.0": {
+     "d_yield_pp": 0.1601453704696017,
+     "d_water_mm": -5.9125
+    }
+   },
+   "dominant": true,
+   "timesteps": 200000,
+   "eval_s": 0.64,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13550484539126406,
+   "yield": 0.9340866507813197,
+   "yield_p05": 0.7357029680474061,
+   "water_mm": 104.196875,
+   "dp_mm": 30.886347129890527,
+   "stress_days": 26.7896875,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05407011576158224,
+     "d_water_mm": -0.2875
+    },
+    "100.0": {
+     "d_yield_pp": 0.11049866100950514,
+     "d_water_mm": -1.3125
+    },
+    "150.0": {
+     "d_yield_pp": 0.12842784647600908,
+     "d_water_mm": -3.4625
+    },
+    "250.0": {
+     "d_yield_pp": 0.019901555137886703,
+     "d_water_mm": -7.175
+    }
+   },
+   "dominant": true,
+   "timesteps": 300000,
+   "eval_s": 0.6,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13595485859345732,
+   "yield": 0.9337059801242095,
+   "yield_p05": 0.7357055919583927,
+   "water_mm": 104.253125,
+   "dp_mm": 30.876599553147862,
+   "stress_days": 26.92125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.06189138917430419,
+     "d_water_mm": -0.2125
+    },
+    "100.0": {
+     "d_yield_pp": 0.13159908372367446,
+     "d_water_mm": -1.025
+    },
+    "150.0": {
+     "d_yield_pp": 0.13457848038118692,
+     "d_water_mm": -2.975
+    },
+    "250.0": {
+     "d_yield_pp": -0.16743903773826257,
+     "d_water_mm": -7.8
+    }
+   },
+   "dominant": false,
+   "timesteps": 400000,
+   "eval_s": 0.61,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13632570168403027,
+   "yield": 0.9332291336443103,
+   "yield_p05": 0.7356719404213832,
+   "water_mm": 103.95,
+   "dp_mm": 30.867577927697486,
+   "stress_days": 27.51,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05135744400234037,
+     "d_water_mm": -0.2875
+    },
+    "100.0": {
+     "d_yield_pp": 0.0957283400634219,
+     "d_water_mm": -1.25
+    },
+    "150.0": {
+     "d_yield_pp": 0.0644015195963347,
+     "d_water_mm": -3.5375
+    },
+    "250.0": {
+     "d_yield_pp": -0.241595980080856,
+     "d_water_mm": -8.15
+    }
+   },
+   "dominant": false,
+   "timesteps": 500000,
+   "eval_s": 0.6,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13637546273387083,
+   "yield": 0.9326131550041263,
+   "yield_p05": 0.7356719404213832,
+   "water_mm": 102.7625,
+   "dp_mm": 30.749927200825436,
+   "stress_days": 28.0275,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.03665974749027383,
+     "d_water_mm": -0.475
+    },
+    "100.0": {
+     "d_yield_pp": 0.054151845757655394,
+     "d_water_mm": -1.875
+    },
+    "150.0": {
+     "d_yield_pp": -0.02850890449196561,
+     "d_water_mm": -4.7625
+    },
+    "250.0": {
+     "d_yield_pp": -0.3388028212482923,
+     "d_water_mm": -10.8625
+    }
+   },
+   "dominant": false,
+   "timesteps": 600000,
+   "eval_s": 0.58,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.1369378638873049,
+   "yield": 0.9321685868505404,
+   "yield_p05": 0.7357166725724142,
+   "water_mm": 102.8625,
+   "dp_mm": 30.840870245219367,
+   "stress_days": 28.4275,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.0357139092953765,
+     "d_water_mm": -0.4
+    },
+    "100.0": {
+     "d_yield_pp": 0.04564953765071142,
+     "d_water_mm": -1.7375
+    },
+    "150.0": {
+     "d_yield_pp": -0.06010384670486103,
+     "d_water_mm": -4.45
+    },
+    "250.0": {
+     "d_yield_pp": -0.4755869941679078,
+     "d_water_mm": -10.9875
+    }
+   },
+   "dominant": false,
+   "timesteps": 700000,
+   "eval_s": 0.64,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.1370364808175386,
+   "yield": 0.931399314831454,
+   "yield_p05": 0.7357064500094576,
+   "water_mm": 101.371875,
+   "dp_mm": 30.828144906205804,
+   "stress_days": 28.99,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.021796033343305266,
+     "d_water_mm": -0.5375
+    },
+    "100.0": {
+     "d_yield_pp": 0.003036061415949934,
+     "d_water_mm": -2.25
+    },
+    "150.0": {
+     "d_yield_pp": -0.15156750065334795,
+     "d_water_mm": -6.1875
+    },
+    "250.0": {
+     "d_yield_pp": -0.6353007956671466,
+     "d_water_mm": -14.5625
+    }
+   },
+   "dominant": false,
+   "timesteps": 800000,
+   "eval_s": 0.62,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13634836732737185,
+   "yield": 0.9315696129293778,
+   "yield_p05": 0.7356804144938901,
+   "water_mm": 100.44375,
+   "dp_mm": 30.725834281940582,
+   "stress_days": 28.741875,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.015544867080285395,
+     "d_water_mm": -0.675
+    },
+    "100.0": {
+     "d_yield_pp": -0.010727315524622485,
+     "d_water_mm": -2.7625
+    },
+    "150.0": {
+     "d_yield_pp": -0.1511810111774614,
+     "d_water_mm": -7.225
+    },
+    "250.0": {
+     "d_yield_pp": -0.5475535027700067,
+     "d_water_mm": -16.5875
+    }
+   },
+   "dominant": false,
+   "timesteps": 900000,
+   "eval_s": 0.64,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13562547691120927,
+   "yield": 0.9331132332866748,
+   "yield_p05": 0.7352509594848912,
+   "water_mm": 102.290625,
+   "dp_mm": 30.910874553129617,
+   "stress_days": 26.82375,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.01905690685085472,
+     "d_water_mm": -0.5125
+    },
+    "100.0": {
+     "d_yield_pp": 0.05391560617745905,
+     "d_water_mm": -2.125
+    },
+    "150.0": {
+     "d_yield_pp": 0.020752022509930662,
+     "d_water_mm": -5.65
+    },
+    "250.0": {
+     "d_yield_pp": -0.17019335501119082,
+     "d_water_mm": -11.575
+    }
+   },
+   "dominant": false,
+   "timesteps": 1000000,
+   "eval_s": 0.66,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.1354251282830456,
+   "yield": 0.9332490336900429,
+   "yield_p05": 0.7352510414148312,
+   "water_mm": 102.125,
+   "dp_mm": 31.012298059990115,
+   "stress_days": 26.378125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.038137069580162206,
+     "d_water_mm": -0.3375
+    },
+    "100.0": {
+     "d_yield_pp": 0.11061506541341194,
+     "d_water_mm": -1.6125
+    },
+    "150.0": {
+     "d_yield_pp": 0.11073436658234918,
+     "d_water_mm": -5.075
+    },
+    "250.0": {
+     "d_yield_pp": -0.28163515970158437,
+     "d_water_mm": -13.5
+    }
+   },
+   "dominant": false,
+   "timesteps": 1100000,
+   "eval_s": 0.61,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13530796090304872,
+   "yield": 0.9331908818977133,
+   "yield_p05": 0.735782722991801,
+   "water_mm": 101.7625,
+   "dp_mm": 31.025000896124382,
+   "stress_days": 26.32125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.058171980086387215,
+     "d_water_mm": -0.125
+    },
+    "100.0": {
+     "d_yield_pp": 0.16131565033222606,
+     "d_water_mm": -1.175
+    },
+    "150.0": {
+     "d_yield_pp": 0.18451172730375712,
+     "d_water_mm": -4.325
+    },
+    "250.0": {
+     "d_yield_pp": -0.4494087327799493,
+     "d_water_mm": -16.35
+    }
+   },
+   "dominant": false,
+   "timesteps": 1200000,
+   "eval_s": 0.58,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13614932224130116,
+   "yield": 0.9321272281609174,
+   "yield_p05": 0.735782722991801,
+   "water_mm": 101.16875,
+   "dp_mm": 30.932305135522565,
+   "stress_days": 27.3240625,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.05554811958585998,
+     "d_water_mm": -0.125
+    },
+    "100.0": {
+     "d_yield_pp": 0.15897556939078133,
+     "d_water_mm": -1.3
+    },
+    "150.0": {
+     "d_yield_pp": 0.1407104917628782,
+     "d_water_mm": -4.575
+    },
+    "250.0": {
+     "d_yield_pp": -0.8261050505153855,
+     "d_water_mm": -18.35
+    }
+   },
+   "dominant": false,
+   "timesteps": 1300000,
+   "eval_s": 0.59,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13593192754934452,
+   "yield": 0.9321802190566169,
+   "yield_p05": 0.7352526397407473,
+   "water_mm": 100.828125,
+   "dp_mm": 30.9829623774059,
+   "stress_days": 26.833125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.048095881760485126,
+     "d_water_mm": -0.125
+    },
+    "100.0": {
+     "d_yield_pp": 0.1541612166669103,
+     "d_water_mm": -1.35
+    },
+    "150.0": {
+     "d_yield_pp": 0.15969854526528468,
+     "d_water_mm": -4.8375
+    },
+    "250.0": {
+     "d_yield_pp": -0.8116301551888077,
+     "d_water_mm": -19.4
+    }
+   },
+   "dominant": false,
+   "timesteps": 1400000,
+   "eval_s": 0.63,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13576989772992154,
+   "yield": 0.9318701454101788,
+   "yield_p05": 0.735782722991801,
+   "water_mm": 99.878125,
+   "dp_mm": 30.90170190873463,
+   "stress_days": 26.896875,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.06611697217519706,
+     "d_water_mm": -0.15
+    },
+    "100.0": {
+     "d_yield_pp": 0.17415819882108646,
+     "d_water_mm": -1.4
+    },
+    "150.0": {
+     "d_yield_pp": 0.18922094779111492,
+     "d_water_mm": -5.3375
+    },
+    "250.0": {
+     "d_yield_pp": -1.0032000888587236,
+     "d_water_mm": -22.625
+    }
+   },
+   "dominant": false,
+   "timesteps": 1500000,
+   "eval_s": 0.58,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13471228744683755,
+   "yield": 0.9334014249111169,
+   "yield_p05": 0.735782722991801,
+   "water_mm": 101.096875,
+   "dp_mm": 30.93027759855887,
+   "stress_days": 25.654375,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.06512822774524363,
+     "d_water_mm": -0.125
+    },
+    "100.0": {
+     "d_yield_pp": 0.18479254676358514,
+     "d_water_mm": -1.325
+    },
+    "150.0": {
+     "d_yield_pp": 0.2570526323874538,
+     "d_water_mm": -4.7125
+    },
+    "250.0": {
+     "d_yield_pp": -0.4681655765923979,
+     "d_water_mm": -18.475
+    }
+   },
+   "dominant": false,
+   "timesteps": 1600000,
+   "eval_s": 0.62,
+   "best": true,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13445268513531616,
+   "yield": 0.9331570851316279,
+   "yield_p05": 0.735846280878479,
+   "water_mm": 100.128125,
+   "dp_mm": 30.79408909179022,
+   "stress_days": 25.64125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.06937575907647592,
+     "d_water_mm": -0.125
+    },
+    "100.0": {
+     "d_yield_pp": 0.19802633765552652,
+     "d_water_mm": -1.4625
+    },
+    "150.0": {
+     "d_yield_pp": 0.2687305173174141,
+     "d_water_mm": -5.4125
+    },
+    "250.0": {
+     "d_yield_pp": -0.5950606955411257,
+     "d_water_mm": -21.5125
+    }
+   },
+   "dominant": false,
+   "timesteps": 1700000,
+   "eval_s": 0.55,
+   "best": true,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13451711846263045,
+   "yield": 0.9321905469427062,
+   "yield_p05": 0.735846280878479,
+   "water_mm": 98.246875,
+   "dp_mm": 30.600121136226708,
+   "stress_days": 26.57125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.07083661319187955,
+     "d_water_mm": -0.3
+    },
+    "100.0": {
+     "d_yield_pp": 0.18925446117013983,
+     "d_water_mm": -2.025
+    },
+    "150.0": {
+     "d_yield_pp": 0.20949809186806023,
+     "d_water_mm": -7.2875
+    },
+    "250.0": {
+     "d_yield_pp": -0.915132523290476,
+     "d_water_mm": -26.425
+    }
+   },
+   "dominant": false,
+   "timesteps": 1800000,
+   "eval_s": 0.59,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13467048022625688,
+   "yield": 0.9321127462896851,
+   "yield_p05": 0.73525286835184,
+   "water_mm": 98.33125,
+   "dp_mm": 30.706593419254595,
+   "stress_days": 26.303125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.0538131624108574,
+     "d_water_mm": -0.35
+    },
+    "100.0": {
+     "d_yield_pp": 0.16970262161980615,
+     "d_water_mm": -2.15
+    },
+    "150.0": {
+     "d_yield_pp": 0.181343866626774,
+     "d_water_mm": -7.375
+    },
+    "250.0": {
+     "d_yield_pp": -0.8815232689263092,
+     "d_water_mm": -25.825
+    }
+   },
+   "dominant": false,
+   "timesteps": 1900000,
+   "eval_s": 0.52,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13426724230875206,
+   "yield": 0.9321303950996008,
+   "yield_p05": 0.73525286835184,
+   "water_mm": 97.603125,
+   "dp_mm": 30.649409187411397,
+   "stress_days": 26.2828125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.049007570559255205,
+     "d_water_mm": -0.6
+    },
+    "100.0": {
+     "d_yield_pp": 0.13605679242654267,
+     "d_water_mm": -2.9125
+    },
+    "150.0": {
+     "d_yield_pp": 0.12165776988841052,
+     "d_water_mm": -8.7
+    },
+    "250.0": {
+     "d_yield_pp": -0.7763262271767939,
+     "d_water_mm": -26.4
+    }
+   },
+   "dominant": false,
+   "timesteps": 2000000,
+   "eval_s": 0.57,
+   "best": true,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.1352779774580193,
+   "yield": 0.9303778987232189,
+   "yield_p05": 0.7358768697185807,
+   "water_mm": 95.85625,
+   "dp_mm": 30.51465285582419,
+   "stress_days": 27.645625,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.06255162043269046,
+     "d_water_mm": -0.4625
+    },
+    "100.0": {
+     "d_yield_pp": 0.14722413053178451,
+     "d_water_mm": -2.9875
+    },
+    "150.0": {
+     "d_yield_pp": 0.057803527274421285,
+     "d_water_mm": -9.5
+    },
+    "250.0": {
+     "d_yield_pp": -1.4381819230942487,
+     "d_water_mm": -32.65
+    }
+   },
+   "dominant": false,
+   "timesteps": 2100000,
+   "eval_s": 0.59,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13513409222517997,
+   "yield": 0.930463262636128,
+   "yield_p05": 0.7358768697185807,
+   "water_mm": 95.75625,
+   "dp_mm": 30.49617684522068,
+   "stress_days": 27.62625,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.06151396537903163,
+     "d_water_mm": -0.525
+    },
+    "100.0": {
+     "d_yield_pp": 0.1479555686317485,
+     "d_water_mm": -3.075
+    },
+    "150.0": {
+     "d_yield_pp": 0.054893920918275434,
+     "d_water_mm": -9.7625
+    },
+    "250.0": {
+     "d_yield_pp": -1.4008205346207714,
+     "d_water_mm": -32.6375
+    }
+   },
+   "dominant": false,
+   "timesteps": 2200000,
+   "eval_s": 0.64,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13544663519517441,
+   "yield": 0.930357569893244,
+   "yield_p05": 0.7352538760600087,
+   "water_mm": 96.09375,
+   "dp_mm": 30.595732014786957,
+   "stress_days": 27.685625,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.0483619448220715,
+     "d_water_mm": -0.5625
+    },
+    "100.0": {
+     "d_yield_pp": 0.13968214398891696,
+     "d_water_mm": -2.9375
+    },
+    "150.0": {
+     "d_yield_pp": 0.047249809583129215,
+     "d_water_mm": -9.4375
+    },
+    "250.0": {
+     "d_yield_pp": -1.414028075239423,
+     "d_water_mm": -31.7125
+    }
+   },
+   "dominant": false,
+   "timesteps": 2300000,
+   "eval_s": 0.6,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.135294235295836,
+   "yield": 0.9306689159336561,
+   "yield_p05": 0.7358768697185808,
+   "water_mm": 96.478125,
+   "dp_mm": 30.615526481985004,
+   "stress_days": 27.253125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.056597984089132435,
+     "d_water_mm": -0.5
+    },
+    "100.0": {
+     "d_yield_pp": 0.148075456878758,
+     "d_water_mm": -2.775
+    },
+    "150.0": {
+     "d_yield_pp": 0.07428592565029037,
+     "d_water_mm": -8.9875
+    },
+    "250.0": {
+     "d_yield_pp": -1.3331551272985964,
+     "d_water_mm": -30.85
+    }
+   },
+   "dominant": false,
+   "timesteps": 2400000,
+   "eval_s": 0.63,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.134904112995216,
+   "yield": 0.9313658382969874,
+   "yield_p05": 0.7352538760600087,
+   "water_mm": 97.225,
+   "dp_mm": 30.64853290742687,
+   "stress_days": 26.76375,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.04793501402852281,
+     "d_water_mm": -0.6125
+    },
+    "100.0": {
+     "d_yield_pp": 0.13972588521998847,
+     "d_water_mm": -2.7625
+    },
+    "150.0": {
+     "d_yield_pp": 0.08675012945644109,
+     "d_water_mm": -8.825
+    },
+    "250.0": {
+     "d_yield_pp": -1.0498378440528693,
+     "d_water_mm": -27.925
+    }
+   },
+   "dominant": false,
+   "timesteps": 2500000,
+   "eval_s": 0.58,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13527039874540936,
+   "yield": 0.9308355014973724,
+   "yield_p05": 0.7352538760600087,
+   "water_mm": 96.71875,
+   "dp_mm": 30.768483431323308,
+   "stress_days": 26.5,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.038816726623602874,
+     "d_water_mm": -0.325
+    },
+    "100.0": {
+     "d_yield_pp": 0.14781799952973743,
+     "d_water_mm": -2.525
+    },
+    "150.0": {
+     "d_yield_pp": 0.1165044771272014,
+     "d_water_mm": -8.6625
+    },
+    "250.0": {
+     "d_yield_pp": -1.290700738474527,
+     "d_water_mm": -30.6375
+    }
+   },
+   "dominant": false,
+   "timesteps": 2600000,
+   "eval_s": 0.61,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.1354799606706737,
+   "yield": 0.9302598770227917,
+   "yield_p05": 0.73525286835184,
+   "water_mm": 95.8875,
+   "dp_mm": 30.742728041846405,
+   "stress_days": 26.6396875,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.0350110223726169,
+     "d_water_mm": -0.35
+    },
+    "100.0": {
+     "d_yield_pp": 0.14621238385300828,
+     "d_water_mm": -2.5625
+    },
+    "150.0": {
+     "d_yield_pp": 0.09771366434383673,
+     "d_water_mm": -9.2
+    },
+    "250.0": {
+     "d_yield_pp": -1.4967483955956649,
+     "d_water_mm": -33.3625
+    }
+   },
+   "dominant": false,
+   "timesteps": 2700000,
+   "eval_s": 0.61,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13530199933650486,
+   "yield": 0.9311632706480023,
+   "yield_p05": 0.73525286835184,
+   "water_mm": 97.45,
+   "dp_mm": 30.834855853906266,
+   "stress_days": 26.2459375,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.03080134068123305,
+     "d_water_mm": -0.225
+    },
+    "100.0": {
+     "d_yield_pp": 0.15279437162371928,
+     "d_water_mm": -2.275
+    },
+    "150.0": {
+     "d_yield_pp": 0.13313618090783402,
+     "d_water_mm": -7.875
+    },
+    "250.0": {
+     "d_yield_pp": -1.1731857681547289,
+     "d_water_mm": -28.85
+    }
+   },
+   "dominant": false,
+   "timesteps": 2800000,
+   "eval_s": 0.65,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13479156198885936,
+   "yield": 0.9315297158362716,
+   "yield_p05": 0.73525286835184,
+   "water_mm": 97.25,
+   "dp_mm": 30.7912682830018,
+   "stress_days": 25.9228125,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.039343059104441844,
+     "d_water_mm": -0.2875
+    },
+    "100.0": {
+     "d_yield_pp": 0.14973792258162363,
+     "d_water_mm": -2.5125
+    },
+    "150.0": {
+     "d_yield_pp": 0.1334870143431302,
+     "d_water_mm": -8.3625
+    },
+    "250.0": {
+     "d_yield_pp": -1.03244379566342,
+     "d_water_mm": -28.8625
+    }
+   },
+   "dominant": false,
+   "timesteps": 2900000,
+   "eval_s": 0.64,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13525650437704295,
+   "yield": 0.9307675929407115,
+   "yield_p05": 0.7352538760600087,
+   "water_mm": 96.546875,
+   "dp_mm": 30.736101709089418,
+   "stress_days": 26.4165625,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.042823264796192154,
+     "d_water_mm": -0.3
+    },
+    "100.0": {
+     "d_yield_pp": 0.142798150697093,
+     "d_water_mm": -2.6125
+    },
+    "150.0": {
+     "d_yield_pp": 0.0914625856527464,
+     "d_water_mm": -8.8
+    },
+    "250.0": {
+     "d_yield_pp": -1.2918089590043418,
+     "d_water_mm": -31.125
+    }
+   },
+   "dominant": false,
+   "timesteps": 3000000,
+   "eval_s": 0.59,
+   "best": false,
+   "best_dominant": false
+  },
+  {
+   "reward": -0.13509249882455499,
+   "yield": 0.9308901344072231,
+   "yield_p05": 0.7352538760600087,
+   "water_mm": 96.49375,
+   "dp_mm": 30.721760139750632,
+   "stress_days": 26.305,
+   "per_budget_vs_fao": {
+    "50.0": {
+     "d_yield_pp": 0.04342600300887932,
+     "d_water_mm": -0.3
+    },
+    "100.0": {
+     "d_yield_pp": 0.1428275609830024,
+     "d_water_mm": -2.6625
+    },
+    "150.0": {
+     "d_yield_pp": 0.09337882911523616,
+     "d_water_mm": -8.975
+    },
+    "250.0": {
+     "d_yield_pp": -1.245340764360718,
+     "d_water_mm": -31.1125
+    }
+   },
+   "dominant": false,
+   "timesteps": 3006464,
+   "eval_s": 0.6,
+   "best": false,
+   "best_dominant": false
+  }
+ ]
+}

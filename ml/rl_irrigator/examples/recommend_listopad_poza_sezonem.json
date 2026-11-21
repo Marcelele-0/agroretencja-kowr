@@ -353,16 +353,90 @@
     ]
    },
    {
+    "strategy": "fao_small",
+    "label": "Regula FAO-56, male dawki 10 mm + prognoza opadu",
+    "avg_yield_rel": 0.9779,
+    "avg_yield_loss_pct": 2.21,
+    "worst_yield_rel": 0.9312,
+    "worst_year": 2018,
+    "avg_water_mm": 104.0,
+    "avg_deep_percolation_mm": 25.8,
+    "avg_stress_days": 13.1,
+    "yield_gain_pp_per_100mm": 19.32,
+    "per_year": [
+     {
+      "year": 2017,
+      "yield_rel": 0.9983,
+      "water_mm": 30.0,
+      "dp_mm": 114.6
+     },
+     {
+      "year": 2018,
+      "yield_rel": 0.9312,
+      "water_mm": 150.0,
+      "dp_mm": 18.1
+     },
+     {
+      "year": 2019,
+      "yield_rel": 0.9785,
+      "water_mm": 150.0,
+      "dp_mm": 2.2
+     },
+     {
+      "year": 2020,
+      "yield_rel": 0.996,
+      "water_mm": 30.0,
+      "dp_mm": 0.0
+     },
+     {
+      "year": 2021,
+      "yield_rel": 0.9845,
+      "water_mm": 60.0,
+      "dp_mm": 53.0
+     },
+     {
+      "year": 2022,
+      "yield_rel": 0.9647,
+      "water_mm": 150.0,
+      "dp_mm": 2.7
+     },
+     {
+      "year": 2023,
+      "yield_rel": 0.9454,
+      "water_mm": 150.0,
+      "dp_mm": 55.1
+     },
+     {
+      "year": 2024,
+      "yield_rel": 0.9977,
+      "water_mm": 100.0,
+      "dp_mm": 12.4
+     },
+     {
+      "year": 2025,
+      "yield_rel": 0.9891,
+      "water_mm": 110.0,
+      "dp_mm": 0.0
+     },
+     {
+      "year": 2026,
+      "yield_rel": 0.9936,
+      "water_mm": 110.0,
+      "dp_mm": 0.0
+     }
+    ]
+   },
+   {
     "strategy": "rl",
     "label": "Agent RL (MaskablePPO)",
-    "avg_yield_rel": 0.9786,
-    "avg_yield_loss_pct": 2.14,
-    "worst_yield_rel": 0.932,
+    "avg_yield_rel": 0.9772,
+    "avg_yield_loss_pct": 2.28,
+    "worst_yield_rel": 0.9318,
     "worst_year": 2018,
-    "avg_water_mm": 105.0,
+    "avg_water_mm": 99.0,
     "avg_deep_percolation_mm": 25.7,
-    "avg_stress_days": 10.3,
-    "yield_gain_pp_per_100mm": 19.2,
+    "avg_stress_days": 14.0,
+    "yield_gain_pp_per_100mm": 20.23,
     "per_year": [
      {
       "year": 2017,
@@ -372,56 +446,56 @@
      },
      {
       "year": 2018,
-      "yield_rel": 0.932,
+      "yield_rel": 0.9318,
       "water_mm": 150.0,
       "dp_mm": 18.1
      },
      {
       "year": 2019,
-      "yield_rel": 0.9813,
+      "yield_rel": 0.9751,
       "water_mm": 150.0,
       "dp_mm": 2.2
      },
      {
       "year": 2020,
-      "yield_rel": 0.9935,
-      "water_mm": 30.0,
+      "yield_rel": 0.9985,
+      "water_mm": 20.0,
       "dp_mm": 0.0
      },
      {
       "year": 2021,
-      "yield_rel": 0.9869,
-      "water_mm": 60.0,
+      "yield_rel": 0.9853,
+      "water_mm": 50.0,
       "dp_mm": 53.0
      },
      {
       "year": 2022,
-      "yield_rel": 0.9565,
+      "yield_rel": 0.9623,
       "water_mm": 150.0,
       "dp_mm": 2.7
      },
      {
       "year": 2023,
-      "yield_rel": 0.9471,
+      "yield_rel": 0.9452,
       "water_mm": 150.0,
       "dp_mm": 55.1
      },
      {
       "year": 2024,
-      "yield_rel": 0.9941,
+      "yield_rel": 0.9912,
       "water_mm": 90.0,
       "dp_mm": 12.4
      },
      {
       "year": 2025,
       "yield_rel": 0.9948,
-      "water_mm": 120.0,
+      "water_mm": 110.0,
       "dp_mm": 0.0
      },
      {
       "year": 2026,
-      "yield_rel": 1.0,
-      "water_mm": 120.0,
+      "yield_rel": 0.9881,
+      "water_mm": 90.0,
       "dp_mm": 0.0
      }
     ]
@@ -539,6 +613,6 @@
     "detail": "ostatnie 92 dni i prognoza 16 dni"
    }
   ],
-  "timing_s": 0.567
+  "timing_s": 0.336
  }
 }

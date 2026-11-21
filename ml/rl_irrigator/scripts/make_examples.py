@@ -20,7 +20,7 @@ EXAMPLES = [
     ("recommend_kukurydza_lipiec_2025.json", "post", "/rl/recommend", {"lat": 52.60, "lon": 17.00, "crop": "kukurydza", "date": "2025-07-15", "budget_mm": 150, "budget_used_mm": 30}),
     ("recommend_ziemniak_dzialka_2024.json", "post", "/rl/recommend", {"parcel_id": "302111_5.0015.72", "crop": "ziemniak", "date": "2024-07-02", "budget_mm": 120, "include_history": True}),
     ("recommend_burak_2019_klimatologia.json", "post", "/rl/recommend", {"lat": 50.50, "lon": 17.70, "crop": "burak_cukrowy", "date": "2019-06-25", "budget_mm": 200}),
-    ("recommend_rl_eksperymentalny_2025.json", "post", "/rl/recommend", {"lat": 52.60, "lon": 17.00, "crop": "kukurydza", "date": "2025-07-15", "budget_mm": 150, "budget_used_mm": 30, "policy": "rl"}),
+    ("recommend_regula_fao_2025.json", "post", "/rl/recommend", {"lat": 52.60, "lon": 17.00, "crop": "kukurydza", "date": "2025-07-15", "budget_mm": 150, "budget_used_mm": 30, "policy": "fao_rule"}),
     ("recommend_listopad_poza_sezonem.json", "post", "/rl/recommend", {"lat": 52.60, "lon": 17.00, "crop": "pszenica_ozima", "date": "2026-11-21", "budget_mm": 150}),
     ("recommend_las_nie_grunt_orny.json", "post", "/rl/recommend", {"lat": 52.735, "lon": 23.86, "crop": "kukurydza", "date": "2025-07-15", "budget_mm": 150}),
     ("compare_kukurydza_wielkopolska.json", "post", "/rl/compare", {"lat": 52.60, "lon": 17.00, "crop": "kukurydza", "budget_mm": 150}),

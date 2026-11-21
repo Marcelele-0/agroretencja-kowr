@@ -2,7 +2,7 @@
 
 Moduł obsługuje krok 4 analizy KOWR (nawadnianie, opcjonalne). Codziennie rekomenduje, czy podlać działkę i ile mm. Uczy się rozkładać ograniczony budżet wody na sezon lepiej niż proste reguły. Wynik jest liczony z danych pobieranych na żywo, a działa jako funkcja Pythona i endpoint HTTP.
 
-Status: **zaakceptowany** (21.11.2026), z decyzjami D1–D6 poniżej. **Wykonanie:** M0–M7 ukończone 21.11.2026 (szczegóły w rejestrze decyzji i w EXPERIMENTS.md).
+Status: **zaakceptowany** (21.11.2026), z decyzjami D1–D6 poniżej. **Wykonanie:** M0–M7 ukończone 21.11.2026. E6 (doszlifowanie agenta) ukończony 21.11.2026: agent E6f_s2@dom przeszedł regułę decyzyjną na czystym teście, `default_policy: rl` (sekcja 5, EXPERIMENTS.md).
 
 ---
 
@@ -188,3 +188,4 @@ Cel: sprawdzić, czy agent może pokonać regułę FAO przy **każdym** poziomie
 - Dlatego konfiguracja E6e trenuje się ponownie jako **E6f** (3 ziarna) z callbackiem, który zapisuje też `best_dominant_model.zip`, czyli najlepszy checkpoint z ΔY ≥ 0 i ΔW ≤ 0 względem FAO przy każdym budżecie walidacyjnym. Do testu idzie `E6f_s*@dom`.
 - **Ensemble** trzech ziaren `@dom` wdrażam tylko wtedy, gdy na walidacji też dominuje i ma nagrodę ≥ najlepszego pojedynczego ziarna. W przeciwnym razie wdrażam najlepsze ziarno.
 - **Wybór (walidacja, przed testem):** E6f_s1@dom −0,1344, **E6f_s2@dom −0,1328**, E6f_s3@dom −0,1350 (to praktycznie klon `fao_small` sprzed PPO). Ensemble 3 ziaren −0,1342, a s1+s2 −0,1333, czyli gorzej od najlepszego ziarna, więc ensemble odpada. Dodatkowo E6g_s1 (`c_w` = 3e-4, lr malejący liniowo) dominuje FAO, ale ma nagrodę −0,1337. **Do testu idzie E6f_s2@dom** (2,8 mln kroków). Na walidacji, względem FAO: plon +0,07 / +0,11 / +0,13 / +0,14 pkt proc., woda −0,9 / −3,4 / −8,5 / −17,1 mm przy 50 / 100 / 150 / 250 mm.
+- **Wynik testu E6 (czysty test, holdout):** RL − FAO łącznie +0,23 pkt proc. [+0,14; +0,33] i −6,0 mm [−7,3; −5,1]. Istotnie wyższy plon **i** istotnie mniej wody przy każdym budżecie (50 / 100 / 150 / 250 mm: +0,12 / +0,26 / +0,28 / +0,27 pkt proc.; −0,9 / −3,9 / −8,2 / −11,2 mm). Stary test daje to samo (+0,23 pkt proc., −5,6 mm, każdy budżet OK). Zgodnie z punktem 3 protokołu ustawiam `default_policy: rl`. Wagi E6f_s2@dom są w `artifacts/models/ppo_irrigator_weights.npz`.
