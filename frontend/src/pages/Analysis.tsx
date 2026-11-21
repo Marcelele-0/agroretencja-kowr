@@ -4,7 +4,7 @@ import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse, RlSource } from "../api/contract";
 import { computeLocal, longestDrought, soilCause, withLevers, type Levers, type LocalResult } from "../analysis/local";
 import { landForCalc, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
-import { ActionCard, BAL, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
+import { BAL, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
@@ -112,15 +112,9 @@ export function Analysis() {
             <Causes local={local} backend={backend} land={landForCalc(st.land)} weatherFailed={!!weatherFailed} />
           </section>
           <section id="retencja" className="rs-section">
-            <h3 className="ar-section-title">Od czego zacząć</h3>
-            <Retention local={local} backend={backend} weatherFailed={!!weatherFailed} picked={picked} onPick={togglePick} />
+            <h3 className="ar-section-title">Co możesz zrobić</h3>
+            <Measures local={local} st={st} backend={backend} crop={crop} date={date} weatherFailed={!!weatherFailed} picked={picked} onPick={togglePick} />
           </section>
-          {local && st.weather.status === "ready" ? (
-            <section id="symulacja" className="rs-section">
-              <h3 className="ar-section-title">Co jeśli</h3>
-              <WhatIf base={local} st={st} crop={crop} date={date} picked={picked} onPick={togglePick} />
-            </section>
-          ) : null}
           {local && showIrr ? (
             <section id="nawadnianie" className="rs-section">
               <h3 className="ar-section-title">Nawadnianie</h3>
@@ -361,72 +355,105 @@ function Causes({ local, backend, land, weatherFailed }: { local: LocalResult | 
   );
 }
 
-interface CardItem { id: string; title: string; metrics: string[]; permit: boolean; image: string; sim?: Measure["sim"] }
-function Retention({ local, backend, weatherFailed, picked, onPick }: { local: LocalResult | null; backend: AnalysisResponse | null; weatherFailed: boolean; picked: Set<string>; onPick: (id: string) => void }) {
-  const recs = backend?.retention?.recommendations;
-  if (!local && !recs && !weatherFailed) return <Skeleton lines={["Działania"]} />;
-  const cards: CardItem[] = recs?.length
-    ? [...recs].sort((a, b) => a.priority_rank - b.priority_rank).map((r) => {
-      const look = measureLook(`${r.id} ${r.category}`);
-      const metrics = [r.delta_taw_mm > 0 ? `+${dec(r.delta_taw_mm, 0)} mm wody` : null, r.runoff_reduction_pct > 0 ? `${dec(r.runoff_reduction_pct, 0)}% mniej spływu` : null].filter((x): x is string => !!x);
-      return { id: r.id, title: r.title, metrics, permit: look.permit, image: look.image };
-    })
-    : ((local?.stage ?? 0) >= 2 ? WET_MEASURES : DRY_MEASURES).map((m) => ({ ...m, metrics: [m.effect] }));
-  const wi = backend?.retention?.what_if_default;
-  const groups = [{ title: "Bez urządzeń wodnych", items: cards.filter((c) => !c.permit) }, { title: "Z urządzeniem wodnym", items: cards.filter((c) => c.permit) }];
-  return (
-    <>
-      {wi ? <p className="rs-lead">W suchym roku {wi.reference_dry_year} te działania zmniejszają stratę plonu z {dec(wi.baseline_yield_loss_pct, 0)}% do {dec(wi.scenario_yield_loss_pct, 0)}% i dają +{wi.delta_reserve_days} dni zapasu wody.</p> : null}
-      {groups.filter((g) => g.items.length).map((g) => (
-        <div key={g.title} className="rs-group">
-          <h3 className="rs-subtitle">{g.title}</h3>
-          <div className="rs-cards">{g.items.map((c) => (
-            <ActionCard key={c.id} title={c.title} image={c.image} metrics={c.metrics} permit={c.permit} permitHref={c.permit ? PERMIT_URL : undefined}
-              selected={picked.has(c.id)} onToggle={c.sim && local ? () => onPick(c.id) : undefined} />
-          ))}</div>
-        </div>
-      ))}
-    </>
-  );
-}
+interface MeasureItem { id: string; title: string; effect: string; permit: boolean; image: string; sim?: Measure["sim"]; backendNote?: string }
+const stageName = (n: number | null) => (n === null ? "brak danych" : BAL[String(n)]!.toLowerCase());
 
-function WhatIf({ base, st, crop, date, picked, onPick }: { base: LocalResult; st: AnalysisState; crop: CropCode; date: Iso; picked: Set<string>; onPick: (id: string) => void }) {
-  const measures = ((base.stage ?? 0) >= 2 ? WET_MEASURES : DRY_MEASURES).filter((m) => m.sim);
-  const preset = useMemo<Levers>(() => measures.filter((m) => picked.has(m.id)).reduce((a, m) => ({ addMm: a.addMm + (m.sim?.addMm ?? 0), etCut: Math.min(0.5, a.etCut + (m.sim?.etCut ?? 0)) }), NO_LEVERS), [picked, measures]);
+/**
+ * One list of measures: the whole card toggles it into the simulation. Each measure is simulated alone to rank
+ * the list by water gain; the selected ones are simulated together below the list.
+ */
+function Measures({ local, st, backend, crop, date, weatherFailed, picked, onPick }: {
+  local: LocalResult | null; st: AnalysisState; backend: AnalysisResponse | null; crop: CropCode; date: Iso; weatherFailed: boolean; picked: Set<string>; onPick: (id: string) => void;
+}) {
   const [own, setOwn] = useState<Levers | null>(null);
+  const land = landForCalc(st.land);
+  const series = st.weather.status === "ready" ? st.weather.data : null;
+  const recs = backend?.retention?.recommendations;
+  const items: MeasureItem[] = recs?.length
+    ? recs.map((r) => {
+      const look = measureLook(`${r.id} ${r.category}`);
+      const note = [r.delta_taw_mm > 0 ? `+${dec(r.delta_taw_mm, 0)} mm wody` : null, r.runoff_reduction_pct > 0 ? `${dec(r.runoff_reduction_pct, 0)}% mniej spływu` : null].filter(Boolean).join(" · ");
+      return { id: r.id, title: r.title, effect: r.rationale || note, permit: look.permit, image: look.image, backendNote: note };
+    })
+    : ((local?.stage ?? 0) >= 2 ? WET_MEASURES : DRY_MEASURES).map((m) => ({ id: m.id, title: m.title, effect: m.effect, permit: m.permit, image: m.image, sim: m.sim }));
+
+  const run = (lv: Levers) => (series && land && land.kind !== "nonAgri" ? computeLocal(land, withLevers(series, lv), crop, date, todayIso()) : null);
+  const solo = useMemo(() => new Map(items.map((m) => [m.id, m.sim ? run({ addMm: m.sim.addMm ?? 0, etCut: m.sim.etCut ?? 0 }) : null])), [series, land, crop, date, items.map((m) => m.id).join()]);
+  const gain = (id: string) => { const r = solo.get(id); return r && local?.kbw60 !== null && local?.kbw60 !== undefined && r.kbw60 !== null ? r.kbw60 - local.kbw60 : -Infinity; };
+  const ordered = recs?.length ? items : [...items].sort((a, b) => gain(b.id) - gain(a.id));
+
+  const preset = useMemo<Levers>(() => items.filter((m) => picked.has(m.id) && m.sim).reduce((acc, m) => ({ addMm: acc.addMm + (m.sim?.addMm ?? 0), etCut: Math.min(0.5, acc.etCut + (m.sim?.etCut ?? 0)) }), NO_LEVERS), [picked, items.map((m) => m.id).join()]);
   useEffect(() => setOwn(null), [preset]);
   const lv = own ?? preset;
-  const land = landForCalc(st.land);
-  const sim = useMemo(() => {
-    if (st.weather.status !== "ready" || !land || (!lv.addMm && !lv.etCut)) return null;
-    return computeLocal(land, withLevers(st.weather.data, lv), crop, date, todayIso());
-  }, [st.weather, land, lv, crop, date]);
+  const combined = useMemo(() => (lv.addMm || lv.etCut ? run(lv) : null), [lv, series, land, crop, date]);
   const dryYears = (r: LocalResult) => r.years.filter((y) => y.value !== null && y.value <= -3).length;
+
+  if (!local && !recs && !weatherFailed) return <Skeleton lines={["Działania"]} />;
+  const groups = [{ title: "Bez urządzeń wodnych", items: ordered.filter((m) => !m.permit) }, { title: "Wymaga zgody Wód Polskich", items: ordered.filter((m) => m.permit) }];
+  const effectLine = (m: MeasureItem) => {
+    if (m.backendNote) return m.backendNote;
+    const r = solo.get(m.id);
+    if (!r || !local) return null;
+    if (r.stage !== null && local.stage !== null && r.stage !== local.stage) return `${BAL[String(local.stage)]} → ${stageName(r.stage)}`;
+    const g = gain(m.id);
+    return Number.isFinite(g) && g > 0 ? `+${dec(g, 0)} mm wody w bilansie 60 dni` : null;
+  };
   return (
-    <div className="ar-card rs-whatif">
-      <p className="rs-lead">Zaznacz działania albo ustaw własne wartości. Rusałka przeliczy KBW i stan wody na tych samych danych pogodowych.</p>
-      <div className="ar-form__chips">{measures.map((m) => <Pill key={m.id} pressed={picked.has(m.id)} onClick={() => onPick(m.id)}>{m.title}</Pill>)}</div>
-      <div className="rs-sliders">
-        <label><span>Woda zatrzymana w glebie: <b>+{lv.addMm} mm</b> na 60 dni</span>
-          <input type="range" min={0} max={80} step={5} value={lv.addMm} onChange={(e) => setOwn({ ...lv, addMm: Number(e.target.value) })} />
-        </label>
-        <label><span>Mniej parowania: <b>−{Math.round(lv.etCut * 100)}%</b></span>
-          <input type="range" min={0} max={30} step={1} value={Math.round(lv.etCut * 100)} onChange={(e) => setOwn({ ...lv, etCut: Number(e.target.value) / 100 })} />
-        </label>
-      </div>
-      {sim ? (
-        <table className="rs-compare">
-          <thead><tr><th /><th>Teraz</th><th>Z działaniami</th></tr></thead>
-          <tbody>
-            <tr><td>Stan wody</td><td><WaterBalance size="sm" value={base.stage} /></td><td><WaterBalance size="sm" value={sim.stage} /></td></tr>
-            <tr><td>KBW 60 dni</td><td>{mm(base.kbw60)} mm</td><td>{mm(sim.kbw60)} mm</td></tr>
-            <tr><td>Okna z suszą IUNG w sezonie {base.season}</td><td>{base.droughtCount} z {base.knownCount}</td><td>{sim.droughtCount} z {sim.knownCount}</td></tr>
-            <tr><td>Lata z suszą ({formatDayMonth(date)}, 10 lat)</td><td>{dryYears(base)} z {base.years.length}</td><td>{dryYears(sim)} z {sim.years.length}</td></tr>
-          </tbody>
-        </table>
-      ) : <p className="ar-card__text">Wybierz działanie albo przesuń suwak, aby zobaczyć wynik.</p>}
-      <p className="ar-muted rs-why__note">Założenia symulacji: {DRY_MEASURES.filter((m) => m.sim).map((m) => `${m.title.toLowerCase()} ${m.sim!.note}`).join(", ")}. Backend zastąpi je bilansem FAO-56 i modelem terenu.</p>
-    </div>
+    <>
+      <p className="rs-lead">Kliknij działania, które rozważasz. Wynik dla tej działki pokaże się pod listą.</p>
+      {groups.filter((g) => g.items.length).map((g) => (
+        <div key={g.title} className="rs-group">
+          <h4 className="rs-subtitle">{g.title}</h4>
+          <div className="rs-measures">
+            {g.items.map((m) => {
+              const on = picked.has(m.id);
+              const can = !!m.sim && !!local;
+              const eff = effectLine(m);
+              return (
+                <button key={m.id} type="button" className={`rs-measure${on ? " is-on" : ""}`} aria-pressed={can ? on : undefined} disabled={!can && !m.backendNote} onClick={() => can && onPick(m.id)}>
+                  <span className="rs-measure__img" style={{ backgroundImage: `url("${m.image}")` }} aria-hidden="true" />
+                  <span className="rs-measure__body">
+                    <b className="rs-measure__title">{m.title}</b>
+                    <span className="rs-measure__effect">{m.effect}</span>
+                    {eff ? <span className="rs-measure__result">{eff}</span> : null}
+                  </span>
+                  {can ? <span className="rs-measure__check" aria-hidden="true">{on ? <Icon name="check" /> : null}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {items.some((m) => m.permit) ? <p className="ar-muted rs-why__note">Zgody i zgłoszenia wodnoprawne: <a href={PERMIT_URL} target="_blank" rel="noreferrer">Wody Polskie</a>.</p> : null}
+      {local ? (
+        <div className="ar-card rs-whatif">
+          <h4 className="rs-subtitle">Z wybranymi działaniami</h4>
+          {combined ? (
+            <table className="rs-compare">
+              <thead><tr><th /><th>Teraz</th><th>Z działaniami</th></tr></thead>
+              <tbody>
+                <tr><td>Stan wody</td><td><WaterBalance size="sm" value={local.stage} /></td><td><WaterBalance size="sm" value={combined.stage} /></td></tr>
+                <tr><td>Bilans wody z 60 dni</td><td>{mm(local.kbw60)} mm</td><td>{mm(combined.kbw60)} mm</td></tr>
+                <tr><td>Okna z suszą IUNG w sezonie {local.season}</td><td>{local.droughtCount} z {local.knownCount}</td><td>{combined.droughtCount} z {combined.knownCount}</td></tr>
+                <tr><td>Lata z suszą ({formatDayMonth(date)}, 10 lat)</td><td>{dryYears(local)} z {local.years.length}</td><td>{dryYears(combined)} z {combined.years.length}</td></tr>
+              </tbody>
+            </table>
+          ) : <p className="ar-card__text">Nic nie wybrano. Kliknij działanie na liście powyżej.</p>}
+          <details className="rs-more rs-more--inline">
+            <summary>Dostosuj założenia</summary>
+            <div className="rs-sliders">
+              <label><span>Woda zatrzymana w glebie: <b>+{lv.addMm} mm</b> na 60 dni</span>
+                <input type="range" min={0} max={80} step={5} value={lv.addMm} onChange={(e) => setOwn({ ...lv, addMm: Number(e.target.value) })} />
+              </label>
+              <label><span>Mniej parowania: <b>−{Math.round(lv.etCut * 100)}%</b></span>
+                <input type="range" min={0} max={30} step={1} value={Math.round(lv.etCut * 100)} onChange={(e) => setOwn({ ...lv, etCut: Number(e.target.value) / 100 })} />
+              </label>
+            </div>
+            <p className="ar-muted rs-why__note">Założenia: {DRY_MEASURES.filter((m) => m.sim).map((m) => `${m.title.toLowerCase()} ${m.sim!.note}`).join(", ")}. Backend zastąpi je bilansem FAO-56 i modelem terenu.</p>
+          </details>
+        </div>
+      ) : null}
+    </>
   );
 }
 

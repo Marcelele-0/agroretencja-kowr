@@ -269,3 +269,22 @@ button.rs-st__day:hover { background: var(--hairline); }
 .ar-bal--sm .ar-bal__cell--on { height: 18px; outline-width: 1px; outline-offset: 1px; }
 .ar-bal__ends { font-size: 12px; }
 .ar-yrs__cell { height: 36px; }
+
+/* ---------- Measures: one list, the card is the toggle; selected = lime with a check ---------- */
+.rs-measures { display: grid; gap: 8px; }
+.rs-measure { display: grid; grid-template-columns: 72px minmax(0, 1fr) 28px; gap: 14px; align-items: center; width: 100%; padding: 10px 12px 10px 10px; border: 1px solid var(--hairline); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; }
+.rs-measure:hover:not(:disabled) { border-color: var(--line-strong); }
+.rs-measure:disabled { cursor: default; }
+.rs-measure.is-on { border-color: var(--lime); background: var(--lime); color: var(--on-bright); }
+.rs-measure:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rs-measure__img { width: 72px; height: 56px; border-radius: 10px; background-color: var(--moss); background-size: cover; background-position: center; }
+.rs-measure__body { display: grid; gap: 3px; min-width: 0; }
+.rs-measure__title { font: 500 19px/1.1 var(--font-sans); font-stretch: 86%; letter-spacing: -.02em; }
+.rs-measure__effect { font-size: 12.5px; line-height: 1.35; color: var(--ink-muted); }
+.rs-measure.is-on .rs-measure__effect { color: var(--on-bright); opacity: .8; }
+.rs-measure__result { font-size: 13px; font-weight: 600; }
+.rs-measure__permit { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; }
+.rs-measure__permit .ar-ico { width: 13px; height: 13px; }
+.rs-measure__check { display: grid; place-items: center; width: 26px; height: 26px; border: 1.5px solid var(--line-strong); border-radius: 50%; }
+.rs-measure.is-on .rs-measure__check { border-color: var(--on-bright); background: var(--on-bright); color: var(--lime); }
+.rs-more--inline { padding-top: 10px; border-top: 1px solid var(--hairline); }
