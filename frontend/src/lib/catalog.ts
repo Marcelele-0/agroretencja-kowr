@@ -28,6 +28,19 @@ export const WET_MEASURES: Measure[] = [
 export function measureLook(idOrCategory: string): Pick<Measure, "image" | "permit"> {
   const all = [...DRY_MEASURES, ...WET_MEASURES];
   const hit = all.find((m) => idOrCategory.includes(m.id)) ?? null;
-  const permit = /zastaw|pietrz|piętrz|zbiorn|row|staw|drenaz|drenaż/i.test(idOrCategory);
+  const permit = /zastaw|pietrz|piętrz|zbiorn|row|staw|drenaz|drenaż|urzadzenie_wodne|odplyw|odpływ/i.test(idOrCategory);
   return { image: hit?.image ?? IMG.aerial, permit: hit?.permit ?? permit };
+}
+
+/** Simulation levers derived from backend retention metrics, falling back to local presets. */
+export function simForBackend(r: { id: string; category: string; delta_taw_mm: number; runoff_reduction_pct: number }): Measure["sim"] {
+  if (r.delta_taw_mm > 0 || r.runoff_reduction_pct > 0) {
+    const addMm = Math.max(0, Math.round(r.delta_taw_mm));
+    const etCut = r.runoff_reduction_pct > 0 ? Math.min(0.2, Math.round((r.runoff_reduction_pct / 200) * 100) / 100) : 0;
+    const noteParts = [addMm > 0 ? `+${addMm} mm` : null, r.runoff_reduction_pct > 0 ? `−${Math.round(r.runoff_reduction_pct)}% spływu` : null].filter(Boolean);
+    return { addMm, etCut, note: noteParts.join(", ") };
+  }
+  const key = `${r.id} ${r.category}`.toLowerCase();
+  const hit = DRY_MEASURES.find((m) => key.includes(m.id));
+  return hit?.sim;
 }

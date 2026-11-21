@@ -26,6 +26,9 @@ const ICONS = {
   calendar: "M2.5 3.5h11v10h-11zM2.5 6.5h11M5.5 2v3M10.5 2v3",
   check: "M3.5 8.5 6.5 11.5 12.5 5",
   search: "M7 12.2a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4ZM10.8 10.8l3.7 3.7",
+  play: "M5 3.2 13 8 5 12.8Z",
+  pause: "M5 3.5v9M11 3.5v9",
+  close: "M4 4l8 8M12 4l-8 8",
 } as const;
 export type IconName = keyof typeof ICONS;
 
@@ -65,6 +68,7 @@ export function Button(props: ButtonProps) {
   const aria = iconOnly ? { "aria-label": label ?? (typeof children === "string" ? children : "Dalej"), title: label } : {};
   const kids = iconOnly ? <Icon name={icon ?? "arrow"} /> : (
     <>
+      {icon ? <Icon name={icon} /> : null}
       <span>{children}</span>
       {tail ? <span className="ar-btn__sq"><Icon name={arrow === "down" ? "down" : "arrow"} /></span> : null}
     </>
