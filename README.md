@@ -1,6 +1,6 @@
 # AgroRetencja KOWR — Cyfrowy Asystent Retencji i Bilansu Wodnego
 
-> **Zadanie:** HackNation 2026 — KOWR: *Zatrzymaj wodę, chroń plony – Inteligentne wsparcie gospodarowania wodą w rolnictwie*  
+> **Zadanie:** HackNation 2026  KOWR: *Zatrzymaj wodę, chroń plony – Inteligentne wsparcie gospodarowania wodą w rolnictwie*  
 > **Repozytorium:** Prywatne repozytorium konkursowe (kod pisany od zera zgodnie z § 5 Regulaminu KOWR)
 
 ---
