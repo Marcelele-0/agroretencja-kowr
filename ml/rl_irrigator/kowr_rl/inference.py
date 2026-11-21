@@ -97,7 +97,7 @@ def _today() -> dt.date:
 
 #: Runtime HTTP settings: worst case per source ~ 4 + 0.5 + 4 s, sources fetched in parallel,
 #: so a cold recommendation stays under ~10 s even when one public service is slow.
-RUNTIME_HTTP = {"timeout": 4.0, "retries": 1, "backoff_s": 0.5, "max_wait_s": 2.0}
+RUNTIME_HTTP = {"timeout": 5.0, "retries": 2, "backoff_s": 0.5, "max_wait_s": 2.0}  # worst case ~17 s < 20 s frontend timeout
 
 
 def get_client() -> HttpClient:

@@ -9,7 +9,7 @@ Dla dowolnej działki rolnej w Polsce i dowolnej daty z ostatnich 10 lat moduł:
 
 Rekomendacja jest liczona z pobranych danych, a nie wybierana z gotowych odpowiedzi.
 
-> **Status agenta RL: domyślna strategia modułu (`default_policy: rl`).** Na czystym teście, czyli 50 nowych lokalizacji niewidzianych w treningu ani przy wyborze modelu, lata 2025–2026 i prawdziwe prognozy ECMWF, agent **przy każdym budżecie wody (50/100/150/250 mm) daje istotnie wyższy plon i zużywa istotnie mniej wody niż reguła FAO-56**. Łącznie to +0,23 pkt proc. plonu i −6,0 mm (−7%) wody na sezon (81 wobec 87 mm). Bije też najlepszą prostą regułę („małe dawki + prognoza”). Szczegóły: [`reports/evaluation_holdout.md`](reports/evaluation_holdout.md) i [`EXPERIMENTS.md`](EXPERIMENTS.md) (E6). Reguły FAO są dostępne przez `policy="fao_rule"`, `"fao_forecast"` i `"fao_small"`.
+> **Status agenta RL: domyślna strategia modułu (`default_policy: rl`), 15 upraw.** Na czystym teście, czyli 50 nowych lokalizacji niewidzianych w treningu ani przy wyborze modelu, lata 2025–2026, wszystkie 15 upraw frontendu i prawdziwe prognozy ECMWF, agent **przy każdym budżecie wody (50/100/150/250 mm) daje istotnie wyższy plon i zużywa istotnie mniej wody niż reguła FAO-56**. Łącznie to +0,12 pkt proc. plonu i −8,5 mm (−10%) wody na sezon (74 wobec 83 mm). Szczegóły: [`reports/evaluation_holdout.md`](reports/evaluation_holdout.md) i [`EXPERIMENTS.md`](EXPERIMENTS.md) (E6, E7). Reguły FAO są dostępne przez `policy="fao_rule"`, `"fao_forecast"` i `"fao_small"`.
 
 ---
 
@@ -61,13 +61,15 @@ cd ml/rl_irrigator
 # zestaw holdout (czysty test E6): 50 nowych punktów, ok. 10 min
 uv run python scripts/fetch_training_data.py --out-dir data/holdout --grid-offset 0.35 \
     --exclude-manifest data/MANIFEST.json --min-dist-km 25 --forecast-years 2025 2026
-# konfiguracja finalna E6f (3 ziarna, każde ok. 11–14 min na CPU)
+# konfiguracja E6f (wdrożony agent; 3 ziarna, każde ok. 11–14 min na CPU). E6f uczono na 4 uprawach:
+# ustaw episode.crops w config/rl.yaml na [kukurydza, ziemniak, pszenica_ozima, burak_cukrowy].
 for s in 1 2 3; do uv run python -m kowr_rl.train --run E6f_s$s --seed $s --c-w 0.0005 --c-p 0.0003 --lr 0.0003 \
     --ent-coef 0.001 --low-budget-prob 0.3 --teacher fao_small --bc-seasons 8000 --bc-epochs 8 \
     --n-envs 8 --n-steps 1024 --threads 2; done
-uv run python scripts/compare_val.py E6f_s1@dom E6f_s2@dom E6f_s3@dom   # wybór modelu (tylko walidacja 2024)
-uv run python -m kowr_rl.evaluate --runs E6f_s1@dom E6f_s2@dom E6f_s3@dom --dataset holdout  # reports/evaluation_holdout.md
-uv run python -m kowr_rl.evaluate --runs E6f_s1@dom E6f_s2@dom E6f_s3@dom                    # reports/evaluation.md
+# E7 (porównanie na 15 uprawach, obecny rl.yaml): to samo z --timesteps 6000000 --bc-seasons 15000 i --run E7_s$s
+uv run python scripts/compare_val.py E6f_s2@dom E7_s1@domc E7_s2@domc   # wybór modelu (tylko walidacja 2024, 15 upraw)
+uv run python -m kowr_rl.evaluate --runs E6f_s2@dom E7_s2@domc --deploy E6f_s2@dom --dataset holdout  # reports/evaluation_holdout.md
+uv run python -m kowr_rl.evaluate --runs E6f_s2@dom E7_s2@domc --deploy E6f_s2@dom                    # reports/evaluation.md
 uv run python scripts/export_policy.py E6f_s2@dom               # artifacts/models/ppo_irrigator_weights.npz
 uv run python scripts/make_examples.py                          # examples/*.json
 uv run python scripts/benchmark_latency.py                      # reports/latency.json
@@ -92,14 +94,25 @@ Pełne rozbicie, co agent bierze pod uwagę przy decyzji, ze wszystkimi wzorami:
 
 - **Bilans:** ETc = Kc·ET0, p = p_tab + 0,04·(5 − ETc), RAW = p·TAW. Ks = 1 dla Dr ≤ RAW, w przeciwnym razie (TAW − Dr)/(TAW − RAW). ETa = min(Ks·ETc, dostępna woda). Nadwyżka ponad pojemność polową to perkolacja DP. Przed siewem bilans startuje 1 marca od Dr = 0.
 - **Plon:** Ya/Ym = 1 − Ky·(1 − ΣETa/ΣETc), obcięty do [0, 1].
-- **Uprawy** (`config/crops.yaml`, źródło przy każdej liczbie: FAO-56 tab. 11, 12, 22 i 24/FAO-33):
+- **Uprawy:** 15 grup z frontendu (grupy SMSR IUNG-PIB oraz łąki i pastwiska), w `config/crops.yaml` ze źródłem przy każdej liczbie (FAO-56 tab. 11, 12, 22 i 24/FAO-33). API przyjmuje kody z frontendu, kody ze `schemas.CropCode` i klucze z tabeli (lista: `GET /rl/health`).
 
-| Uprawa | Kc ini/mid/end | Fazy [dni] | Start sezonu | p | Ky |
-|---|---|---|---|---|---|
-| Kukurydza na ziarno | 0,30 / 1,20 / 0,60 | 30/40/50/50 | 25 IV | 0,55 | 1,25 |
-| Ziemniak | 0,50 / 1,15 / 0,75 | 30/35/50/30 | 20 IV | 0,35 | 1,10 |
-| Pszenica ozima (od wznowienia wegetacji) | 0,40 / 1,15 / 0,30 | 20/45/40/20 | 25 III | 0,55 | 1,05 |
-| Burak cukrowy | 0,35 / 1,20 / 0,70 | 50/40/50/40 | 10 IV | 0,55 | 1,00 |
+| Uprawa | Kod (alias) | Kc ini/mid/end | Fazy [dni] | Start sezonu | p | Ky |
+|---|---|---|---|---|---|---|
+| Kukurydza na ziarno | `kukurydza` (`kukurydza_ziarno`) | 0,30 / 1,20 / 0,60 | 30/40/50/50 | 25 IV | 0,55 | 1,25 |
+| Kukurydza na kiszonkę | `kukurydza_kiszonka` | 0,30 / 1,20 / 0,60 | 30/40/50/30 | 25 IV | 0,55 | 1,25 |
+| Zboża ozime (pszenica, od wznowienia wegetacji) | `pszenica_ozima` (`zboza_ozime`) | 0,40 / 1,15 / 0,30 | 20/45/40/20 | 25 III | 0,55 | 1,05 |
+| Zboża jare (jęczmień, pszenica jara) | `zboza_jare` (`pszenica_jara`) | 0,30 / 1,15 / 0,25 | 15/25/50/30 | 1 IV | 0,55 | 1,15 |
+| Rzepak ozimy (od wznowienia wegetacji) | `rzepak` (`rzepak_ozimy`) | 0,35 / 1,10 / 0,35 | 20/35/45/25 | 20 III | 0,60 | 1,00 |
+| Ziemniak | `ziemniak` | 0,50 / 1,15 / 0,75 | 30/35/50/30 | 20 IV | 0,35 | 1,10 |
+| Burak cukrowy | `burak_cukrowy` | 0,35 / 1,20 / 0,70 | 50/40/50/40 | 10 IV | 0,55 | 1,00 |
+| Rośliny strączkowe (groch, bobik) | `straczkowe` | 0,40 / 1,15 / 0,30 | 20/30/35/25 | 5 IV | 0,40 | 1,15 |
+| Warzywa gruntowe (kapustne) | `warzywa` | 0,70 / 1,05 / 0,95 | 30/40/50/20 | 10 V | 0,45 | 0,95 |
+| Chmiel | `chmiel` | 0,30 / 1,05 / 0,85 | 25/40/60/15 | 15 IV | 0,50 | 1,00 |
+| Tytoń | `tyton` | 0,35 / 1,10 / 0,80 | 20/30/40/25 | 15 V | 0,50 | 0,90 |
+| Drzewa owocowe (sad jabłoniowy) | `drzewa_owocowe` | 0,50 / 1,20 / 0,95 | 20/70/90/30 | 1 IV | 0,50 | 1,00 |
+| Krzewy owocowe (porzeczka, malina) | `krzewy_owocowe` | 0,30 / 1,05 / 0,50 | 20/50/75/40 | 5 IV | 0,50 | 1,00 |
+| Truskawki | `truskawki` | 0,40 / 0,85 / 0,75 | 20/30/60/40 | 10 IV | 0,20 | 1,00 |
+| Łąki i pastwiska | `uzytki_zielone` | 0,40 / 0,95 / 0,85 | 10/20/150/20 | 1 IV | 0,60 | 1,00 |
 
   Kc end kukurydzy wynosi 0,60, a nie 0,35. FAO podaje 0,60 dla zbioru ziarna o wysokiej wilgotności, co odpowiada praktyce w Polsce. **Wszystkie parametry są oznaczone do weryfikacji z mentorem.**
 - **Gleba** (`config/soils.yaml`): kategorie podatności IUNG-PIB I–IV i TAW reprezentatywne 110/150/185/220 mm. Kody 5, 11–14, 19 i 99 dają komunikat „to nie jest grunt orny”, a kody 0 i 255 komunikat „brak danych”, bez rekomendacji.
@@ -178,36 +191,36 @@ Szczegóły (URL, znaczniki czasu dla każdego punktu, kontrola jakości) są w 
 
 ## 6. Wyniki
 
-**Czysty test: 50 nowych lokalizacji (holdout), lata 2025–2026** (pełny raport: [`reports/evaluation_holdout.md`](reports/evaluation_holdout.md)).
-- **Układ:** 50 punktów × 2 lata × 4 uprawy × 4 gleby × 4 budżety (50/100/150/250 mm), czyli 6400 sezonów na strategię.
+**Czysty test: 50 nowych lokalizacji (holdout), lata 2025–2026, wszystkie 15 upraw** (pełny raport: [`reports/evaluation_holdout.md`](reports/evaluation_holdout.md)).
+- **Układ:** 50 punktów × 2 lata × 15 upraw × 4 gleby × 4 budżety (50/100/150/250 mm), czyli 24 000 sezonów na strategię.
 - **Dane:** wszystkie strategie dostają te same dane z **prawdziwymi prognozami ECMWF**.
 - **Przedziały:** 95% bootstrap po punktach i latach.
 - **Niezależność:** lokalizacje nie były używane ani w treningu, ani przy wyborze modelu.
 
 | Strategia | Plon względny | Woda [mm/sezon] | Perkolacja [mm] | Dni stresu |
 |---|---|---|---|---|
-| Bez nawadniania | 0,845 | 0 | 36 | 49 |
-| Kalendarz | 0,951 | 138 | 101 | 21 |
-| Reguła FAO-56 | 0,967 | 87 | 41 | 16 |
-| FAO-56 + prognoza | 0,967 | 84 | 40 | 16 |
-| FAO-56 małe dawki + prognoza | 0,969 | 83 | 38 | 16 |
-| **Agent RL (E6f_s2@dom, domyślny)** | **0,970** | **81** | 38 | 15 |
-| Wyrocznia (znana pogoda, górna granica) | 0,972 | 76 | 37 | 13 |
+| Bez nawadniania | 0,862 | 0 | 29 | 48 |
+| Kalendarz | 0,958 | 135 | 94 | 19 |
+| Reguła FAO-56 | 0,972 | 83 | 36 | 15 |
+| FAO-56 + prognoza | 0,971 | 80 | 34 | 16 |
+| FAO-56 małe dawki + prognoza | 0,973 | 79 | 33 | 16 |
+| **Agent RL (E6f_s2@dom, domyślny)** | **0,973** | **74** | 32 | 15 |
+| Wyrocznia (znana pogoda, górna granica) | 0,975 | 71 | 31 | 12 |
 
 | Budżet | ΔPlon RL − FAO [pkt proc.] | ΔWoda RL − FAO [mm] |
 |---|---|---|
-| łącznie | **+0,23** [+0,14; +0,33] | **−6,0** [−7,3; −5,1] |
-| 50 mm | +0,12 [+0,07; +0,17] | −0,9 [−1,4; −0,5] |
-| 100 mm | +0,26 [+0,12; +0,43] | −3,9 [−5,2; −2,8] |
-| 150 mm | +0,28 [+0,13; +0,44] | −8,2 [−10,0; −6,5] |
-| 250 mm | +0,27 [+0,20; +0,33] | −11,2 [−13,2; −9,6] |
+| łącznie | **+0,12** [+0,05; +0,19] | **−8,5** [−9,9; −7,3] |
+| 50 mm | +0,10 [+0,07; +0,13] | −1,7 [−2,4; −1,1] |
+| 100 mm | +0,16 [+0,05; +0,28] | −6,2 [−8,1; −4,5] |
+| 150 mm | +0,12 [+0,02; +0,22] | −11,6 [−13,7; −9,7] |
+| 250 mm | +0,10 [+0,04; +0,14] | −14,4 [−16,1; −13,0] |
 
 - **Przy każdym budżecie** agent ma istotnie wyższy plon i istotnie mniejsze zużycie wody niż reguła FAO. Według kryterium ustalonego przed testem to werdykt **„gotowy”**.
-- **Wobec najlepszej prostej reguły** („FAO małe dawki + prognoza”): +0,11 pkt proc. i −2,0 mm, istotnie przy każdym budżecie. **Wobec FAO + prognoza:** +0,27 pkt proc. i −2,7 mm.
-- **Górna granica:** agent zbiera ok. 55–60% przewagi, jaką nad FAO ma wyrocznia znająca przyszłą pogodę, jednocześnie w plonie i w wodzie.
-- **Te same lata na punktach treningowych** ([`reports/evaluation.md`](reports/evaluation.md)): +0,23 pkt proc. i −5,6 mm, także istotnie przy każdym budżecie.
-- **Stabilność:** 3 ziarna na holdoucie dają plon 0,969–0,970 i wodę 81–83 mm.
-- **Jak to osiągnęliśmy:** nowe cechy obserwacji, start od reguły małych dawek i wybór modelu, który na walidacji wygrywa z FAO przy każdym budżecie. Całą drogę opisuje [`EXPERIMENTS.md`](EXPERIMENTS.md).
+- **Woda:** o 10% mniej niż reguła FAO (74 wobec 83 mm na sezon). Agent zbiera ok. 70% oszczędności wody, jaką dałaby nawet idealna znajomość przyszłej pogody.
+- **Każda z 15 upraw** zużywa mniej wody niż przy regule FAO, a w 12 z 15 plon jest wyższy.
+- **Wobec FAO + prognoza:** +0,16 pkt proc. i −5,3 mm. **Wobec najlepszej prostej reguły** („małe dawki + prognoza”): ten sam plon przy 4,4 mm mniej wody.
+- **Te same lata na punktach treningowych** ([`reports/evaluation.md`](reports/evaluation.md)): +0,12 pkt proc. i −8,5 mm, także istotnie przy każdym budżecie.
+- **Jak to osiągnęliśmy:** nowe cechy obserwacji, start od reguły małych dawek i wybór modelu, który na walidacji wygrywa z FAO przy każdym budżecie. Agent jest uwarunkowany parametrami uprawy (Kc, p, Ky), więc obsługuje wszystkie 15 upraw jedną siecią. Całą drogę opisuje [`EXPERIMENTS.md`](EXPERIMENTS.md).
 
 **Czas odpowiedzi** (`reports/latency.json`, 10 losowych punktów i dat z lat 2016–2026, tempo pojedynczego użytkownika, 21.11.2026):
 - **z pobraniem danych:** mediana **0,48 s**, maksimum **4,9 s** (przypadek z chwilowym timeoutem połączenia i ponowieniem); cel < 10 s;

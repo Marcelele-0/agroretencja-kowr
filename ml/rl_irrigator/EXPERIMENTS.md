@@ -178,3 +178,36 @@ Przy **każdym** budżecie agent ma istotnie wyższy plon **i** istotnie mniejsz
 **Te same lata na punktach treningowych:** łącznie +0,23 pkt proc. [+0,14; +0,34] i −5,6 mm [−6,8; −4,7]. Przy 50 mm +0,11 / −0,8, przy 100 mm +0,25 / −3,8, przy 150 mm +0,28 / −7,8, przy 250 mm +0,28 / −10,2. Wszystko istotne (`reports/evaluation.md`).
 
 **Werdykt (reguła z M5 bez zmian, na czystym teście):** agent **GOTOWY**, więc `default_policy: rl`. Reguły FAO, FAO + prognoza i `fao_small` pozostają dostępne jako `policy=...`.
+
+---
+
+## E7: wszystkie 15 upraw frontendu (21.11.2026)
+
+**Cel:** jedna polityka dla 15 upraw wybieranych we frontendzie (grupy SMSR IUNG-PIB oraz łąki i pastwiska). Parametry FAO-56/33 nowych upraw i aliasy kodów są w `config/crops.yaml`; protokół w `PLAN.md` (sekcja 6), zapisany przed treningiem.
+
+**Walidacja 2024, 15 upraw (12 000 sezonów, nagroda przy `c_w` = 5e-4, `c_p` = 3e-4; FAO −0,1291):**
+
+| Kandydat | Nagroda | Plon (FAO 0,9395) | Woda [mm] (FAO 102,7) | Uprawy z ΔY ≥ 0 i ΔW ≤ 0 |
+|---|---|---|---|---|
+| **E6f_s2@dom** (wdrożony, uczony na 4 uprawach) | **−0,1240** | 0,9398 | 94,3 | 8/15 |
+| E7_s2@domc (6 mln kroków, 15 upraw) | −0,1252 | 0,9406 | 98,2 | 15/15 |
+| E7_s1@domc | −0,1256 | 0,9408 | 99,6 | 15/15 |
+| E7_s3@dom | −0,1250 | 0,9404 | 97,8 | 13/15 |
+
+E6f_s2 jest uwarunkowany parametrami uprawy (Kc, p, Ky, TAW), więc dobrze przenosi się na nowe uprawy i ma najwyższą nagrodę. Zgodnie z protokołem **zostaje wdrożony E6f_s2@dom**, a E7_s2@domc jest alternatywą.
+
+**Czysty test (holdout, 50 nowych lokalizacji × 2025–2026 × 15 upraw × 4 gleby × 4 budżety = 24 000 sezonów):**
+
+| Strategia | Plon | Woda [mm] |
+|---|---|---|
+| Reguła FAO | 0,972 | 83 |
+| FAO + prognoza | 0,971 | 80 |
+| FAO małe dawki + prognoza | 0,973 | 79 |
+| **Agent RL (E6f_s2@dom)** | **0,973** | **74** |
+| E7_s2@domc | 0,973 | 77 |
+| Wyrocznia | 0,975 | 71 |
+
+RL − FAO: łącznie +0,12 pkt proc. [+0,05; +0,19] i −8,5 mm [−9,9; −7,3]. Według budżetów: 50 mm +0,10 / −1,7; 100 mm +0,16 / −6,2; 150 mm +0,12 / −11,6; 250 mm +0,10 / −14,4. Wszystko istotne, więc werdykt **gotowy**. Każda z 15 upraw zużywa mniej wody niż przy FAO, a w 12 z 15 plon jest wyższy. Wobec FAO + prognoza: +0,16 pkt proc. i −5,3 mm. Wobec `fao_small`: ten sam plon przy −4,4 mm.
+
+**Te same lata na punktach treningowych:** +0,12 pkt proc. [+0,06; +0,19] i −8,5 mm [−10,0; −7,2], istotnie przy każdym budżecie.
+

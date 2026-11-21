@@ -23,12 +23,25 @@ Poniżej obie warstwy z pełną matematyką. Część 5 to pomiar na wdrożonym 
 | Prognoza opadu na 1–7 dni | ECMWF IFS 0,25°: bieżąca, archiwalna (od 2024) albo klimatologia punktu | decyzje i plan na 7 dni |
 | $K_{c,ini}$, $K_{c,mid}$, $K_{c,end}$, długości faz, $p$, $K_y$ | [`config/crops.yaml`](../ml/rl_irrigator/config/crops.yaml) (FAO-56/33) | zapotrzebowanie uprawy i wrażliwość plonu |
 
-| Uprawa | $K_c$ ini / mid / end | Fazy [dni] | Start sezonu | $p$ | $K_y$ |
-|---|---|---|---|---|---|
-| Kukurydza na ziarno | 0,30 / 1,20 / 0,60 | 30 / 40 / 50 / 50 | 25 IV | 0,55 | 1,25 |
-| Ziemniak | 0,50 / 1,15 / 0,75 | 30 / 35 / 50 / 30 | 20 IV | 0,35 | 1,10 |
-| Pszenica ozima (od wznowienia wegetacji) | 0,40 / 1,15 / 0,30 | 20 / 45 / 40 / 20 | 25 III | 0,55 | 1,05 |
-| Burak cukrowy | 0,35 / 1,20 / 0,70 | 50 / 40 / 50 / 40 | 10 IV | 0,55 | 1,00 |
+Agent obsługuje 15 upraw z frontendu: grupy SMSR IUNG-PIB oraz łąki i pastwiska. API przyjmuje kody frontendu, kody ze `schemas.CropCode` i klucze z `crops.yaml`.
+
+| Uprawa | Kod (alias) | $K_c$ ini / mid / end | Fazy [dni] | Start sezonu | $p$ | $K_y$ |
+|---|---|---|---|---|---|---|
+| Kukurydza na ziarno | `kukurydza` (`kukurydza_ziarno`) | 0,30 / 1,20 / 0,60 | 30 / 40 / 50 / 50 | 25 IV | 0,55 | 1,25 |
+| Kukurydza na kiszonkę | `kukurydza_kiszonka` | 0,30 / 1,20 / 0,60 | 30 / 40 / 50 / 30 | 25 IV | 0,55 | 1,25 |
+| Zboża ozime (od wznowienia wegetacji) | `pszenica_ozima` (`zboza_ozime`) | 0,40 / 1,15 / 0,30 | 20 / 45 / 40 / 20 | 25 III | 0,55 | 1,05 |
+| Zboża jare | `zboza_jare` (`pszenica_jara`) | 0,30 / 1,15 / 0,25 | 15 / 25 / 50 / 30 | 1 IV | 0,55 | 1,15 |
+| Rzepak ozimy (od wznowienia wegetacji) | `rzepak` (`rzepak_ozimy`) | 0,35 / 1,10 / 0,35 | 20 / 35 / 45 / 25 | 20 III | 0,60 | 1,00 |
+| Ziemniak | `ziemniak` | 0,50 / 1,15 / 0,75 | 30 / 35 / 50 / 30 | 20 IV | 0,35 | 1,10 |
+| Burak cukrowy | `burak_cukrowy` | 0,35 / 1,20 / 0,70 | 50 / 40 / 50 / 40 | 10 IV | 0,55 | 1,00 |
+| Rośliny strączkowe | `straczkowe` | 0,40 / 1,15 / 0,30 | 20 / 30 / 35 / 25 | 5 IV | 0,40 | 1,15 |
+| Warzywa gruntowe | `warzywa` | 0,70 / 1,05 / 0,95 | 30 / 40 / 50 / 20 | 10 V | 0,45 | 0,95 |
+| Chmiel | `chmiel` | 0,30 / 1,05 / 0,85 | 25 / 40 / 60 / 15 | 15 IV | 0,50 | 1,00 |
+| Tytoń | `tyton` | 0,35 / 1,10 / 0,80 | 20 / 30 / 40 / 25 | 15 V | 0,50 | 0,90 |
+| Drzewa owocowe | `drzewa_owocowe` | 0,50 / 1,20 / 0,95 | 20 / 70 / 90 / 30 | 1 IV | 0,50 | 1,00 |
+| Krzewy owocowe | `krzewy_owocowe` | 0,30 / 1,05 / 0,50 | 20 / 50 / 75 / 40 | 5 IV | 0,50 | 1,00 |
+| Truskawki | `truskawki` | 0,40 / 0,85 / 0,75 | 20 / 30 / 60 / 40 | 10 IV | 0,20 | 1,00 |
+| Łąki i pastwiska | `uzytki_zielone` | 0,40 / 0,95 / 0,85 | 10 / 20 / 150 / 20 | 1 IV | 0,60 | 1,00 |
 
 ---
 
@@ -220,7 +233,7 @@ $$
    $$\min\ -\log \pi(a_{reguły} \mid o) + 0{,}5\,(V(o) - G)^2,$$
 
    gdzie $G$ to zdyskontowany zwrot nagród z sezonu.
-2. **PPO.** 3 mln dni symulacji na 50 punktach rolnych z całej Polski w latach 2016–2023, dla 4 upraw i 4 kategorii gleby. Budżet losowany z $U[0, 250]$ mm, a w 30% epizodów z $U[20, 100]$ mm, żeby agent dobrze opanował ciasne budżety.
+2. **PPO.** 3 mln dni symulacji na 50 punktach rolnych z całej Polski w latach 2016–2023, dla 4 upraw i 4 kategorii gleby. Sieć widzi parametry uprawy ($K_c$, $p$, $K_y$) i gleby ($TAW$), a nie jej nazwę, więc ta sama polityka działa dla wszystkich 15 upraw (sprawdzone na walidacji i teście z 15 uprawami, część 8). Budżet losowany z $U[0, 250]$ mm, a w 30% epizodów z $U[20, 100]$ mm, żeby agent dobrze opanował ciasne budżety.
 3. **Realistyczna prognoza w treningu.** Szum jest dopasowany do prawdziwych prognoz ECMWF z 2024 roku ($j$ = dzień wyprzedzenia):
 
    $$
@@ -258,19 +271,21 @@ $$
 
 ---
 
-## 8. Efekt: test na 50 nowych lokalizacjach (2025–2026)
+## 8. Efekt: test na 50 nowych lokalizacjach (2025–2026), 15 upraw
 
-Prawdziwe prognozy ECMWF, 6400 sezonów na strategię, 95% przedziały bootstrap. Pełny raport: [`evaluation_holdout.md`](../ml/rl_irrigator/reports/evaluation_holdout.md).
+Prawdziwe prognozy ECMWF, 24 000 sezonów na strategię (50 punktów × 2 lata × 15 upraw × 4 gleby × 4 budżety), 95% przedziały bootstrap. Pełny raport: [`evaluation_holdout.md`](../ml/rl_irrigator/reports/evaluation_holdout.md).
 
 | Budżet | Plon: agent − reguła FAO [pkt proc.] | Woda: agent − reguła FAO [mm] |
 |---|---|---|
-| łącznie | **+0,23** [+0,14; +0,33] | **−6,0** [−7,3; −5,1] |
-| 50 mm | +0,12 [+0,07; +0,17] | −0,9 [−1,4; −0,5] |
-| 100 mm | +0,26 [+0,12; +0,43] | −3,9 [−5,2; −2,8] |
-| 150 mm | +0,28 [+0,13; +0,44] | −8,2 [−10,0; −6,5] |
-| 250 mm | +0,27 [+0,20; +0,33] | −11,2 [−13,2; −9,6] |
+| łącznie | **+0,12** [+0,05; +0,19] | **−8,5** [−9,9; −7,3] |
+| 50 mm | +0,10 [+0,07; +0,13] | −1,7 [−2,4; −1,1] |
+| 100 mm | +0,16 [+0,05; +0,28] | −6,2 [−8,1; −4,5] |
+| 150 mm | +0,12 [+0,02; +0,22] | −11,6 [−13,7; −9,7] |
+| 250 mm | +0,10 [+0,04; +0,14] | −14,4 [−16,1; −13,0] |
 
-Przy każdym budżecie agent daje istotnie wyższy plon przy istotnie mniejszym zużyciu wody.
+- **Przy każdym budżecie** agent daje istotnie wyższy plon przy istotnie mniejszym zużyciu wody.
+- **Woda:** o 10% mniej niż reguła FAO (74 wobec 83 mm na sezon). Agent zbiera ok. 70% oszczędności wody, jaką dałaby idealna znajomość przyszłej pogody.
+- **Uprawy:** każda z 15 upraw zużywa mniej wody niż przy regule FAO, a w 12 z 15 plon jest wyższy.
 
 ---
 

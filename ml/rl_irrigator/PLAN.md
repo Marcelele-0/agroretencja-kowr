@@ -219,3 +219,5 @@ Raportuję też wynik dla każdej uprawy.
 - Checkpointy `@domc` (przewaga przy każdym budżecie i dla każdej uprawy): E7_s1 −0,1256, **E7_s2 −0,1252**; E7_s3 takiego nie ma (`@dom` −0,1250). Najlepszy kandydat E7: **E7_s2@domc** (1,3 mln kroków; ΔY/ΔW przy 50/100/150/250 mm: +0,02/−0,6, +0,09/−2,2, +0,12/−5,4, +0,20/−9,8; 15/15 upraw).
 - E6f_s2@dom na tej samej walidacji ma nagrodę **−0,1240** (oszczędza więcej wody: 94,3 mm wobec 98,2 mm, ale w części nowych upraw ma niższy plon niż FAO). Zgodnie z punktem 3 **zostaje wdrożony E6f_s2@dom**, teraz z parametrami 15 upraw. E7_s2@domc jest raportowany jako alternatywa „przewaga w każdej uprawie”.
 - Test (holdout i punkty treningowe, 15 upraw): decyzja dla E6f_s2@dom, wynik E7_s2@domc obok.
+- **Wynik testu E7 (czysty test, 15 upraw):** wdrożony E6f_s2@dom wobec FAO: +0,12 pkt proc. [+0,05; +0,19] i −8,5 mm [−9,9; −7,3]; istotnie wyższy plon i mniej wody przy każdym budżecie. Stary test: +0,12 pkt proc. i −8,5 mm. E7_s2@domc: ten sam plon (0,9729 wobec 0,9730) przy 77 wobec 74 mm, co potwierdza wybór z walidacji. `default_policy: rl` bez zmian.
+
