@@ -1,4 +1,5 @@
 /* Rusałka app layout. Components come from rusalka.css (design system); this file only places them. Prefix rs-. */
+html { color-scheme: light; }
 html, body, #root { height: 100%; }
 body { background: var(--ground); }
 a { color: inherit; }
