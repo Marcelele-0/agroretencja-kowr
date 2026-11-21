@@ -182,3 +182,9 @@ Cel: sprawdzić, czy agent może pokonać regułę FAO przy **każdym** poziomie
 2. **Stary test** (50 punktów treningowych, 2025–2026): raportowany dla ciągłości, ale oznaczony jako już widziany.
 3. **Reguła decyzyjna bez zmian** (istotność przy każdym budżecie, jak w M5). Stosowana na czystym teście. Jeśli RL ją spełnia, `default_policy: rl`. W przeciwnym razie `default_policy: fao_rule` (jak w prompcie), a `fao_small` i RL są dostępne jako opcje.
 4. RL raportuję także względem `fao_small` i `fao_forecast`, żeby było widać, czy agent bije najlepszą prostą regułę, a nie tylko FAO.
+
+**Uzupełnienie przed testem (21.11.2026, po walidacji E6a/d/e, przed jakimkolwiek uruchomieniem E6 na latach 2025–2026):**
+- Walidacja 2024 (nagroda; FAO −0,1383): E6e −0,1328, E6a −0,1339, E6d −0,1341, E5_s3 −0,1350, `fao_small` −0,1352. Najlepszy checkpoint żadnej z konfiguracji RL nie spełnia warunku dominacji: przy 250 mm E6e ma −0,11 pkt proc. plonu (za −22 mm wody), a E6a −0,01 pkt proc.
+- Dlatego konfiguracja E6e trenuje się ponownie jako **E6f** (3 ziarna) z callbackiem, który zapisuje też `best_dominant_model.zip`, czyli najlepszy checkpoint z ΔY ≥ 0 i ΔW ≤ 0 względem FAO przy każdym budżecie walidacyjnym. Do testu idzie `E6f_s*@dom`.
+- **Ensemble** trzech ziaren `@dom` wdrażam tylko wtedy, gdy na walidacji też dominuje i ma nagrodę ≥ najlepszego pojedynczego ziarna. W przeciwnym razie wdrażam najlepsze ziarno.
+- **Wybór (walidacja, przed testem):** E6f_s1@dom −0,1344, **E6f_s2@dom −0,1328**, E6f_s3@dom −0,1350 (to praktycznie klon `fao_small` sprzed PPO). Ensemble 3 ziaren −0,1342, a s1+s2 −0,1333, czyli gorzej od najlepszego ziarna, więc ensemble odpada. Dodatkowo E6g_s1 (`c_w` = 3e-4, lr malejący liniowo) dominuje FAO, ale ma nagrodę −0,1337. **Do testu idzie E6f_s2@dom** (2,8 mln kroków). Na walidacji, względem FAO: plon +0,07 / +0,11 / +0,13 / +0,14 pkt proc., woda −0,9 / −3,4 / −8,5 / −17,1 mm przy 50 / 100 / 150 / 250 mm.
