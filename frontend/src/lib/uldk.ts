@@ -42,14 +42,26 @@ async function query(params: string, signal?: AbortSignal): Promise<Parcel> {
   const qs = `${params}&result=${RESULT}&srid=4326`;
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
+    let res: { status: number; ok: boolean; text: string };
     try {
-      const res = await requestViaProxy("/uldk", `/uldk?${qs}`, `${ULDK_URL}?${qs}`, 12000, signal);
-      if (res.ok) return parseUldk(res.text);
-      lastErr = sourceFailure("ULDK", null, res.status);
-      if (res.status < 500) throw lastErr;
+      res = await requestViaProxy("/uldk", `/uldk?${qs}`, `${ULDK_URL}?${qs}`, 12000, signal);
     } catch (e) {
       if (isAbort(e)) throw e;
       lastErr = e instanceof SourceError ? e : sourceFailure("ULDK", e);
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+      continue;
+    }
+    if (!res.ok) {
+      lastErr = sourceFailure("ULDK", null, res.status);
+      if (res.status < 500 && res.status !== 429) throw lastErr;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+      continue;
+    }
+    try {
+      return parseUldk(res.text);
+    } catch (e) {
+      if (e instanceof ParcelNotFound) throw e;
+      lastErr = e;
     }
     if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
   }
