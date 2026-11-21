@@ -4,7 +4,7 @@ import { API_URL, backendEnabled, reportPdfUrl } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse, RlSource } from "../api/contract";
 import { computeLocal, soilCause, withLevers, type Levers, type LocalResult, type TimelineDay } from "../analysis/local";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
-import { BAL, cx, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
+import { BAL, balStep, cx, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, simForBackend, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, cropOf, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, isoOf, minIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
@@ -318,7 +318,7 @@ export function Analysis() {
       {st.parcel.status !== "error" && land?.kind !== "nonAgri" ? (
         <>
           <section id="ocena" className="rs-section">
-            {local ? <Assessment local={local} components={backend?.assessment?.components} replay={replayView} onPickDate={(d) => write(items, activeId, { data: d })} /> : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
+            {local ? <Assessment local={local} components={backendComponents(backend?.assessment)} replay={replayView} onPickDate={(d) => write(items, activeId, { data: d })} /> : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
           </section>
           <section id="przyczyny" className="rs-section">
             <h3 className="ar-section-title">{causesTitle(local)}</h3>
@@ -410,24 +410,42 @@ export function Analysis() {
 function withBackend(local: LocalResult | null, backend: AnalysisResponse | null): LocalResult | null {
   const a = backend?.assessment;
   if (!local || !a || (a.water_state === undefined && !a.water_state_timeline)) return local;
-  const stage = a.water_state !== undefined ? Math.max(-5, Math.min(5, Math.round(a.water_state))) : local.stage;
+  const stage = a.water_state !== undefined ? balStep(a.water_state) : local.stage;
   const r = stage === null ? null : riskFromStage(stage);
   const veto = a.water_risk?.veto_triggered ?? local.risk.veto;
+  const timeline = a.water_state_timeline
+    ? a.water_state_timeline.map((d) => ({ ...d, value: balStep(d.value) }))
+    : local.timeline;
   return {
     ...local,
     stage,
     risk: r ? { level: (a.water_risk?.level as typeof local.risk.level) ?? r.level, side: r.side, veto, vetoReason: a.water_risk?.veto_reasons?.join(" ") || local.risk.vetoReason } : local.risk,
     caption: a.summary_text ?? local.caption,
     confidence: a.confidence ? { level: a.confidence.level, detail: [...(a.confidence.resolution_warnings ?? []), ...(a.confidence.missing_factors ?? [])].join(" ") || "Wynik z modelu serwera." } : local.confidence,
-    timeline: a.water_state_timeline ?? local.timeline,
+    timeline,
   };
+}
+
+function backendComponents(assessment: AnalysisResponse["assessment"] | undefined): NonNullable<AnalysisResponse["assessment"]>["components"] {
+  if (!assessment) return undefined;
+  if (assessment.components?.length) return assessment.components;
+  const scoreComponents = assessment.water_score?.components;
+  if (!scoreComponents?.length) return undefined;
+  return scoreComponents.map((c) => ({
+    key: c.name,
+    label: c.label,
+    value: c.value != null ? `${Math.round(c.value)}/100` : "brak danych",
+    weight: c.weight_used > 0 ? c.weight_used : undefined,
+    detail: c.explanation ?? undefined,
+  }));
 }
 
 function timelineSummary(local: LocalResult): string | null {
   const today = todayIso();
   const in7 = local.timeline.find((d) => d.date === addDays(today, 7));
-  if (!in7 || in7.value === null) return null;
-  return `Za 7 dni: ${BAL[String(in7.value)]!.toLowerCase()} (prognoza)`;
+  const step = balStep(in7?.value);
+  if (step === null) return null;
+  return `Za 7 dni: ${BAL[String(step)]!.toLowerCase()} (prognoza)`;
 }
 
 function causesTitle(local: LocalResult | null): string {
@@ -660,7 +678,7 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
     ? recs.map((r) => {
       const look = measureLook(`${r.id} ${r.category}`);
       const note = [r.delta_taw_mm > 0 ? `+${dec(r.delta_taw_mm, 0)} mm wody` : null, r.runoff_reduction_pct > 0 ? `${dec(r.runoff_reduction_pct, 0)}% mniej spływu` : null].filter(Boolean).join(" · ");
-      return { id: r.id, title: r.title, effect: r.rationale || note, permit: look.permit, image: look.image, sim: simForBackend(r), backendNote: note };
+      return { id: r.id, title: r.title, effect: r.rationale || note, permit: r.requires_permit ?? look.permit, image: look.image, sim: simForBackend(r), backendNote: note };
     })
     : ((local?.stage ?? 0) >= 2 ? WET_MEASURES : DRY_MEASURES).map((m) => ({ id: m.id, title: m.title, effect: m.effect, permit: m.permit, image: m.image, sim: m.sim }));
 
@@ -818,7 +836,7 @@ function Sources({ sources, backend, rlSources, elapsed }: { sources: SourceEntr
     <div className="ar-card rs-table">
       <table>
         <thead><tr><th>Źródło</th><th>Co daje</th><th>Pobrano</th><th>Rozdzielczość</th><th>Licencja</th></tr></thead>
-        <tbody>{rows.map((r) => <tr key={r[0]}>{r.map((c, i) => <td key={i}>{c}</td>)}</tr>)}</tbody>
+        <tbody>{rows.map((r, idx) => <tr key={`${r[0]}-${idx}`}>{r.map((c, i) => <td key={i}>{c}</td>)}</tr>)}</tbody>
       </table>
       <p className="ar-card__text">{elapsed !== null ? `Pogoda pobrana w ${dec(elapsed / 1000, 1)} s. ` : ""}Analiza używa tylko danych działki, bez danych osobowych.</p>
     </div>

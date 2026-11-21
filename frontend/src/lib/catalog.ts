@@ -28,7 +28,7 @@ export const WET_MEASURES: Measure[] = [
 export function measureLook(idOrCategory: string): Pick<Measure, "image" | "permit"> {
   const all = [...DRY_MEASURES, ...WET_MEASURES];
   const hit = all.find((m) => idOrCategory.includes(m.id)) ?? null;
-  const permit = /zastaw|pietrz|piętrz|zbiorn|row|staw|drenaz|drenaż/i.test(idOrCategory);
+  const permit = /zastaw|pietrz|piętrz|zbiorn|row|staw|drenaz|drenaż|urzadzenie_wodne|odplyw|odpływ/i.test(idOrCategory);
   return { image: hit?.image ?? IMG.aerial, permit: hit?.permit ?? permit };
 }
 

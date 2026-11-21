@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { quickPicks } from "../ds/inputs";
-import { simForBackend } from "./catalog";
+import { measureLook, simForBackend } from "./catalog";
 import { isCropCode } from "./crops";
 import { addDays, inSeason, isIso, seasonYear, toDay } from "./dates";
 import { parseUug } from "./geocoder";
@@ -182,6 +182,7 @@ describe("backend measure levers, quick picks, and presets", () => {
       note: "−10% parowania",
     });
     expect(simForBackend({ id: "unknown_0", category: "other", delta_taw_mm: 0, runoff_reduction_pct: 0 })).toBeUndefined();
+    expect(measureLook("sterowany_odplyw urzadzenie_wodne").permit).toBe(true);
   });
 
   it("includes Susza 2019 in quickPicks for 2026-11-21", () => {
