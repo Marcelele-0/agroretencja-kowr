@@ -207,6 +207,8 @@ function openMeteoProxyPlugin(): Plugin {
 
 // External APIs go through our server: bypasses client-side Wi-Fi limits, VPN/Private Relay blocks, and mobile CORS issues.
 const proxy = {
+  "/api": { target: "http://127.0.0.1:8000", changeOrigin: true, timeout: 60000, proxyTimeout: 60000 },
+  "/rl": { target: "http://127.0.0.1:8000", changeOrigin: true, timeout: 60000, proxyTimeout: 60000 },
   "/uug": { target: "https://services.gugik.gov.pl", changeOrigin: true, rewrite: (p: string) => p.replace(/^\/uug\/?/, "/uug/") },
   "/iung": { target: "https://sgeo.iung.pl", changeOrigin: true, rewrite: (p: string) => p.replace(/^\/iung\/?/, "/geoserver/Susza/wms") },
 };

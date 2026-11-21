@@ -5,8 +5,9 @@ import type { AnalysisRequest, AnalysisResponse, RlCompareResponse, RlRecommendR
  * Loose hooks to the FastAPI backend. Empty VITE_API_URL = hooks off: the UI hides the steps that need the server.
  * Endpoints: POST /api/analyze, POST /api/what-if, GET /api/report.pdf, POST /rl/recommend, POST /rl/compare.
  */
-export const API_URL: string = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
-export const backendEnabled = API_URL !== "";
+const RAW_API_URL: string = (import.meta.env.VITE_API_URL ?? "").trim();
+export const backendEnabled = RAW_API_URL !== "";
+export const API_URL: string = RAW_API_URL === "/" ? "" : RAW_API_URL.replace(/\/$/, "");
 
 export class BackendError extends Error {
   constructor(
@@ -49,16 +50,16 @@ async function post<T>(path: string, body: unknown, ms: number, signal?: AbortSi
 }
 
 export function postAnalyze(req: AnalysisRequest, signal?: AbortSignal): Promise<AnalysisResponse> {
-  return post<AnalysisResponse>("/api/analyze", req, 30000, signal);
+  return post<AnalysisResponse>("/api/analyze", req, 45000, signal);
 }
 export function postWhatIf(req: WhatIfRequest, signal?: AbortSignal): Promise<WhatIfScenarioResult> {
-  return post<WhatIfScenarioResult>("/api/what-if", req, 20000, signal);
+  return post<WhatIfScenarioResult>("/api/what-if", req, 25000, signal);
 }
 export function postRlRecommend(req: RlRecommendRequest, signal?: AbortSignal): Promise<RlRecommendResponse> {
-  return post<RlRecommendResponse>("/rl/recommend", req, 20000, signal);
+  return post<RlRecommendResponse>("/rl/recommend", req, 35000, signal);
 }
 export function postRlCompare(req: { parcel_id: string; crop: string; budget_mm?: number }, signal?: AbortSignal): Promise<RlCompareResponse> {
-  return post<RlCompareResponse>("/rl/compare", req, 30000, signal);
+  return post<RlCompareResponse>("/rl/compare", req, 45000, signal);
 }
 export function reportPdfUrl(req: AnalysisRequest): string | null {
   if (!backendEnabled) return null;

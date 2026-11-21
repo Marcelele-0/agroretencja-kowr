@@ -359,7 +359,7 @@ export function Analysis() {
       <header className="rs-ahead">
         <Link to={`/?dzialki=${encodeURIComponent(key)}`} aria-label="Wróć do mapy"><Wordmark /></Link>
         <p className="rs-ahead__parcel ar-muted">{items.length === 1 ? "1 działka" : `${items.length} działki`} · {formatLong(date)}</p>
-        {pdf ? <Button variant="light" arrow="down" href={pdf}>Pobierz raport PDF</Button> : <Button variant="light" arrow="down" onClick={() => window.print()}>Pobierz raport PDF</Button>}
+        {items.length === 1 && pdf ? <Button variant="light" arrow="down" href={pdf}>Pobierz raport PDF</Button> : <Button variant="light" arrow="down" onClick={() => window.print()}>Pobierz raport PDF</Button>}
       </header>
 
       <div className="rs-grid">
@@ -1003,7 +1003,7 @@ function DevHooks({ st }: { st: AnalysisState }) {
     <details className="rs-dev">
       <summary>Podpięcia backendu (widoczne tylko w trybie deweloperskim)</summary>
       <ul>
-        <li>VITE_API_URL: {backendEnabled ? API_URL : "puste: kroki serwera są wyłączone"}</li>
+        <li>VITE_API_URL: {backendEnabled ? (API_URL || "/ (same-origin proxy)") : "puste: kroki serwera są wyłączone"}</li>
         <li>POST /api/analyze: {st.backend.status}{st.backend.status === "error" ? ` (${st.backend.message})` : ""}</li>
         <li>POST /rl/recommend: {st.rl.status}{st.rl.status === "error" ? ` (${st.rl.message})` : ""}</li>
         <li>Próbka sekcji serwera bez backendu: dodaj <code>&amp;fixtures</code> do adresu.</li>
