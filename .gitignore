@@ -40,6 +40,7 @@ ml/rl_irrigator/data/**
 !ml/rl_irrigator/data/soils/points.json
 !ml/rl_irrigator/data/holdout/MANIFEST.json
 !ml/rl_irrigator/data/holdout/soils/points.json
+!ml/rl_irrigator/data/single_runs/MANIFEST.json
 ml/rl_irrigator/runs/
 ml/rl_irrigator/models/checkpoints/
 # RL checkpoints: only the deployed model is force-added (git add -f)

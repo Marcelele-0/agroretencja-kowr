@@ -70,14 +70,17 @@ def ensure_npz(run: str) -> Path:
     zip_path = d / f"{prefix}_model.zip"
     if npz.exists() and npz.stat().st_mtime >= zip_path.stat().st_mtime:
         return npz
-    from sb3_contrib import MaskablePPO
-    from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+    import pickle
 
-    from .env import KowrIrrigationEnv
+    from sb3_contrib import MaskablePPO
+
     from .policy import export_npz
 
     model = MaskablePPO.load(zip_path, device="cpu")
-    venv = VecNormalize.load(str(d / f"{prefix}_vecnormalize.pkl"), DummyVecEnv([lambda: KowrIrrigationEnv("val")]))
+    # unpickle the VecNormalize statistics directly: the env's observation space may have grown since
+    # the run was trained (v1 13, v2 17, v3 18 features); export_npz only needs obs_rms / clip / epsilon
+    with open(d / f"{prefix}_vecnormalize.pkl", "rb") as fh:
+        venv = pickle.load(fh)
     hist = json.loads((d / "val_history.json").read_text(encoding="utf-8"))["history"]
     if ckpt in ("dom", "domc"):
         flag = "dominant" if ckpt == "dom" else "dominant_all_crops"

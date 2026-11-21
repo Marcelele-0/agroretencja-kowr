@@ -32,7 +32,8 @@ import numpy as np
 from .config import CropParams, PreSeason, load_pre_season, load_rl_config
 from .data import DailySeries
 
-N_LEADS = 7
+N_LEADS = 7  # forecast window of the v1/v2 agents and of the archived Previous Runs (leads 1-7)
+N_FC = 14  # E8: length of the forecast arrays (14-day window; leads 8-14 for the v3 feature)
 OBS_NAMES = (
     "season_progress",
     "kc",
@@ -52,9 +53,12 @@ OBS_NAMES = (
     "forecast_2d_scaled",
     "etc_remaining_est_scaled",
     "budget_over_remaining_etc",
+    # v3 (E8): forecast for days 8-14 (appended; v1/v2 policies read the first 13/17 features)
+    "forecast_8_14_scaled",
 )
 N_OBS = len(OBS_NAMES)
 N_OBS_V1 = 13
+N_OBS_V2 = 17
 
 
 def default_actions() -> np.ndarray:
@@ -148,8 +152,8 @@ class SeasonBatch:
     length: np.ndarray  # (B,)
     p_hist7: np.ndarray  # (B, T) precipitation of the 7 days before day t
     et0_hist7: np.ndarray  # (B, T)
-    fut: np.ndarray  # (B, T, 7) true precipitation on days t..t+6 (0 where unknown)
-    forecast: np.ndarray  # (B, T, 7) forecast for days t..t+6 known on the morning of day t
+    fut: np.ndarray  # (B, T, N_FC) true precipitation on days t..t+13 (0 where unknown)
+    forecast: np.ndarray  # (B, T, N_FC) forecast for days t..t+13 known on the morning of day t
     taw: np.ndarray
     p_tab: np.ndarray
     ky: np.ndarray
@@ -157,6 +161,8 @@ class SeasonBatch:
     budget: np.ndarray
     etc_season_est: np.ndarray
     kc_rem: np.ndarray  # (B, T) share of the seasonal Kc sum still ahead on day t (known in advance)
+    clim_p: np.ndarray  # (B, T + N_FC) day-of-year mean precipitation of the other years (no-skill forecast)
+    clim_e: np.ndarray  # (B, T + N_FC) day-of-year mean ET0 of the other years
     dev_start: np.ndarray  # (B,) first day of the development stage
     late_start: np.ndarray  # (B,) first day of the late stage
     start_dates: np.ndarray  # (B,) datetime64[D]
@@ -193,6 +199,18 @@ def _daily_on_range(weather: DailySeries, start: dt.date, n: int) -> tuple[np.nd
     return p, e
 
 
+def _doy_climatology(weather: DailySeries, exclude_year: int) -> tuple[np.ndarray, np.ndarray]:
+    """Mean P and ET0 by day of year (index 0..366) over the years other than ``exclude_year``."""
+    dates = np.asarray(weather.dates, dtype="datetime64[D]")
+    years = dates.astype("datetime64[Y]").astype(int) + 1970
+    doy = (dates - dates.astype("datetime64[Y]")).astype(int)
+    ok = (years != exclude_year) & np.isfinite(weather.precip) & np.isfinite(weather.et0)
+    n = np.maximum(np.bincount(doy[ok], minlength=367), 1)
+    p = np.bincount(doy[ok], weights=np.asarray(weather.precip)[ok], minlength=367) / n
+    e = np.bincount(doy[ok], weights=np.asarray(weather.et0)[ok], minlength=367) / n
+    return p, e
+
+
 def build_batch(specs: list[SeasonSpec], pre: PreSeason | None = None, horizon: int | None = None) -> SeasonBatch:
     """Stack seasons into padded arrays. Missing season weather raises ``ValueError``."""
     pre = pre or load_pre_season()
@@ -206,9 +224,12 @@ def build_batch(specs: list[SeasonSpec], pre: PreSeason | None = None, horizon: 
     valid = np.zeros(shape, dtype=bool)
     p7 = np.zeros(shape)
     e7 = np.zeros(shape)
-    fut = np.zeros((B, T, N_LEADS))
-    fc = np.zeros((B, T, N_LEADS))
+    fut = np.zeros((B, T, N_FC))
+    fc = np.zeros((B, T, N_FC))
     kc_rem = np.zeros(shape)
+    clim_p = np.zeros((B, T + N_FC))
+    clim_e = np.zeros((B, T + N_FC))
+    clim_cache: dict[tuple[int, int], tuple[np.ndarray, np.ndarray]] = {}
     length = np.zeros(B, dtype=np.int64)
     dr0 = np.zeros(B)
     etc_est = np.zeros(B)
@@ -223,7 +244,7 @@ def build_batch(specs: list[SeasonSpec], pre: PreSeason | None = None, horizon: 
         n_pre = (start - pre_start).days
         if n_pre < 7:
             raise ValueError("pre-season must be at least 7 days (for the 7-day history)")
-        p_all, e_all = _daily_on_range(s.weather, pre_start, n_pre + L + N_LEADS)
+        p_all, e_all = _daily_on_range(s.weather, pre_start, n_pre + L + N_FC)
         core = slice(n_pre, n_pre + L)
         if np.isnan(p_all[: n_pre + L]).any() or np.isnan(e_all[: n_pre + L]).any():
             raise ValueError(f"missing weather for {crop.key} {s.year} ({s.meta})")
@@ -241,10 +262,22 @@ def build_batch(specs: list[SeasonSpec], pre: PreSeason | None = None, horizon: 
         p7[b, :L] = cs[absi] - cs[absi - 7]
         e7[b, :L] = ce[absi] - ce[absi - 7]
         p_future = np.nan_to_num(p_all, nan=0.0)
-        for j in range(N_LEADS):
+        for j in range(N_FC):
             fut[b, :L, j] = p_future[absi + j]
+        ck = (id(s.weather), s.year)
+        if ck not in clim_cache:
+            clim_cache[ck] = _doy_climatology(s.weather, s.year)
+        cp, ce_ = clim_cache[ck]
+        days = np.datetime64(start, "D") + np.arange(L + N_FC)
+        doy = (days - days.astype("datetime64[Y]")).astype(int)
+        clim_p[b, : L + N_FC] = cp[doy]
+        clim_e[b, : L + N_FC] = ce_[doy]
         if s.forecast is not None:
-            fc[b, :L] = s.forecast[:L]
+            w = min(s.forecast.shape[1], N_FC)
+            fc[b, :L, :w] = s.forecast[:L, :w]
+            # leads beyond the available forecast (e.g. archived Previous Runs = 7 days): climatology
+            for j in range(w, N_FC):
+                fc[b, :L, j] = clim_p[b, j : j + L]
         length[b] = L
         own_etc = float((kc[b, :L] * et0[b, :L]).sum())
         est = s.etc_season_est
@@ -270,6 +303,8 @@ def build_batch(specs: list[SeasonSpec], pre: PreSeason | None = None, horizon: 
         budget=np.array([s.budget for s in specs], dtype=np.float64),
         etc_season_est=etc_est,
         kc_rem=kc_rem,
+        clim_p=clim_p,
+        clim_e=clim_e,
         dev_start=dev_start,
         late_start=late_start,
         start_dates=starts,
@@ -300,7 +335,8 @@ def observation(
     et0_7 = batch.et0_hist7[r, t_arr]
     f = batch.forecast[r, t_arr]
     f3 = f[:, :3].sum(axis=1)
-    f7 = f.sum(axis=1)
+    f7 = f[:, :N_LEADS].sum(axis=1)
+    f8_14 = f[:, N_LEADS:N_FC].sum(axis=1)
     budget = batch.budget[r]
     p_tab = batch.p_tab[r]
     raw = adjusted_p(p_tab, kc * et0_7 / 7.0) * taw
@@ -324,6 +360,7 @@ def observation(
             f[:, 1] / cfg["forecast_day_scale_mm"],
             etc_rem / cfg["etc_scale_mm"],
             np.clip(budget_left / np.maximum(etc_rem, 10.0), 0.0, 3.0),
+            f8_14 / cfg["forecast_scale_mm"],
         ],
         axis=1,
     )

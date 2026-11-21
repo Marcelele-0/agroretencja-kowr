@@ -48,6 +48,7 @@ from .data import (
 from .forecast import align_archived_forecast, climatology_forecast, noisy_forecast
 from .policy import EnsemblePolicy, NumpyPolicy, load_policy
 from .simulator import (
+    N_FC,
     N_LEADS,
     SeasonBatch,
     SeasonSpec,
@@ -240,7 +241,7 @@ def _season_spec(
 ) -> SeasonSpec:
     """Weather for 1 March .. season end + 7: observed before ``date``, assumed afterwards."""
     pre_start = dt.date(year, 3, 1)
-    end = crop.season_end(year) + dt.timedelta(days=N_LEADS)
+    end = crop.season_end(year) + dt.timedelta(days=N_FC)
     dates = np.datetime64(pre_start, "D") + np.arange((end - pre_start).days + 1)
     clim_p, clim_e = _weather_climatology(obs, dates, year)
     p, e = clim_p.copy(), clim_e.copy()
@@ -264,10 +265,11 @@ def _forecast_rows(batch: SeasonBatch, t_date: int, issued: np.ndarray, past_rng
     """Fill batch.forecast: synthetic for past days, issued forecast (shifted) for plan days."""
     batch.forecast = noisy_forecast(batch.fut, past_rng)
     L = int(batch.length[0])
+    width = batch.forecast.shape[2]
     for k in range(min(N_LEADS + 1, L - t_date)):
-        row = issued[k : k + N_LEADS]
-        if len(row) < N_LEADS:
-            row = np.concatenate([row, np.zeros(N_LEADS - len(row))])
+        row = issued[k : k + width]
+        if len(row) < width:
+            row = np.concatenate([row, np.zeros(width - len(row))])
         batch.forecast[0, t_date + k] = row
 
 
