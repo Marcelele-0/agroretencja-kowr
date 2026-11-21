@@ -1,0 +1,23 @@
+# IUNG-PIB soil drought-susceptibility categories (layer Susza:katgl_landuse2024).
+# TAW ranges come from the IUNG category definitions; the representative values are an
+# assumption (mid-range, open-ended classes extended by ~18 mm). DO WERYFIKACJI Z MENTOREM.
+source: "IUNG-PIB, System Monitoringu Suszy Rolniczej - kategorie podatnosci gleb na susze (Doroszewski et al. 2012)"
+
+categories:
+  1: {label: "I - gleby bardzo podatne na susze", taw_range_mm: [null, 127.5], taw_mm: 110}
+  2: {label: "II - gleby podatne na susze", taw_range_mm: [127.5, 170.0], taw_mm: 150}
+  3: {label: "III - gleby srednio podatne na susze", taw_range_mm: [170.0, 202.5], taw_mm: 185}
+  4: {label: "IV - gleby malo podatne na susze", taw_range_mm: [202.5, null], taw_mm: 220}
+
+# Codes that are not arable soil categories: the module returns a message, no recommendation.
+non_arable:
+  5: "Gleby organiczne - model bilansu wodnego dla gleb mineralnych nie ma zastosowania"
+  11: "Las - to nie jest grunt orny"
+  12: "Woda - to nie jest grunt orny"
+  13: "Zabudowa - to nie jest grunt orny"
+  14: "Komunikacja lub nieuzytki - to nie jest grunt orny"
+  19: "Teren niesklasyfikowany - brak kategorii gleby"
+  99: "Teren niesklasyfikowany - brak kategorii gleby"
+no_data:
+  0: "Brak danych glebowych (punkt poza Polska lub poza zasiegiem warstwy IUNG)"
+  255: "Brak danych glebowych (punkt poza Polska lub poza zasiegiem warstwy IUNG)"

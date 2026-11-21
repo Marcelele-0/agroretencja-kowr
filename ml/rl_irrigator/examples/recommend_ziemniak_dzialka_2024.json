@@ -1,0 +1,821 @@
+{
+ "request": {
+  "method": "POST",
+  "path": "/rl/recommend",
+  "body": {
+   "parcel_id": "302111_5.0015.72",
+   "crop": "ziemniak",
+   "date": "2024-07-02",
+   "budget_mm": 120,
+   "include_history": true
+  }
+ },
+ "status_code": 200,
+ "response": {
+  "module": "kowr_rl",
+  "version": "0.1.0",
+  "input": {
+   "lat": null,
+   "lon": null,
+   "parcel_id": "302111_5.0015.72",
+   "crop": "ziemniak",
+   "date": "2024-07-02",
+   "budget_mm": 120.0,
+   "budget_used_mm": 0.0,
+   "policy": "default"
+  },
+  "limitations": [
+   "Model bilansu jest jednowarstwowy (FAO-56 'wiadro'): nie uwzglednia podsiaku wod gruntowych, splywu powierzchniowego ani drenazu.",
+   "Pogoda pochodzi z reanalizy i modelu ECMWF na siatce ok. 9-25 km, a nie z pomiaru na dzialce; lokalne burze moga sie roznic.",
+   "Pojemnosc wodna gleby (TAW) to wartosc reprezentatywna dla kategorii IUNG-PIB, a nie pomiar na dzialce; nie zalezy od glebokosci korzeni uprawy.",
+   "Parametry upraw (Kc, p, Ky, terminy siewu i dlugosci faz) sa z FAO-56/FAO-33 i wymagaja weryfikacji z ekspertem dla warunkow Polski.",
+   "Plon wzgledny wg FAO-33 to wskaznik straty z niedoboru wody, a nie prognoza plonu w t/ha (nie uwzglednia nawozenia, chorob, odmiany).",
+   "Nawadnianie jest ostatnim krokiem po dzialaniach retencyjnych i agrotechnicznych - ta rekomendacja ich nie zastepuje."
+  ],
+  "location_parcel": {
+   "parcel_id": "302111_5.0015.72",
+   "teryt": "302111_5.0015.72",
+   "centroid": [
+    52.598110813149454,
+    16.996906772371467
+   ]
+  },
+  "status": "ok",
+  "message": "Nawadniaj dzis: 10 mm - zapas wody 53% TAW jest ponizej progu stresu (67% TAW), prognoza opadu na 3 dni: 5 mm. Plan na kolejne dni (warunkowy, zalezy od opadu): 2024-07-03: 10 mm, 2024-07-04: 10 mm, 2024-07-05: 10 mm, 2024-07-07: 10 mm.",
+  "location": {
+   "lat": 52.59811,
+   "lon": 16.99691,
+   "iung_code": 1,
+   "soil_category": "I",
+   "soil_label": "I - gleby bardzo podatne na susze",
+   "taw_mm": 110.0
+  },
+  "crop": {
+   "key": "ziemniak",
+   "label": "Ziemniak (sredniopozny)",
+   "season_start": "2024-04-20",
+   "season_end": "2024-09-11",
+   "params": {
+    "kc_ini": 0.5,
+    "kc_mid": 1.15,
+    "kc_end": 0.75,
+    "p": 0.35,
+    "ky": 1.1
+   },
+   "day_of_season": 74,
+   "season_length": 145,
+   "stage": "mid",
+   "stage_label": "srodkowa (pelnia wzrostu, kwitnienie)",
+   "kc": 1.15
+  },
+  "policy": {
+   "used": "rl",
+   "label": "Agent RL (MaskablePPO)",
+   "default": "rl",
+   "rl_status": "domyslny",
+   "rl_weights": "ppo_irrigator_weights.npz"
+  },
+  "recommendation": {
+   "action_now": "Nawadniaj dzis: 10 mm",
+   "dose_today_mm": 10.0,
+   "total_7d_mm": 50.0,
+   "plan_7d": [
+    {
+     "day": 0,
+     "dose_mm": 10.0,
+     "precip_assumed_mm": 1.5,
+     "et0_assumed_mm": 4.8,
+     "storage_pct_taw_start": 52.7,
+     "stress_expected": true,
+     "date": "2024-07-02"
+    },
+    {
+     "day": 1,
+     "dose_mm": 10.0,
+     "precip_assumed_mm": 0.6,
+     "et0_assumed_mm": 4.8,
+     "storage_pct_taw_start": 59.2,
+     "stress_expected": true,
+     "date": "2024-07-03"
+    },
+    {
+     "day": 2,
+     "dose_mm": 10.0,
+     "precip_assumed_mm": 3.0,
+     "et0_assumed_mm": 4.8,
+     "storage_pct_taw_start": 64.5,
+     "stress_expected": true,
+     "date": "2024-07-04"
+    },
+    {
+     "day": 3,
+     "dose_mm": 10.0,
+     "precip_assumed_mm": 0.6,
+     "et0_assumed_mm": 4.8,
+     "storage_pct_taw_start": 71.5,
+     "stress_expected": false,
+     "date": "2024-07-05"
+    },
+    {
+     "day": 4,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 0.3,
+     "et0_assumed_mm": 4.8,
+     "storage_pct_taw_start": 76.1,
+     "stress_expected": false,
+     "date": "2024-07-06"
+    },
+    {
+     "day": 5,
+     "dose_mm": 10.0,
+     "precip_assumed_mm": 1.4,
+     "et0_assumed_mm": 4.8,
+     "storage_pct_taw_start": 71.4,
+     "stress_expected": false,
+     "date": "2024-07-07"
+    },
+    {
+     "day": 6,
+     "dose_mm": 0.0,
+     "precip_assumed_mm": 0.0,
+     "et0_assumed_mm": 4.8,
+     "storage_pct_taw_start": 76.8,
+     "stress_expected": false,
+     "date": "2024-07-08"
+    }
+   ],
+   "window": [
+    "2024-07-02",
+    "2024-07-03",
+    "2024-07-04",
+    "2024-07-05",
+    "2024-07-07"
+   ],
+   "scenarios_7d_mm": {
+    "bez_opadu": 60.0,
+    "wg_prognozy": 50.0,
+    "opad_x1_5": 40.0
+   },
+   "alternative": {
+    "policy": "fao_rule",
+    "label": "Regula FAO-56 (Dr > RAW)",
+    "dose_today_mm": 30.0,
+    "total_7d_mm": 60.0
+   }
+  },
+  "rationale": {
+   "soil_water_storage_pct_taw": 52.7,
+   "depletion_mm": 52.0,
+   "taw_mm": 110.0,
+   "stress_threshold_storage_pct_taw": 66.9,
+   "raw_mm": 36.4,
+   "days_to_stress_without_rain": 0.0,
+   "etc_estimate_mm_per_day": 5.47,
+   "precip_last7_mm": 27.4,
+   "et0_last7_mm": 33.3,
+   "forecast_precip_3d_mm": 5.1,
+   "forecast_precip_7d_mm": 7.4,
+   "budget_mm": 120.0,
+   "budget_used_mm": 0.0,
+   "budget_left_mm": 120.0,
+   "irrigation_before_date_mm": 0.0,
+   "policy_action_probabilities": {
+    "0_mm": 0.0,
+    "10_mm": 1.0,
+    "20_mm": 0.0,
+    "30_mm": 0.0
+   }
+  },
+  "forecast_mode": "archived_ecmwf",
+  "uncertainty": [
+   "Suma dawek na 7 dni: 60 mm gdyby nie padalo, 50 mm wg prognozy, 40 mm przy opadzie 1,5 x prognoza.",
+   "Prognoza: archiwalna prognoza ECMWF wydana dzien przed data analizy (Open-Meteo Previous Runs).",
+   "Przyjeto brak nawadniania od poczatku sezonu do daty analizy (budzet zuzyty = 0).",
+   "Pewnosc agenta RL dla dzisiejszej decyzji (prawdopodobienstwa akcji): {'0_mm': 0.0, '10_mm': 1.0, '20_mm': 0.0, '30_mm': 0.0}."
+  ],
+  "sources": [
+   {
+    "name": "GUGiK ULDK GetParcelById",
+    "url": "https://uldk.gugik.gov.pl/?request=GetParcelById&id=302111_5.0015.72&result=geom_wkt%2Cteryt&srid=4326",
+    "retrieved_at": "2026-11-21T13:49:50+00:00",
+    "mode": "cache",
+    "license": "GUGiK ULDK, dane publiczne (ustawa Prawo geodezyjne i kartograficzne)",
+    "detail": "TERYT 302111_5.0015.72"
+   },
+   {
+    "name": "IUNG-PIB WMS Susza:katgl_landuse2024 (kategorie podatnosci gleb na susze)",
+    "url": "https://sgeo.iung.pl/geoserver/Susza/wms?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=Susza%3Akatgl_landuse2024&query_layers=Susza%3Akatgl_landuse2024&info_format=application%2Fjson&srs=EPSG%3A4326&bbox=16.995907%2C52.597111%2C16.997907%2C52.599111&width=101&height=101&x=50&y=50&styles=",
+    "retrieved_at": "2026-11-21T13:49:51+00:00",
+    "mode": "cache",
+    "license": "IUNG-PIB, Mapa podatnosci gleb na susze (katgl_landuse2024), publiczna usluga WMS",
+    "detail": "punkt 52.59811N 16.99691E"
+   },
+   {
+    "name": "Open-Meteo Historical Weather API (best_match: ERA5/ERA5-Land/ECMWF IFS)",
+    "url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.5981&longitude=16.9969&start_date=2016-01-01&end_date=2026-11-20&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+    "retrieved_at": "2026-11-21T13:49:51+00:00",
+    "mode": "cache",
+    "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
+    "detail": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-20; punkt siatki 52.619N 16.959E"
+   },
+   {
+    "name": "Open-Meteo Previous Runs API (ecmwf_ifs025)",
+    "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.5981&longitude=16.9969&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-07-02&end_date=2024-07-08&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+    "retrieved_at": "2026-11-21T13:49:51+00:00",
+    "mode": "cache",
+    "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
+    "detail": "archiwalne prognozy opadu, wyprzedzenie 1-7 dni, 2024-07-02..2024-07-08"
+   }
+  ],
+  "timing_s": 0.395,
+  "history": [
+   {
+    "strategy": "none",
+    "label": "Bez nawadniania",
+    "avg_yield_rel": 0.6464,
+    "avg_yield_loss_pct": 35.36,
+    "worst_yield_rel": 0.4269,
+    "worst_year": 2019,
+    "avg_water_mm": 0.0,
+    "avg_deep_percolation_mm": 18.9,
+    "avg_stress_days": 77.8,
+    "yield_gain_pp_per_100mm": null,
+    "per_year": [
+     {
+      "year": 2017,
+      "yield_rel": 0.9827,
+      "water_mm": 0.0,
+      "dp_mm": 101.0
+     },
+     {
+      "year": 2018,
+      "yield_rel": 0.5304,
+      "water_mm": 0.0,
+      "dp_mm": 5.9
+     },
+     {
+      "year": 2019,
+      "yield_rel": 0.4269,
+      "water_mm": 0.0,
+      "dp_mm": 13.1
+     },
+     {
+      "year": 2020,
+      "yield_rel": 0.7261,
+      "water_mm": 0.0,
+      "dp_mm": 14.1
+     },
+     {
+      "year": 2021,
+      "yield_rel": 0.6777,
+      "water_mm": 0.0,
+      "dp_mm": 41.2
+     },
+     {
+      "year": 2022,
+      "yield_rel": 0.4817,
+      "water_mm": 0.0,
+      "dp_mm": 2.6
+     },
+     {
+      "year": 2023,
+      "yield_rel": 0.5751,
+      "water_mm": 0.0,
+      "dp_mm": 8.9
+     },
+     {
+      "year": 2024,
+      "yield_rel": 0.632,
+      "water_mm": 0.0,
+      "dp_mm": 1.8
+     },
+     {
+      "year": 2025,
+      "yield_rel": 0.7172,
+      "water_mm": 0.0,
+      "dp_mm": 0.0
+     },
+     {
+      "year": 2026,
+      "yield_rel": 0.7144,
+      "water_mm": 0.0,
+      "dp_mm": 0.0
+     }
+    ]
+   },
+   {
+    "strategy": "calendar",
+    "label": "Kalendarz (stala dawka co N dni)",
+    "avg_yield_rel": 0.8124,
+    "avg_yield_loss_pct": 18.76,
+    "worst_yield_rel": 0.622,
+    "worst_year": 2019,
+    "avg_water_mm": 120.0,
+    "avg_deep_percolation_mm": 54.8,
+    "avg_stress_days": 56.6,
+    "yield_gain_pp_per_100mm": 13.84,
+    "per_year": [
+     {
+      "year": 2017,
+      "yield_rel": 0.9983,
+      "water_mm": 120.0,
+      "dp_mm": 210.6
+     },
+     {
+      "year": 2018,
+      "yield_rel": 0.698,
+      "water_mm": 120.0,
+      "dp_mm": 39.6
+     },
+     {
+      "year": 2019,
+      "yield_rel": 0.622,
+      "water_mm": 120.0,
+      "dp_mm": 34.3
+     },
+     {
+      "year": 2020,
+      "yield_rel": 0.8415,
+      "water_mm": 120.0,
+      "dp_mm": 79.1
+     },
+     {
+      "year": 2021,
+      "yield_rel": 0.8614,
+      "water_mm": 120.0,
+      "dp_mm": 74.3
+     },
+     {
+      "year": 2022,
+      "yield_rel": 0.7041,
+      "water_mm": 120.0,
+      "dp_mm": 2.6
+     },
+     {
+      "year": 2023,
+      "yield_rel": 0.8005,
+      "water_mm": 120.0,
+      "dp_mm": 13.5
+     },
+     {
+      "year": 2024,
+      "yield_rel": 0.8438,
+      "water_mm": 120.0,
+      "dp_mm": 12.7
+     },
+     {
+      "year": 2025,
+      "yield_rel": 0.8738,
+      "water_mm": 120.0,
+      "dp_mm": 43.9
+     },
+     {
+      "year": 2026,
+      "yield_rel": 0.8811,
+      "water_mm": 120.0,
+      "dp_mm": 37.5
+     }
+    ]
+   },
+   {
+    "strategy": "fao_rule",
+    "label": "Regula FAO-56 (Dr > RAW)",
+    "avg_yield_rel": 0.8493,
+    "avg_yield_loss_pct": 15.07,
+    "worst_yield_rel": 0.6686,
+    "worst_year": 2019,
+    "avg_water_mm": 114.0,
+    "avg_deep_percolation_mm": 30.7,
+    "avg_stress_days": 44.7,
+    "yield_gain_pp_per_100mm": 17.8,
+    "per_year": [
+     {
+      "year": 2017,
+      "yield_rel": 0.9987,
+      "water_mm": 60.0,
+      "dp_mm": 147.2
+     },
+     {
+      "year": 2018,
+      "yield_rel": 0.7344,
+      "water_mm": 120.0,
+      "dp_mm": 22.6
+     },
+     {
+      "year": 2019,
+      "yield_rel": 0.6686,
+      "water_mm": 120.0,
+      "dp_mm": 13.1
+     },
+     {
+      "year": 2020,
+      "yield_rel": 0.9591,
+      "water_mm": 120.0,
+      "dp_mm": 14.1
+     },
+     {
+      "year": 2021,
+      "yield_rel": 0.8781,
+      "water_mm": 120.0,
+      "dp_mm": 67.2
+     },
+     {
+      "year": 2022,
+      "yield_rel": 0.6811,
+      "water_mm": 120.0,
+      "dp_mm": 17.5
+     },
+     {
+      "year": 2023,
+      "yield_rel": 0.8211,
+      "water_mm": 120.0,
+      "dp_mm": 8.9
+     },
+     {
+      "year": 2024,
+      "yield_rel": 0.8599,
+      "water_mm": 120.0,
+      "dp_mm": 3.5
+     },
+     {
+      "year": 2025,
+      "yield_rel": 0.9395,
+      "water_mm": 120.0,
+      "dp_mm": 12.6
+     },
+     {
+      "year": 2026,
+      "yield_rel": 0.9529,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     }
+    ]
+   },
+   {
+    "strategy": "fao_forecast",
+    "label": "Regula FAO-56 + prognoza opadu",
+    "avg_yield_rel": 0.8543,
+    "avg_yield_loss_pct": 14.57,
+    "worst_yield_rel": 0.6686,
+    "worst_year": 2019,
+    "avg_water_mm": 114.0,
+    "avg_deep_percolation_mm": 27.8,
+    "avg_stress_days": 44.7,
+    "yield_gain_pp_per_100mm": 18.24,
+    "per_year": [
+     {
+      "year": 2017,
+      "yield_rel": 0.9987,
+      "water_mm": 60.0,
+      "dp_mm": 147.2
+     },
+     {
+      "year": 2018,
+      "yield_rel": 0.7339,
+      "water_mm": 120.0,
+      "dp_mm": 22.8
+     },
+     {
+      "year": 2019,
+      "yield_rel": 0.6686,
+      "water_mm": 120.0,
+      "dp_mm": 13.1
+     },
+     {
+      "year": 2020,
+      "yield_rel": 0.959,
+      "water_mm": 120.0,
+      "dp_mm": 14.1
+     },
+     {
+      "year": 2021,
+      "yield_rel": 0.8781,
+      "water_mm": 120.0,
+      "dp_mm": 67.2
+     },
+     {
+      "year": 2022,
+      "yield_rel": 0.7089,
+      "water_mm": 120.0,
+      "dp_mm": 2.6
+     },
+     {
+      "year": 2023,
+      "yield_rel": 0.8211,
+      "water_mm": 120.0,
+      "dp_mm": 8.9
+     },
+     {
+      "year": 2024,
+      "yield_rel": 0.8624,
+      "water_mm": 120.0,
+      "dp_mm": 1.8
+     },
+     {
+      "year": 2025,
+      "yield_rel": 0.9605,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     },
+     {
+      "year": 2026,
+      "yield_rel": 0.9517,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     }
+    ]
+   },
+   {
+    "strategy": "fao_small",
+    "label": "Regula FAO-56, male dawki 10 mm + prognoza opadu",
+    "avg_yield_rel": 0.8559,
+    "avg_yield_loss_pct": 14.41,
+    "worst_yield_rel": 0.6686,
+    "worst_year": 2019,
+    "avg_water_mm": 111.0,
+    "avg_deep_percolation_mm": 23.9,
+    "avg_stress_days": 48.5,
+    "yield_gain_pp_per_100mm": 18.88,
+    "per_year": [
+     {
+      "year": 2017,
+      "yield_rel": 0.9967,
+      "water_mm": 30.0,
+      "dp_mm": 118.0
+     },
+     {
+      "year": 2018,
+      "yield_rel": 0.7334,
+      "water_mm": 120.0,
+      "dp_mm": 23.0
+     },
+     {
+      "year": 2019,
+      "yield_rel": 0.6686,
+      "water_mm": 120.0,
+      "dp_mm": 13.1
+     },
+     {
+      "year": 2020,
+      "yield_rel": 0.959,
+      "water_mm": 120.0,
+      "dp_mm": 14.1
+     },
+     {
+      "year": 2021,
+      "yield_rel": 0.898,
+      "water_mm": 120.0,
+      "dp_mm": 57.3
+     },
+     {
+      "year": 2022,
+      "yield_rel": 0.7088,
+      "water_mm": 120.0,
+      "dp_mm": 2.6
+     },
+     {
+      "year": 2023,
+      "yield_rel": 0.821,
+      "water_mm": 120.0,
+      "dp_mm": 8.9
+     },
+     {
+      "year": 2024,
+      "yield_rel": 0.8619,
+      "water_mm": 120.0,
+      "dp_mm": 1.8
+     },
+     {
+      "year": 2025,
+      "yield_rel": 0.96,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     },
+     {
+      "year": 2026,
+      "yield_rel": 0.952,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     }
+    ]
+   },
+   {
+    "strategy": "rl",
+    "label": "Agent RL (MaskablePPO)",
+    "avg_yield_rel": 0.8573,
+    "avg_yield_loss_pct": 14.27,
+    "worst_yield_rel": 0.6687,
+    "worst_year": 2019,
+    "avg_water_mm": 112.0,
+    "avg_deep_percolation_mm": 24.5,
+    "avg_stress_days": 44.7,
+    "yield_gain_pp_per_100mm": 18.83,
+    "per_year": [
+     {
+      "year": 2017,
+      "yield_rel": 0.9995,
+      "water_mm": 40.0,
+      "dp_mm": 126.9
+     },
+     {
+      "year": 2018,
+      "yield_rel": 0.7354,
+      "water_mm": 120.0,
+      "dp_mm": 22.0
+     },
+     {
+      "year": 2019,
+      "yield_rel": 0.6687,
+      "water_mm": 120.0,
+      "dp_mm": 13.1
+     },
+     {
+      "year": 2020,
+      "yield_rel": 0.9597,
+      "water_mm": 120.0,
+      "dp_mm": 14.1
+     },
+     {
+      "year": 2021,
+      "yield_rel": 0.9023,
+      "water_mm": 120.0,
+      "dp_mm": 55.5
+     },
+     {
+      "year": 2022,
+      "yield_rel": 0.7089,
+      "water_mm": 120.0,
+      "dp_mm": 2.6
+     },
+     {
+      "year": 2023,
+      "yield_rel": 0.8211,
+      "water_mm": 120.0,
+      "dp_mm": 8.9
+     },
+     {
+      "year": 2024,
+      "yield_rel": 0.8625,
+      "water_mm": 120.0,
+      "dp_mm": 1.8
+     },
+     {
+      "year": 2025,
+      "yield_rel": 0.9611,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     },
+     {
+      "year": 2026,
+      "yield_rel": 0.9535,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     }
+    ]
+   },
+   {
+    "strategy": "oracle",
+    "label": "Wyrocznia (znana pogoda, gorna granica)",
+    "avg_yield_rel": 0.8614,
+    "avg_yield_loss_pct": 13.86,
+    "worst_yield_rel": 0.6687,
+    "worst_year": 2019,
+    "avg_water_mm": 110.0,
+    "avg_deep_percolation_mm": 19.9,
+    "avg_stress_days": 40.0,
+    "yield_gain_pp_per_100mm": 19.55,
+    "per_year": [
+     {
+      "year": 2017,
+      "yield_rel": 0.998,
+      "water_mm": 20.0,
+      "dp_mm": 107.5
+     },
+     {
+      "year": 2018,
+      "yield_rel": 0.7478,
+      "water_mm": 120.0,
+      "dp_mm": 10.1
+     },
+     {
+      "year": 2019,
+      "yield_rel": 0.6687,
+      "water_mm": 120.0,
+      "dp_mm": 13.1
+     },
+     {
+      "year": 2020,
+      "yield_rel": 0.9601,
+      "water_mm": 120.0,
+      "dp_mm": 14.1
+     },
+     {
+      "year": 2021,
+      "yield_rel": 0.9297,
+      "water_mm": 120.0,
+      "dp_mm": 41.2
+     },
+     {
+      "year": 2022,
+      "yield_rel": 0.7091,
+      "water_mm": 120.0,
+      "dp_mm": 2.6
+     },
+     {
+      "year": 2023,
+      "yield_rel": 0.8212,
+      "water_mm": 120.0,
+      "dp_mm": 8.9
+     },
+     {
+      "year": 2024,
+      "yield_rel": 0.8632,
+      "water_mm": 120.0,
+      "dp_mm": 1.8
+     },
+     {
+      "year": 2025,
+      "yield_rel": 0.9619,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     },
+     {
+      "year": 2026,
+      "yield_rel": 0.9544,
+      "water_mm": 120.0,
+      "dp_mm": 0.0
+     }
+    ]
+   }
+  ],
+  "history_years": [
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "irrigation_advice": {
+   "action_now": "Nawadniaj dzis: 10 mm",
+   "recommended_mm": 10.0,
+   "rationale": "Nawadniaj dzis: 10 mm - zapas wody 53% TAW jest ponizej progu stresu (67% TAW), prognoza opadu na 3 dni: 5 mm. Plan na kolejne dni (warunkowy, zalezy od opadu): 2024-07-03: 10 mm, 2024-07-04: 10 mm, 2024-07-05: 10 mm, 2024-07-07: 10 mm.",
+   "forecast_mode": "archived_ecmwf",
+   "strategies_10y": [
+    {
+     "strategy_name": "Bez nawadniania",
+     "avg_yield_loss_pct": 35.36,
+     "avg_water_mm": 0.0,
+     "avg_deep_percolation_mm": 18.9,
+     "water_use_efficiency": 0.0
+    },
+    {
+     "strategy_name": "Kalendarz (stala dawka co N dni)",
+     "avg_yield_loss_pct": 18.76,
+     "avg_water_mm": 120.0,
+     "avg_deep_percolation_mm": 54.8,
+     "water_use_efficiency": 13.84
+    },
+    {
+     "strategy_name": "Regula FAO-56 (Dr > RAW)",
+     "avg_yield_loss_pct": 15.07,
+     "avg_water_mm": 114.0,
+     "avg_deep_percolation_mm": 30.7,
+     "water_use_efficiency": 17.8
+    },
+    {
+     "strategy_name": "Regula FAO-56 + prognoza opadu",
+     "avg_yield_loss_pct": 14.57,
+     "avg_water_mm": 114.0,
+     "avg_deep_percolation_mm": 27.8,
+     "water_use_efficiency": 18.24
+    },
+    {
+     "strategy_name": "Regula FAO-56, male dawki 10 mm + prognoza opadu",
+     "avg_yield_loss_pct": 14.41,
+     "avg_water_mm": 111.0,
+     "avg_deep_percolation_mm": 23.9,
+     "water_use_efficiency": 18.88
+    },
+    {
+     "strategy_name": "Agent RL (MaskablePPO)",
+     "avg_yield_loss_pct": 14.27,
+     "avg_water_mm": 112.0,
+     "avg_deep_percolation_mm": 24.5,
+     "water_use_efficiency": 18.83
+    },
+    {
+     "strategy_name": "Wyrocznia (znana pogoda, gorna granica)",
+     "avg_yield_loss_pct": 13.86,
+     "avg_water_mm": 110.0,
+     "avg_deep_percolation_mm": 19.9,
+     "water_use_efficiency": 19.55
+    }
+   ]
+  }
+ }
+}
