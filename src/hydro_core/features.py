@@ -430,6 +430,11 @@ def _ndmi_z(fx: FeatureContext) -> float | None:
     return fx.inputs.satellite.ndmi_anomaly_z
 
 
+@feature("ndmi_history_mean", group="satelita", unit="", label="NDMI działki w tym samym terminie poprzednich lat")
+def _ndmi_hist(fx: FeatureContext) -> float | None:
+    return fx.inputs.satellite.ndmi_history_mean
+
+
 @feature("s2_age_days", group="satelita", unit="dni", label="Wiek ostatniego bezchmurnego zdjęcia")
 def _s2_age(fx: FeatureContext) -> float | None:
     acq = fx.inputs.satellite.acquired

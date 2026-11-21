@@ -1,0 +1,122 @@
+{
+ "pl_49p16_22p54": {
+  "retrieved_at": "2026-11-21T21:56:53+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 34.2,
+  "soc_g_kg": 113.2,
+  "awc_mm_0_100": 165.1,
+  "estimated_category": "II"
+ },
+ "pl_49p80_19p10": {
+  "retrieved_at": "2026-11-21T21:57:09+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 27.6,
+  "soc_g_kg": 71.3,
+  "awc_mm_0_100": 171.1,
+  "estimated_category": "III"
+ },
+ "pl_49p74_20p44": {
+  "retrieved_at": "2026-11-21T21:57:26+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 26.5,
+  "soc_g_kg": 83.3,
+  "awc_mm_0_100": 160.1,
+  "estimated_category": "II"
+ },
+ "pl_49p74_21p20": {
+  "retrieved_at": "2026-11-21T21:57:44+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 21.8,
+  "soc_g_kg": 54.5,
+  "awc_mm_0_100": 168.9,
+  "estimated_category": "II"
+ },
+ "pl_49p74_22p66": {
+  "retrieved_at": "2026-11-21T21:58:01+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 21.6,
+  "soc_g_kg": 59.6,
+  "awc_mm_0_100": 168.9,
+  "estimated_category": "II"
+ },
+ "pl_50p50_17p00": {
+  "retrieved_at": "2026-11-21T21:58:19+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 21.8,
+  "soc_g_kg": 60.8,
+  "awc_mm_0_100": 169.6,
+  "estimated_category": "II"
+ },
+ "pl_50p44_18p34": {
+  "retrieved_at": "2026-11-21T21:58:38+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 40.6,
+  "soc_g_kg": 39.2,
+  "awc_mm_0_100": 142.4,
+  "estimated_category": "II"
+ },
+ "pl_50p50_19p80": {
+  "retrieved_at": "2026-11-21T21:58:58+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 36.7,
+  "soc_g_kg": 49.6,
+  "awc_mm_0_100": 149.3,
+  "estimated_category": "II"
+ },
+ "pl_50p44_21p14": {
+  "retrieved_at": "2026-11-21T21:59:15+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 41.2,
+  "soc_g_kg": 56.4,
+  "awc_mm_0_100": 137.3,
+  "estimated_category": "II"
+ },
+ "pl_50p56_21p84": {
+  "retrieved_at": "2026-11-21T21:59:36+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 60.9,
+  "soc_g_kg": 49.7,
+  "awc_mm_0_100": 101.7,
+  "estimated_category": "I"
+ },
+ "pl_50p44_22p60": {
+  "retrieved_at": "2026-11-21T21:59:58+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 45.3,
+  "soc_g_kg": 64.9,
+  "awc_mm_0_100": 136.6,
+  "estimated_category": "II"
+ },
+ "pl_50p50_24p00": {
+  "retrieved_at": "2026-11-21T22:00:17+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 22.7,
+  "soc_g_kg": 55.7,
+  "awc_mm_0_100": 163.9,
+  "estimated_category": "II"
+ },
+ "pl_51p20_15p60": {
+  "retrieved_at": "2026-11-21T22:00:36+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 36.4,
+  "soc_g_kg": 79.9,
+  "awc_mm_0_100": 154.4,
+  "estimated_category": "II"
+ },
+ "pl_51p20_17p70": {
+  "retrieved_at": "2026-11-21T22:00:55+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 70.6,
+  "soc_g_kg": 43.8,
+  "awc_mm_0_100": 87.9,
+  "estimated_category": "I"
+ },
+ "pl_51p20_19p10": {
+  "retrieved_at": "2026-11-21T22:01:27+00:00",
+  "url": "https://rest.isric.org/soilgrids/v2.0/properties/query",
+  "sand_pct": 67.9,
+  "soc_g_kg": 41.5,
+  "awc_mm_0_100": 95.8,
+  "estimated_category": "I"
+ }
+}

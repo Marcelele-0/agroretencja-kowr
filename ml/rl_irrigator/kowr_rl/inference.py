@@ -36,7 +36,7 @@ from .data import (
     fetch_parcel,
     fetch_previous_runs,
 )
-from .forecast import align_archived_forecast, climatology_forecast, noisy_forecast
+from .forecast import align_archived_forecast, noisy_forecast
 from .policy import EnsemblePolicy, NumpyPolicy, load_policy
 from .simulator import (
     N_LEADS,
