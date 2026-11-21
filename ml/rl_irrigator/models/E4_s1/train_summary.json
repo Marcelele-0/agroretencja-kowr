@@ -1,0 +1,6 @@
+{
+ "run": "E4_s1",
+ "train_seconds": 850.0,
+ "steps_per_s": 3529,
+ "best_val_reward": -0.11989485411205626
+}

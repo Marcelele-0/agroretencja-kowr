@@ -382,10 +382,10 @@ def recommend(
 
     if not in_season:
         hist = compare_strategies(lat, lon, crop, budget_mm, client=client, today=today, _prefetched=(code, obs, list(sources)))
-        when = "przed" if date < season_start else "po"
+        when = "przed sezonem" if date < season_start else "po sezonie"
         return finish(
             "out_of_season",
-            f"Data {date} jest {when} sezonem uprawy '{c.label_pl}' ({season_start} - {season_end}). "
+            f"Data {date} jest {when} uprawy '{c.label_pl}' ({season_start} - {season_end}). "
             "Brak rekomendacji dawek - ponizej porownanie strategii z ostatnich sezonow.",
             location=location,
             crop=crop_info,

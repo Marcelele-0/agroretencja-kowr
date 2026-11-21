@@ -198,7 +198,10 @@ def fig_seasons(cases: list[dict[str, Any]], path: Path) -> None:
         for s in ("fao_rule", "rl"):
             a0.plot(days, 100 * case[s]["dr"] / taw, color=COLORS[s], linewidth=2, label=LABELS[s])
         a0.set_ylim(100, 0)  # depletion grows downwards: drier = lower
-        a0.set_title(case["title"], loc="left", fontsize=9.5, color=INK)
+        import textwrap
+
+        title = "\n".join(textwrap.fill(part, width=44) for part in case["title"].split("\n"))
+        a0.set_title(title, loc="left", fontsize=8.5, color=INK)
         a1.bar(days, case["precip"], width=0.9, color=BASE, label="opad")
         for s, off in (("fao_rule", -0.2), ("rl", 0.2)):
             irr = case[s]["irr"]
@@ -236,7 +239,7 @@ def fig_seasons(cases: list[dict[str, Any]], path: Path) -> None:
 # ======================================================================================
 # Main evaluation
 # ======================================================================================
-def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = None) -> dict[str, Any]:
+def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = None, split: str = "test") -> dict[str, Any]:
     import pandas as pd
 
     from .dataset import factorial_specs, load_points
@@ -244,7 +247,8 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
     cfg = load_rl_config()
     ev = cfg["evaluation"]
     reps = reps or ev["bootstrap_reps"]
-    years = cfg["split"]["test_years"]
+    years = cfg["split"][f"{split}_years"]
+    tag = "" if split == "test" else f"_{split}"
     budgets = [float(b) for b in ev["budget_levels_mm"]]
     crops = cfg["episode"]["crops"]
     soils = cfg["episode"]["soil_categories"]
@@ -314,8 +318,12 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
     for label, sub in [("wszystkie budzety", diff)] + [(f"{b:.0f} mm", diff[diff.budget == b]) for b in budgets]:
         dy = cluster_bootstrap(sub, "yield_rel", reps, rng)
         dw = cluster_bootstrap(sub, "water_mm", reps, rng)
-        pass_a = dy[0] >= -rule["max_yield_drop_pp"] / 100 and dw[0] < 0
-        pass_b = dy[0] > 0
+        # (a) yield not worse than FAO by more than 1 pp (mean) AND significantly less water
+        #     (whole 95% CI of the water difference below 0);
+        # (b) significantly higher yield at the same budget (whole 95% CI of dYield above 0)
+        #     without using more water on average (otherwise it is a water-for-yield trade, not a win).
+        pass_a = dy[0] >= -rule["max_yield_drop_pp"] / 100 and dw[2] < 0
+        pass_b = dy[1] > 0 and dw[0] <= 0
         decision_rows.append({"scope": label, "d_yield": dy, "d_water": dw, "pass_less_water": pass_a, "pass_higher_yield": pass_b, "pass": pass_a or pass_b})
     ready = all(r["pass"] for r in decision_rows)
     vs_ff = {"d_yield": cluster_bootstrap(diff_ff, "yield_rel", reps, rng), "d_water": cluster_bootstrap(diff_ff, "water_mm", reps, rng)}
@@ -371,9 +379,9 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
 
     figdir = REPORTS_DIR / "figures"
     figdir.mkdir(parents=True, exist_ok=True)
-    fig_strategies(summary, order, figdir / "strategies_test.png")
-    fig_budget(per_budget, [s for s in order if s not in ("calendar",)], budgets, figdir / "budget_curves_test.png")
-    fig_seasons(cases, figdir / "example_seasons.png")
+    fig_strategies(summary, order, figdir / f"strategies{tag or '_test'}.png")
+    fig_budget(per_budget, [s for s in order if s not in ("calendar",)], budgets, figdir / f"budget_curves{tag or '_test'}.png")
+    fig_seasons(cases, figdir / f"example_seasons{tag}.png")
 
     out = {
         "generated_at": dt.datetime.now().isoformat(timespec="seconds"),
@@ -394,7 +402,8 @@ def run_evaluation(runs: list[str], *, oracle: bool = True, reps: int | None = N
         "bootstrap_reps": reps,
     }
     ARTIFACT_VALIDATION_DIR.mkdir(parents=True, exist_ok=True)
-    (ARTIFACT_VALIDATION_DIR / "rl_eval.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+    (ARTIFACT_VALIDATION_DIR / "rl_eval.json" if not tag else REPORTS_DIR / f"rl_eval{tag}.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+    out["tag"] = tag
     write_report(out, order)
     return out
 
@@ -409,8 +418,13 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
     crops = load_crops()
     soils = load_soils()["categories"]
     L: list[str] = []
-    L.append("# Ewaluacja agenta RL nawadniania (lata testowe 2025-2026)\n")
-    L.append(f"Wygenerowano: {out['generated_at']} przez `kowr_rl.evaluate`. Liczby pochodza z `artifacts/validation/rl_eval.json`.\n")
+    tag = out.get("tag", "")
+    fig_s, fig_b, fig_e = f"strategies{tag or '_test'}.png", f"budget_curves{tag or '_test'}.png", f"example_seasons{tag}.png"
+    if tag:
+        L.append(f"# PROBA na roku walidacyjnym ({', '.join(map(str, out['test_years']))}) - nie jest to wynik testowy\n")
+    else:
+        L.append("# Ewaluacja agenta RL nawadniania (lata testowe 2025-2026)\n")
+    L.append(f"Wygenerowano: {out['generated_at']} przez `kowr_rl.evaluate`. Liczby pochodza z `{'artifacts/validation/rl_eval.json' if not tag else f'reports/rl_eval{tag}.json'}`.\n")
     L.append(
         f"**Uklad:** 50 punktow rolnych x lata {', '.join(map(str, out['test_years']))} x 4 uprawy x 4 kategorie gleby IUNG x 4 budzety wody "
         f"= {out['n_seasons_per_strategy']} sezonow na strategie. Kazda strategia dostaje te same dane: pogode z archiwum Open-Meteo i "
@@ -422,7 +436,10 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
     L.append(f"## Werdykt: agent RL {verdict}\n")
     L.append(
         "Kryterium z planu: na tescie plon nie gorszy od reguly FAO o wiecej niz 1 pkt proc. przy mniejszym zuzyciu wody "
-        "albo wyzszy plon przy tym samym budzecie. Sprawdzane lacznie i osobno dla kazdego poziomu budzetu.\n"
+        "albo wyzszy plon przy tym samym budzecie. Sprawdzane lacznie i osobno dla kazdego poziomu budzetu. "
+        "Zaostrzenie ustalone przed uruchomieniem testu: 'mniej wody' i 'wyzszy plon' musza byc istotne, czyli caly 95% przedzial "
+        "bootstrap roznicy musi lezec po wlasciwej stronie zera. Sama srednia nie wystarcza. 'Wyzszy plon przy tym samym budzecie' "
+        "liczy sie tylko wtedy, gdy agent nie zuzywa srednio wiecej wody niz FAO. Inaczej jest to wymiana wody na plon, a nie przewaga.\n"
     )
     L.append("| Zakres | Delta plonu RL - FAO [pkt proc.] | Delta wody RL - FAO [mm] | Mniej wody, plon >= -1 pkt | Wyzszy plon | Wynik |")
     L.append("|---|---|---|---|---|---|")
@@ -439,7 +456,7 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
     L.append(f"Domyslna strategia w module: **`{out['recommended_default_policy']}`** (`config/rl.yaml`, `default_policy`).\n")
 
     L.append("## Wyniki zbiorcze\n")
-    L.append("![Strategie](figures/strategies_test.png)\n")
+    L.append(f"![Strategie](figures/{fig_s})\n")
     L.append("| Strategia | Plon sredni [95% CI] | Plon min | Plon 5. percentyl | Woda [mm] | Przyrost plonu na 100 mm [pkt proc.] | Dni stresu | Perkolacja [mm] |")
     L.append("|---|---|---|---|---|---|---|---|")
     for s in order:
@@ -462,7 +479,7 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
     )
 
     L.append("## Wedlug budzetu wody\n")
-    L.append("![Budzet](figures/budget_curves_test.png)\n")
+    L.append(f"![Budzet](figures/{fig_b})\n")
     budgets = list(next(iter(out["per_budget"].values())).keys())
     L.append("| Strategia | " + " | ".join(f"{float(b):.0f} mm: plon / woda" for b in budgets) + " |")
     L.append("|---|" + "---|" * len(budgets))
@@ -478,7 +495,7 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
             f"{100 * r['d_yield']:+.2f} | {r['d_water']:+.1f} | {100 * r['rl_worse_1pp_share']:.0f}% |"
         )
     L.append("\n## Przykladowe sezony: agent RL vs regula FAO\n")
-    L.append("![Sezony](figures/example_seasons.png)\n")
+    L.append(f"![Sezony](figures/{fig_e})\n")
     L.append(
         "Gorny panel: niedobor wody w strefie korzeniowej (% TAW, wyzej = wilgotniej) i prog stresu RAW. Srodkowy: opad (szary) i dawki obu strategii. "
         "Dolny: woda skumulowana z plonem koncowym. Jeden z przykladow to celowo **najgorszy** przypadek agenta.\n"
@@ -491,7 +508,7 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
         "- Parametry upraw i TAW sa do weryfikacji z mentorem. Pogoda pochodzi z reanalizy na siatce ok. 9-25 km.\n"
         "- Brak podsiaku wod gruntowych i splywu powierzchniowego w bilansie (model jednowarstwowy).\n"
     )
-    (REPORTS_DIR / "evaluation.md").write_text("\n".join(L) + "\n", encoding="utf-8")
+    (REPORTS_DIR / f"evaluation{out['tag']}.md").write_text("\n".join(L) + "\n", encoding="utf-8")
 
 
 def main() -> None:
@@ -499,8 +516,9 @@ def main() -> None:
     ap.add_argument("--runs", nargs="+", required=True)
     ap.add_argument("--no-oracle", action="store_true")
     ap.add_argument("--reps", type=int, default=None)
+    ap.add_argument("--split", choices=["test", "val"], default="test", help="val = dry run on the validation year (no test leakage)")
     args = ap.parse_args()
-    out = run_evaluation(args.runs, oracle=not args.no_oracle, reps=args.reps)
+    out = run_evaluation(args.runs, oracle=not args.no_oracle, reps=args.reps, split=args.split)
     print(json.dumps({k: out[k] for k in ("deployed_run", "ready", "recommended_default_policy")}))
     for r in out["rl_vs_fao"]:
         print(r["scope"], "dY=%+.4f [%+.4f, %+.4f]" % r["d_yield"], "dW=%+.1f [%+.1f, %+.1f]" % r["d_water"], "OK" if r["pass"] else "NO")

@@ -153,3 +153,9 @@ ml/rl_irrigator/
 Uzupełniam na bieżąco: data, decyzja, powód.
 
 - 2026-11-21: decyzje D1–D6 zaakceptowane. D2 zmieniona: zamiast osobnego projektu uv zależności trafiają do głównego `pyproject.toml`.
+- 2026-11-21 (M1): punkty treningowe wybrane z 83 węzłów rolnych przez farthest-point sampling do 50 punktów (wszystkie 16 województw), bo zwykłe obcięcie listy dawało tylko południe Polski. Do treningu pobrane tylko P i ET0, żeby oszczędzić limit Open-Meteo. Domyślny model archiwum to `best_match`, bo `era5_land` zwracał null dla sum dobowych.
+- 2026-11-21 (M1): model prognozy to ECMWF IFS 0,25°, jedyny ze spójnymi wyprzedzeniami 1–7 dni w Previous Runs API (ICON nie ma 7. dnia, a GFS zaniża opad od 5. dnia). Archiwalne prognozy istnieją od 2024, więc walidacja (2024) i test (2025–2026) używają prawdziwych prognoz.
+- 2026-11-21 (M2): ETa ograniczone do dostępnej wody zamiast obcinania Dr do TAW, żeby bilans masy zamykał się dokładnie. Kc end kukurydzy 0,60 (zbiór przy wysokiej wilgotności ziarna) zamiast 0,35.
+- 2026-11-21 (M3/E0): szum prognozy skalibrowany na ECMWF 2024, zależny od wyprzedzenia, zamiast lognormal σ = 0,4 z promptu, który był zbyt optymistyczny.
+- 2026-11-21 (M4): własny, deterministyczny callback walidacyjny na całym zbiorze 2024 (3200 sezonów) zamiast `EvalCallback`. Opcjonalny start PPO od klonu reguły FAO (behavior cloning).
+- 2026-11-21 (M5, ustalone PRZED uruchomieniem testu): kryterium gotowości zaostrzone o istotność. „Mniej wody” oznacza, że cały 95% CI różnicy wody RL − FAO jest < 0 (przy średniej różnicy plonu ≥ −1 pkt proc.), a „wyższy plon” oznacza, że cały 95% CI różnicy plonu jest > 0 **i** średnio nie zużywa więcej wody niż FAO. To ostatnie dodałem po próbie na walidacji, gdzie E1 „wygrywał” plonem tylko dlatego, że przy dużym budżecie zużywał więcej wody niż FAO.
