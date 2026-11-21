@@ -88,12 +88,15 @@ def assumed_batch(
     use_forecast: bool = True,
     precip_issued: np.ndarray | None = None,
     et0_issued: np.ndarray | None = None,
+    keep_today_forecast: bool = False,
 ) -> SeasonBatch:
     """Copy of ``batch`` where days t0 .. t0+h-1 carry the weather assumed on the morning of t0.
 
     ``precip_issued`` / ``et0_issued``: (B, n) forecast issued on t0 for days t0 .. t0+n-1 (NaN = not
     available). Default precipitation: ``batch.forecast[:, t0]`` (the forecast the policy sees on t0).
     ``use_forecast=False`` gives the no-forecast plan (climatology for every day).
+    ``keep_today_forecast``: today's decision sees the forecast really issued today
+    (``batch.forecast[:, t0]``) even when the assumed weather is an ensemble member.
     """
     b = batch.subset(np.arange(batch.size))
     T = b.horizon
@@ -123,6 +126,8 @@ def assumed_batch(
     # forecast window seen on plan day k = the assumed weather shifted by k
     for k in range(hh):
         b.forecast[:, t0 + k] = ap[:, k : k + N_FC]
+    if keep_today_forecast:
+        b.forecast[:, t0] = batch.forecast[:, t0]
     return b
 
 
