@@ -1,0 +1,1727 @@
+{
+ "description": "Pre-fetched dataset for training/evaluating the KOWR RL irrigation agent.",
+ "fetch_started_utc": "2026-11-21T12:40:22+00:00",
+ "fetch_finished_utc": "2026-11-21T12:48:38+00:00",
+ "script": "ml/rl_irrigator/scripts/fetch_training_data.py",
+ "split": {
+  "train": "2016-2023",
+  "validation": "2024",
+  "test": "2025-2026"
+ },
+ "sources": {
+  "weather_archive": {
+   "url": "https://archive-api.open-meteo.com/v1/archive",
+   "variables": [
+    "precipitation_sum",
+    "et0_fao_evapotranspiration"
+   ],
+   "model": "best_match (Open-Meteo default reanalysis blend)",
+   "date_range": [
+    "2016-01-01",
+    "2026-11-16"
+   ],
+   "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use"
+  },
+  "archived_forecasts": {
+   "url": "https://previous-runs-api.open-meteo.com/v1/forecast",
+   "model": "ecmwf_ifs025",
+   "variables": [
+    "precipitation_previous_day1",
+    "precipitation_previous_day2",
+    "precipitation_previous_day3",
+    "precipitation_previous_day4",
+    "precipitation_previous_day5",
+    "precipitation_previous_day6",
+    "precipitation_previous_day7"
+   ],
+   "seasons": [
+    "2024-03-15..2024-10-31",
+    "2025-03-15..2025-10-31",
+    "2026-03-15..2026-10-31"
+   ],
+   "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use"
+  },
+  "soil_category": {
+   "url": "https://sgeo.iung.pl/geoserver/Susza/wms",
+   "layer": "Susza:katgl_landuse2024",
+   "license": "IUNG-PIB, Mapa podatnosci gleb na susze (katgl_landuse2024), publiczna usluga WMS"
+  },
+  "regions": {
+   "url": "https://uldk.gugik.gov.pl/",
+   "request": "GetCommuneByXY",
+   "license": "GUGiK ULDK, dane publiczne (ustawa Prawo geodezyjne i kartograficzne)"
+  }
+ },
+ "grid": {
+  "lon": [
+   14.2,
+   24.1
+  ],
+  "lat": [
+   49.1,
+   54.8
+  ],
+  "step_deg": 0.7,
+  "neighbour_offset_deg": 0.06
+ },
+ "iung_selection": {
+  "nodes": 135,
+  "outside_or_nodata": 51,
+  "non_arable": 1,
+  "arable": 83,
+  "selected": 50
+ },
+ "n_points": 50,
+ "points": [
+  {
+   "id": "pl_49p16_22p54",
+   "lat": 49.16,
+   "lon": 22.54,
+   "iung_code": 2,
+   "voivodeship": "podkarpackie",
+   "weather_file": "weather/pl_49p16_22p54.parquet",
+   "weather_retrieved_at": "2026-11-21T12:37:34+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=49.16&longitude=22.54&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 49.104N 22.577E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 1200.2,
+   "annual_et0_mean": 620.5,
+   "forecast_file": "forecasts/pl_49p16_22p54.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.16&longitude=22.54&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:37:34+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.16&longitude=22.54&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:37:37+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.16&longitude=22.54&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:37:40+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_49p80_19p10",
+   "lat": 49.8,
+   "lon": 19.1,
+   "iung_code": 3,
+   "voivodeship": "śląskie",
+   "weather_file": "weather/pl_49p80_19p10.parquet",
+   "weather_retrieved_at": "2026-11-21T12:37:41+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=49.8&longitude=19.1&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 49.807N 19.062E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 1120.5,
+   "annual_et0_mean": 752.0,
+   "forecast_file": "forecasts/pl_49p80_19p10.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.8&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:37:43+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.8&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:37:46+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.8&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:37:49+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_49p74_20p44",
+   "lat": 49.74,
+   "lon": 20.44,
+   "iung_code": 4,
+   "voivodeship": "małopolskie",
+   "weather_file": "weather/pl_49p74_20p44.parquet",
+   "weather_retrieved_at": "2026-11-21T12:37:59+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=49.74&longitude=20.44&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 49.736N 20.433E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 972.4,
+   "annual_et0_mean": 746.9,
+   "forecast_file": "forecasts/pl_49p74_20p44.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:01+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:04+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:07+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_49p74_21p20",
+   "lat": 49.74,
+   "lon": 21.2,
+   "iung_code": 3,
+   "voivodeship": "małopolskie",
+   "weather_file": "weather/pl_49p74_21p20.parquet",
+   "weather_retrieved_at": "2026-11-21T12:38:08+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=49.74&longitude=21.2&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 49.736N 21.213E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 874.9,
+   "annual_et0_mean": 778.3,
+   "forecast_file": "forecasts/pl_49p74_21p20.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:10+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:13+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:16+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_49p74_22p66",
+   "lat": 49.74,
+   "lon": 22.66,
+   "iung_code": 4,
+   "voivodeship": "podkarpackie",
+   "weather_file": "weather/pl_49p74_22p66.parquet",
+   "weather_retrieved_at": "2026-11-21T12:38:27+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=49.74&longitude=22.66&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 49.736N 22.617E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 851.3,
+   "annual_et0_mean": 794.8,
+   "forecast_file": "forecasts/pl_49p74_22p66.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=22.66&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:28+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=22.66&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:31+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=49.74&longitude=22.66&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:34+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_50p50_17p00",
+   "lat": 50.5,
+   "lon": 17.0,
+   "iung_code": 4,
+   "voivodeship": "dolnośląskie",
+   "weather_file": "weather/pl_50p50_17p00.parquet",
+   "weather_retrieved_at": "2026-11-21T12:38:35+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.5&longitude=17.0&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 50.510N 17.014E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 772.4,
+   "annual_et0_mean": 783.2,
+   "forecast_file": "forecasts/pl_50p50_17p00.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:37+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:40+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:38:43+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_50p44_18p34",
+   "lat": 50.44,
+   "lon": 18.34,
+   "iung_code": 2,
+   "voivodeship": "opolskie",
+   "weather_file": "weather/pl_50p44_18p34.parquet",
+   "weather_retrieved_at": "2026-11-21T12:38:58+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.44&longitude=18.34&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 50.439N 18.413E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 751.3,
+   "annual_et0_mean": 817.2,
+   "forecast_file": "forecasts/pl_50p44_18p34.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=18.34&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:39:00+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=18.34&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:39:03+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=18.34&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:39:06+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_50p50_19p80",
+   "lat": 50.5,
+   "lon": 19.8,
+   "iung_code": 3,
+   "voivodeship": "śląskie",
+   "weather_file": "weather/pl_50p50_19p80.parquet",
+   "weather_retrieved_at": "2026-11-21T12:39:15+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.5&longitude=19.8&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 50.439N 19.841E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 741.8,
+   "annual_et0_mean": 798.9,
+   "forecast_file": "forecasts/pl_50p50_19p80.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:39:18+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:39:21+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:39:24+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_50p44_21p14",
+   "lat": 50.44,
+   "lon": 21.14,
+   "iung_code": 3,
+   "voivodeship": "świętokrzyskie",
+   "weather_file": "weather/pl_50p44_21p14.parquet",
+   "weather_retrieved_at": "2026-11-21T12:39:51+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.44&longitude=21.14&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 50.439N 21.111E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 728.8,
+   "annual_et0_mean": 817.7,
+   "forecast_file": "forecasts/pl_50p44_21p14.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=21.14&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:39:51+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=21.14&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:28+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=21.14&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:31+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_50p56_21p84",
+   "lat": 50.56,
+   "lon": 21.84,
+   "iung_code": 4,
+   "voivodeship": "podkarpackie",
+   "weather_file": "weather/pl_50p56_21p84.parquet",
+   "weather_retrieved_at": "2026-11-21T12:40:32+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.56&longitude=21.84&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 50.580N 21.823E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 739.4,
+   "annual_et0_mean": 823.9,
+   "forecast_file": "forecasts/pl_50p56_21p84.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.56&longitude=21.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:34+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.56&longitude=21.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:37+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.56&longitude=21.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:40+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_50p44_22p60",
+   "lat": 50.44,
+   "lon": 22.6,
+   "iung_code": 3,
+   "voivodeship": "lubelskie",
+   "weather_file": "weather/pl_50p44_22p60.parquet",
+   "weather_retrieved_at": "2026-11-21T12:40:40+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.44&longitude=22.6&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 50.439N 22.540E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 769.7,
+   "annual_et0_mean": 812.8,
+   "forecast_file": "forecasts/pl_50p44_22p60.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:43+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:45+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.44&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:49+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_50p50_24p00",
+   "lat": 50.5,
+   "lon": 24.0,
+   "iung_code": 4,
+   "voivodeship": "lubelskie",
+   "weather_file": "weather/pl_50p50_24p00.parquet",
+   "weather_retrieved_at": "2026-11-21T12:40:59+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=50.5&longitude=24.0&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 50.510N 24.011E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 709.9,
+   "annual_et0_mean": 813.9,
+   "forecast_file": "forecasts/pl_50p50_24p00.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=24.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:40:59+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=24.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:41:02+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=50.5&longitude=24.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:41:05+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p20_15p60",
+   "lat": 51.2,
+   "lon": 15.6,
+   "iung_code": 4,
+   "voivodeship": "dolnośląskie",
+   "weather_file": "weather/pl_51p20_15p60.parquet",
+   "weather_retrieved_at": "2026-11-21T12:41:19+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.2&longitude=15.6&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.213N 15.540E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 728.3,
+   "annual_et0_mean": 798.0,
+   "forecast_file": "forecasts/pl_51p20_15p60.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=15.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:41:19+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=15.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:41:22+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=15.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:41:25+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p20_17p70",
+   "lat": 51.2,
+   "lon": 17.7,
+   "iung_code": 2,
+   "voivodeship": "dolnośląskie",
+   "weather_file": "weather/pl_51p20_17p70.parquet",
+   "weather_retrieved_at": "2026-11-21T12:41:49+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.2&longitude=17.7&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.213N 17.644E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 682.6,
+   "annual_et0_mean": 813.6,
+   "forecast_file": "forecasts/pl_51p20_17p70.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:41:49+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:41:52+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:41:55+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p20_19p10",
+   "lat": 51.2,
+   "lon": 19.1,
+   "iung_code": 1,
+   "voivodeship": "łódzkie",
+   "weather_file": "weather/pl_51p20_19p10.parquet",
+   "weather_retrieved_at": "2026-11-21T12:42:13+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.2&longitude=19.1&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.213N 19.101E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 693.7,
+   "annual_et0_mean": 825.2,
+   "forecast_file": "forecasts/pl_51p20_19p10.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:42:13+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:42:16+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:42:19+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p14_20p56",
+   "lat": 51.14,
+   "lon": 20.56,
+   "iung_code": 2,
+   "voivodeship": "świętokrzyskie",
+   "weather_file": "weather/pl_51p14_20p56.parquet",
+   "weather_retrieved_at": "2026-11-21T12:42:49+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.14&longitude=20.56&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.142N 20.521E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 743.1,
+   "annual_et0_mean": 791.5,
+   "forecast_file": "forecasts/pl_51p14_20p56.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.14&longitude=20.56&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:42:49+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.14&longitude=20.56&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:42:52+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.14&longitude=20.56&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:42:55+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p20_22p60",
+   "lat": 51.2,
+   "lon": 22.6,
+   "iung_code": 4,
+   "voivodeship": "lubelskie",
+   "weather_file": "weather/pl_51p20_22p60.parquet",
+   "weather_retrieved_at": "2026-11-21T12:43:14+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.2&longitude=22.6&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.142N 22.621E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 723.4,
+   "annual_et0_mean": 785.8,
+   "forecast_file": "forecasts/pl_51p20_22p60.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:14+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:17+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.2&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:20+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p14_23p30",
+   "lat": 51.14,
+   "lon": 23.3,
+   "iung_code": 2,
+   "voivodeship": "lubelskie",
+   "weather_file": "weather/pl_51p14_23p30.parquet",
+   "weather_retrieved_at": "2026-11-21T12:43:22+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.14&longitude=23.3&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.142N 23.268E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 723.1,
+   "annual_et0_mean": 792.5,
+   "forecast_file": "forecasts/pl_51p14_23p30.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.14&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:23+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.14&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:26+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.14&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:29+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p90_14p90",
+   "lat": 51.9,
+   "lon": 14.9,
+   "iung_code": 1,
+   "voivodeship": "lubuskie",
+   "weather_file": "weather/pl_51p90_14p90.parquet",
+   "weather_retrieved_at": "2026-11-21T12:43:32+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.9&longitude=14.9&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.916N 14.835E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 625.8,
+   "annual_et0_mean": 821.1,
+   "forecast_file": "forecasts/pl_51p90_14p90.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=14.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:33+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=14.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:36+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=14.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:39+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p84_16p30",
+   "lat": 51.84,
+   "lon": 16.3,
+   "iung_code": 2,
+   "voivodeship": "lubuskie",
+   "weather_file": "weather/pl_51p84_16p30.parquet",
+   "weather_retrieved_at": "2026-11-21T12:43:41+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.84&longitude=16.3&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.845N 16.289E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 620.3,
+   "annual_et0_mean": 841.2,
+   "forecast_file": "forecasts/pl_51p84_16p30.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=16.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:42+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=16.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:45+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=16.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:48+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p90_17p70",
+   "lat": 51.9,
+   "lon": 17.7,
+   "iung_code": 2,
+   "voivodeship": "wielkopolskie",
+   "weather_file": "weather/pl_51p90_17p70.parquet",
+   "weather_retrieved_at": "2026-11-21T12:43:49+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.9&longitude=17.7&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.916N 17.637E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 612.7,
+   "annual_et0_mean": 837.6,
+   "forecast_file": "forecasts/pl_51p90_17p70.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:51+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:54+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:43:57+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p90_19p10",
+   "lat": 51.9,
+   "lon": 19.1,
+   "iung_code": 2,
+   "voivodeship": "łódzkie",
+   "weather_file": "weather/pl_51p90_19p10.parquet",
+   "weather_retrieved_at": "2026-11-21T12:43:57+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.9&longitude=19.1&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.916N 19.121E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 649.5,
+   "annual_et0_mean": 824.1,
+   "forecast_file": "forecasts/pl_51p90_19p10.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:00+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:03+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:06+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p84_20p44",
+   "lat": 51.84,
+   "lon": 20.44,
+   "iung_code": 3,
+   "voivodeship": "łódzkie",
+   "weather_file": "weather/pl_51p84_20p44.parquet",
+   "weather_retrieved_at": "2026-11-21T12:44:09+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.84&longitude=20.44&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.845N 20.402E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 671.0,
+   "annual_et0_mean": 803.2,
+   "forecast_file": "forecasts/pl_51p84_20p44.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:09+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:12+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:15+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p90_21p90",
+   "lat": 51.9,
+   "lon": 21.9,
+   "iung_code": 2,
+   "voivodeship": "mazowieckie",
+   "weather_file": "weather/pl_51p90_21p90.parquet",
+   "weather_retrieved_at": "2026-11-21T12:44:16+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.9&longitude=21.9&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.916N 21.923E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 701.7,
+   "annual_et0_mean": 785.1,
+   "forecast_file": "forecasts/pl_51p90_21p90.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=21.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:18+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=21.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:21+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.9&longitude=21.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:24+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_51p84_23p30",
+   "lat": 51.84,
+   "lon": 23.3,
+   "iung_code": 2,
+   "voivodeship": "lubelskie",
+   "weather_file": "weather/pl_51p84_23p30.parquet",
+   "weather_retrieved_at": "2026-11-21T12:44:26+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=51.84&longitude=23.3&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 51.845N 23.364E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 702.2,
+   "annual_et0_mean": 809.6,
+   "forecast_file": "forecasts/pl_51p84_23p30.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:27+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:30+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=51.84&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:33+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_52p60_14p90",
+   "lat": 52.6,
+   "lon": 14.9,
+   "iung_code": 2,
+   "voivodeship": "lubuskie",
+   "weather_file": "weather/pl_52p60_14p90.parquet",
+   "weather_retrieved_at": "2026-11-21T12:44:34+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.6&longitude=14.9&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 52.619N 14.944E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 610.6,
+   "annual_et0_mean": 792.6,
+   "forecast_file": "forecasts/pl_52p60_14p90.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=14.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:36+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=14.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:39+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=14.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:42+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_52p60_17p00",
+   "lat": 52.6,
+   "lon": 17.0,
+   "iung_code": 2,
+   "voivodeship": "wielkopolskie",
+   "weather_file": "weather/pl_52p60_17p00.parquet",
+   "weather_retrieved_at": "2026-11-21T12:44:43+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.6&longitude=17.0&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 52.619N 16.959E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 628.4,
+   "annual_et0_mean": 800.2,
+   "forecast_file": "forecasts/pl_52p60_17p00.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:45+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:48+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:51+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_52p60_18p40",
+   "lat": 52.6,
+   "lon": 18.4,
+   "iung_code": 2,
+   "voivodeship": "kujawsko-pomorskie",
+   "weather_file": "weather/pl_52p60_18p40.parquet",
+   "weather_retrieved_at": "2026-11-21T12:44:52+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.6&longitude=18.4&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 52.548N 18.436E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 606.0,
+   "annual_et0_mean": 804.9,
+   "forecast_file": "forecasts/pl_52p60_18p40.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=18.4&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:54+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=18.4&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:44:57+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=18.4&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:00+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_52p60_19p80",
+   "lat": 52.6,
+   "lon": 19.8,
+   "iung_code": 2,
+   "voivodeship": "mazowieckie",
+   "weather_file": "weather/pl_52p60_19p80.parquet",
+   "weather_retrieved_at": "2026-11-21T12:45:01+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.6&longitude=19.8&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 52.619N 19.813E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 650.1,
+   "annual_et0_mean": 770.6,
+   "forecast_file": "forecasts/pl_52p60_19p80.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:03+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:06+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:09+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_52p54_20p50",
+   "lat": 52.54,
+   "lon": 20.5,
+   "iung_code": 1,
+   "voivodeship": "mazowieckie",
+   "weather_file": "weather/pl_52p54_20p50.parquet",
+   "weather_retrieved_at": "2026-11-21T12:45:09+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.54&longitude=20.5&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 52.548N 20.447E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 662.3,
+   "annual_et0_mean": 782.5,
+   "forecast_file": "forecasts/pl_52p54_20p50.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.54&longitude=20.5&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:12+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.54&longitude=20.5&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:15+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.54&longitude=20.5&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:18+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_52p60_21p20",
+   "lat": 52.6,
+   "lon": 21.2,
+   "iung_code": 2,
+   "voivodeship": "mazowieckie",
+   "weather_file": "weather/pl_52p60_21p20.parquet",
+   "weather_retrieved_at": "2026-11-21T12:45:19+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.6&longitude=21.2&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 52.619N 21.157E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 682.4,
+   "annual_et0_mean": 782.2,
+   "forecast_file": "forecasts/pl_52p60_21p20.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:21+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:24+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:27+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_52p60_22p60",
+   "lat": 52.6,
+   "lon": 22.6,
+   "iung_code": 3,
+   "voivodeship": "podlaskie",
+   "weather_file": "weather/pl_52p60_22p60.parquet",
+   "weather_retrieved_at": "2026-11-21T12:45:28+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.6&longitude=22.6&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 52.548N 22.626E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 705.4,
+   "annual_et0_mean": 775.9,
+   "forecast_file": "forecasts/pl_52p60_22p60.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:30+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:33+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.6&longitude=22.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:36+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_52p54_23p30",
+   "lat": 52.54,
+   "lon": 23.3,
+   "iung_code": 1,
+   "voivodeship": "podlaskie",
+   "weather_file": "weather/pl_52p54_23p30.parquet",
+   "weather_retrieved_at": "2026-11-21T12:45:37+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.54&longitude=23.3&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 52.548N 23.296E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 702.2,
+   "annual_et0_mean": 773.5,
+   "forecast_file": "forecasts/pl_52p54_23p30.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.54&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:39+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.54&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:42+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=52.54&longitude=23.3&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:45+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p24_14p84",
+   "lat": 53.24,
+   "lon": 14.84,
+   "iung_code": 3,
+   "voivodeship": "zachodniopomorskie",
+   "weather_file": "weather/pl_53p24_14p84.parquet",
+   "weather_retrieved_at": "2026-11-21T12:45:46+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.24&longitude=14.84&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.251N 14.858E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 616.2,
+   "annual_et0_mean": 747.5,
+   "forecast_file": "forecasts/pl_53p24_14p84.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=14.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:48+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=14.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:51+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=14.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:54+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p24_16p24",
+   "lat": 53.24,
+   "lon": 16.24,
+   "iung_code": 2,
+   "voivodeship": "zachodniopomorskie",
+   "weather_file": "weather/pl_53p24_16p24.parquet",
+   "weather_retrieved_at": "2026-11-21T12:45:55+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.24&longitude=16.24&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.251N 16.224E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 663.4,
+   "annual_et0_mean": 742.1,
+   "forecast_file": "forecasts/pl_53p24_16p24.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=16.24&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:45:57+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=16.24&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:00+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=16.24&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:03+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p30_17p70",
+   "lat": 53.3,
+   "lon": 17.7,
+   "iung_code": 2,
+   "voivodeship": "kujawsko-pomorskie",
+   "weather_file": "weather/pl_53p30_17p70.parquet",
+   "weather_retrieved_at": "2026-11-21T12:46:04+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.3&longitude=17.7&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.251N 17.761E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 627.8,
+   "annual_et0_mean": 760.5,
+   "forecast_file": "forecasts/pl_53p30_17p70.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:06+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:09+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:12+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p24_19p04",
+   "lat": 53.24,
+   "lon": 19.04,
+   "iung_code": 3,
+   "voivodeship": "kujawsko-pomorskie",
+   "weather_file": "weather/pl_53p24_19p04.parquet",
+   "weather_retrieved_at": "2026-11-21T12:46:13+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.24&longitude=19.04&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.181N 19.091E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 648.6,
+   "annual_et0_mean": 765.6,
+   "forecast_file": "forecasts/pl_53p24_19p04.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=19.04&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:15+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=19.04&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:18+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=19.04&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:21+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p24_19p80",
+   "lat": 53.24,
+   "lon": 19.8,
+   "iung_code": 2,
+   "voivodeship": "warmińsko-mazurskie",
+   "weather_file": "weather/pl_53p24_19p80.parquet",
+   "weather_retrieved_at": "2026-11-21T12:46:22+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.24&longitude=19.8&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.251N 19.810E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 682.8,
+   "annual_et0_mean": 744.6,
+   "forecast_file": "forecasts/pl_53p24_19p80.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:24+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:27+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.24&longitude=19.8&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:30+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p30_20p50",
+   "lat": 53.3,
+   "lon": 20.5,
+   "iung_code": 1,
+   "voivodeship": "warmińsko-mazurskie",
+   "weather_file": "weather/pl_53p30_20p50.parquet",
+   "weather_retrieved_at": "2026-11-21T12:46:43+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.3&longitude=20.5&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.322N 20.532E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 675.4,
+   "annual_et0_mean": 734.1,
+   "forecast_file": "forecasts/pl_53p30_20p50.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=20.5&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:43+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=20.5&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:46+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=20.5&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:49+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p30_21p90",
+   "lat": 53.3,
+   "lon": 21.9,
+   "iung_code": 2,
+   "voivodeship": "podlaskie",
+   "weather_file": "weather/pl_53p30_21p90.parquet",
+   "weather_retrieved_at": "2026-11-21T12:46:50+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.3&longitude=21.9&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.322N 21.901E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 688.8,
+   "annual_et0_mean": 754.7,
+   "forecast_file": "forecasts/pl_53p30_21p90.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=21.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:52+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=21.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:55+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=21.9&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:46:58+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p30_23p24",
+   "lat": 53.3,
+   "lon": 23.24,
+   "iung_code": 2,
+   "voivodeship": "podlaskie",
+   "weather_file": "weather/pl_53p30_23p24.parquet",
+   "weather_retrieved_at": "2026-11-21T12:46:58+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.3&longitude=23.24&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.322N 23.270E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 692.5,
+   "annual_et0_mean": 743.1,
+   "forecast_file": "forecasts/pl_53p30_23p24.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=23.24&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:01+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=23.24&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:04+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.3&longitude=23.24&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:07+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p94_14p84",
+   "lat": 53.94,
+   "lon": 14.84,
+   "iung_code": 2,
+   "voivodeship": "zachodniopomorskie",
+   "weather_file": "weather/pl_53p94_14p84.parquet",
+   "weather_retrieved_at": "2026-11-21T12:47:08+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.94&longitude=14.84&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.954N 14.797E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 726.2,
+   "annual_et0_mean": 755.4,
+   "forecast_file": "forecasts/pl_53p94_14p84.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=14.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:10+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=14.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:13+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=14.84&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:16+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_54p00_15p60",
+   "lat": 54.0,
+   "lon": 15.6,
+   "iung_code": 2,
+   "voivodeship": "zachodniopomorskie",
+   "weather_file": "weather/pl_54p00_15p60.parquet",
+   "weather_retrieved_at": "2026-11-21T12:47:17+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=54.0&longitude=15.6&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 54.025N 15.523E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 754.5,
+   "annual_et0_mean": 719.5,
+   "forecast_file": "forecasts/pl_54p00_15p60.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=15.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:19+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=15.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:22+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=15.6&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:25+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_54p00_17p00",
+   "lat": 54.0,
+   "lon": 17.0,
+   "iung_code": 2,
+   "voivodeship": "pomorskie",
+   "weather_file": "weather/pl_54p00_17p00.parquet",
+   "weather_retrieved_at": "2026-11-21T12:47:38+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=54.0&longitude=17.0&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.954N 17.060E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 707.9,
+   "annual_et0_mean": 697.4,
+   "forecast_file": "forecasts/pl_54p00_17p00.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:38+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:41+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=17.0&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:44+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p94_17p70",
+   "lat": 53.94,
+   "lon": 17.7,
+   "iung_code": 2,
+   "voivodeship": "pomorskie",
+   "weather_file": "weather/pl_53p94_17p70.parquet",
+   "weather_retrieved_at": "2026-11-21T12:47:45+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.94&longitude=17.7&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.954N 17.756E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 665.3,
+   "annual_et0_mean": 717.1,
+   "forecast_file": "forecasts/pl_53p94_17p70.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:47+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:50+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=17.7&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:53+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_54p00_19p10",
+   "lat": 54.0,
+   "lon": 19.1,
+   "iung_code": 3,
+   "voivodeship": "pomorskie",
+   "weather_file": "weather/pl_54p00_19p10.parquet",
+   "weather_retrieved_at": "2026-11-21T12:47:53+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=54.0&longitude=19.1&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.954N 19.149E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 686.8,
+   "annual_et0_mean": 741.7,
+   "forecast_file": "forecasts/pl_54p00_19p10.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:56+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:47:59+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.0&longitude=19.1&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:02+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p94_20p44",
+   "lat": 53.94,
+   "lon": 20.44,
+   "iung_code": 1,
+   "voivodeship": "warmińsko-mazurskie",
+   "weather_file": "weather/pl_53p94_20p44.parquet",
+   "weather_retrieved_at": "2026-11-21T12:48:03+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.94&longitude=20.44&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.954N 20.368E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 709.6,
+   "annual_et0_mean": 719.9,
+   "forecast_file": "forecasts/pl_53p94_20p44.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:05+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:08+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=20.44&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:11+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p94_21p20",
+   "lat": 53.94,
+   "lon": 21.2,
+   "iung_code": 1,
+   "voivodeship": "warmińsko-mazurskie",
+   "weather_file": "weather/pl_53p94_21p20.parquet",
+   "weather_retrieved_at": "2026-11-21T12:48:11+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.94&longitude=21.2&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.954N 21.238E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 677.2,
+   "annual_et0_mean": 711.3,
+   "forecast_file": "forecasts/pl_53p94_21p20.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:14+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:17+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=21.2&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:20+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_53p94_22p54",
+   "lat": 53.94,
+   "lon": 22.54,
+   "iung_code": 4,
+   "voivodeship": "warmińsko-mazurskie",
+   "weather_file": "weather/pl_53p94_22p54.parquet",
+   "weather_retrieved_at": "2026-11-21T12:48:21+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=53.94&longitude=22.54&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 53.884N 22.587E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 678.4,
+   "annual_et0_mean": 723.0,
+   "forecast_file": "forecasts/pl_53p94_22p54.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=22.54&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:23+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=22.54&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:26+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=53.94&longitude=22.54&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:29+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  },
+  {
+   "id": "pl_54p70_18p40",
+   "lat": 54.7,
+   "lon": 18.4,
+   "iung_code": 3,
+   "voivodeship": "pomorskie",
+   "weather_file": "weather/pl_54p70_18p40.parquet",
+   "weather_retrieved_at": "2026-11-21T12:48:30+00:00",
+   "weather_url": "https://archive-api.open-meteo.com/v1/archive?latitude=54.7&longitude=18.4&start_date=2016-01-01&end_date=2026-11-16&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
+   "weather_grid": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-16; punkt siatki 54.657N 18.462E",
+   "n_days": 3973,
+   "missing_precip": 0,
+   "missing_et0": 0,
+   "annual_precip_mean": 707.5,
+   "annual_et0_mean": 734.4,
+   "forecast_file": "forecasts/pl_54p70_18p40.parquet",
+   "forecast_requests": [
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.7&longitude=18.4&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2024-03-15&end_date=2024-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:32+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.7&longitude=18.4&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2025-03-15&end_date=2025-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:36+00:00"
+    },
+    {
+     "url": "https://previous-runs-api.open-meteo.com/v1/forecast?latitude=54.7&longitude=18.4&hourly=precipitation_previous_day1%2Cprecipitation_previous_day2%2Cprecipitation_previous_day3%2Cprecipitation_previous_day4%2Cprecipitation_previous_day5%2Cprecipitation_previous_day6%2Cprecipitation_previous_day7&start_date=2026-03-15&end_date=2026-10-31&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
+     "retrieved_at": "2026-11-21T12:48:38+00:00"
+    }
+   ],
+   "forecast_days": 693,
+   "forecast_missing_cells": 12
+  }
+ ]
+}
