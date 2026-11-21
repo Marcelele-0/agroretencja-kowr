@@ -225,3 +225,29 @@ Pełny raport: [`reports/plan14.md`](reports/plan14.md).
   - zakres zapotrzebowania na wodę w 14 dni (scenariusze z 10 lat) obejmuje rzeczywistość w 92% przypadków.
 - **Agent E8 z 14-dniowym oknem prognozy** (15 upraw, 6 mln kroków, 3 ziarna): nagroda walidacyjna −0,1241 wobec −0,1243 dla E7, czyli tyle samo. Także przy syntetycznej prognozie z informacją na dni 8–14 (−0,1240 wobec −0,1244). Wdrożony zostaje E6f_s2.
 - **API:** `plan_days=14` dodaje `recommendation.plan_14d` (dawki, prawdopodobieństwo podlewania, zakres wody, pewność każdego dnia).
+
+
+---
+
+## E9: prognoza wody w glebie na 14 dni z ensemble ECMWF i trzema strefami gleby (21.11.2026)
+
+Pełny raport: [`reports/forecast14.md`](reports/forecast14.md).
+
+- **Dane:**
+  - 51 członków archiwalnego ensemble ECMWF IFS (dynamical.org), 94 przebiegi co tydzień 2024–2026 dla 100 punktów;
+  - profile SoilGrids 2.0 (pojemność polowa i punkt więdnięcia, 6 warstw 0–200 cm) dla 100 punktów;
+  - ERA5-Land (4 warstwy wilgotności) jako niezależne odniesienie.
+- **Model gleby** (`kowr_rl/soil3.py`):
+  - trzy strefy 0–28 / 28–100 / 100–200 cm, pojemność z SoilGrids przeskalowana do TAW kategorii IUNG;
+  - korzenie rosnące do głębokości maksymalnej uprawy;
+  - parowanie z wierzchniej strefy, transpiracja z zasięgu korzeni;
+  - stan na dziś z bilansu od 1 sierpnia poprzedniego roku.
+- **Kalibracja na 2024, test na holdout 2025–2026:**
+  - ET0 z ensemble wzorem Makkinka i liniowo do FAO-56: CRPS skill wobec klimatologii +0,48–0,51 w dniu 1, +0,22–0,25 w dniu 4;
+  - opad bez zmian: +0,51–0,52 w dniu 1.
+- **Prognoza wody w strefie korzeni** (12 800 prognoz):
+  - CRPS skill ENS wobec scenariuszy z innych lat: +0,54 (dzień 1), +0,44 (4), +0,29 (7), +0,21 (10), +0,05 (14); wobec persystencji: +0,71 / +0,60 / +0,53 w dniach 1 / 7 / 14;
+  - przedział P10–P90 po postprocessingu z 2024 pokrywa prawdę w 78–87% przypadków;
+  - prawdopodobieństwo stresu uprawy: Brier skill wobec klimatologii +0,94 / +0,72 / +0,49 w dniach 1 / 7 / 14.
+- **Plan nawadniania z 51 członków** (51 200 planów): Brier skill dni podlewania +0,53 / +0,38 / +0,23 w dniach 2 / 4 / 7, wobec +0,33 / +0,17 / +0,07 dla scenariuszy z innych lat. Zakres wody na 14 dni obejmuje rzeczywistość w 95% przypadków.
+- **API:** `plan_days=14` używa ensemble do prawdopodobieństwa podlewania (`probability_source: "ecmwf_ens"`). Dodaje też `plan_14d.soil_zones`: klasy wody z prawdopodobieństwami dla każdej strefy i dnia, zakres P10–P90 strefy korzeni, prawdopodobieństwo stresu bez nawadniania i z planem oraz skalę danych.

@@ -269,6 +269,28 @@ $$
 - Prognoza na 3 dni to 5 mm, za mało, żeby czekać.
 - Decyzja: **„Nawadniaj dziś: 10 mm”**.
 
+### 7.1. Plan i prognoza wody na 14 dni (`plan_days=14`)
+
+Szczegóły i testy: [`reports/forecast14.md`](../ml/rl_irrigator/reports/forecast14.md).
+
+1. **Scenariusze pogody.** 51 członków ensemble ECMWF IFS na 14 dni: opad bez zmian, a ET0 ze wzoru Makkinka skalibrowane liniowo dla każdego dnia wyprzedzenia,
+
+   $$
+   ET_{0,k} = a_k + b_k \cdot 0{,}65\,\frac{\Delta}{\Delta+\gamma}\,\frac{R_{s,k}}{\lambda}.
+   $$
+
+   Po dniu 14 przyjmujemy klimatologię punktu.
+2. **Prawdopodobieństwo podlewania.** Agent planuje 14 dni na każdym członku $m$. Prawdopodobieństwo dawki w dniu $k$ to $P_k = \frac{1}{51}\sum_m \mathbb{1}[I_{m,k} > 0]$. Zakres wody na 14 dni to percentyle P10–P90 sum $\sum_k I_{m,k}$.
+3. **Trzy strefy gleby** (0–28, 28–100, 100–200 cm).
+   - Pojemność stref pochodzi z SoilGrids: $AWC_z = \sum_j (\theta_{FC,j}-\theta_{WP,j})\,\Delta z_{j\cap z}$, przeskalowana tak, by 0–100 cm równało się TAW kategorii IUNG.
+   - Parowanie $E = K_r(1-f_T)K_c ET_0$ zachodzi ze strefy wierzchniej.
+   - Transpiracja $T = K_s f_T K_c ET_0$ zachodzi z zasięgu korzeni $Z_r(t)$, przy $K_s = \frac{TAW_r - D_r}{(1-p)TAW_r}$.
+4. **Rozkład zamiast jednej liczby.** Dla każdej strefy i dnia model podaje prawdopodobieństwa 5 klas zapasu ($w = 1 - D/AWC$, progi co 20%) jako udział członków w klasie. Ważenie ENS i scenariuszy z innych lat oraz poszerzenie przedziału P10–P90 strefy korzeni są dopasowane na roku walidacyjnym 2024.
+5. **Trafność** na 50 nowych lokalizacjach w latach 2025–2026:
+   - zapas w strefie korzeni: CRPS skill +0,54 w dniu 1 i +0,29 w dniu 7 wobec scenariuszy z innych lat;
+   - prawdopodobieństwo stresu: Brier skill +0,94 w dniu 1 i +0,72 w dniu 7 wobec klimatologii;
+   - dni podlewania z ensemble: Brier skill +0,53 w dniu 2, wobec +0,33 dla scenariuszy z innych lat.
+
 ---
 
 ## 8. Efekt: test na 50 nowych lokalizacjach (2025–2026), 15 upraw
@@ -300,4 +322,5 @@ Prawdziwe prognozy ECMWF, 24 000 sezonów na strategię (50 punktów × 2 lata �
 | Reguły bazowe i wyrocznia | [`kowr_rl/baselines.py`](../ml/rl_irrigator/kowr_rl/baselines.py) |
 | Sieć w NumPy | [`kowr_rl/policy.py`](../ml/rl_irrigator/kowr_rl/policy.py) |
 | Rekomendacja i API `/rl/recommend`, `/rl/compare` | [`kowr_rl/inference.py`](../ml/rl_irrigator/kowr_rl/inference.py), [`kowr_rl/api.py`](../ml/rl_irrigator/kowr_rl/api.py) |
+| Trzy strefy gleby, prognoza na 14 dni z ensemble ECMWF | [`kowr_rl/soil3.py`](../ml/rl_irrigator/kowr_rl/soil3.py), [`kowr_rl/forecast14.py`](../ml/rl_irrigator/kowr_rl/forecast14.py), [`kowr_rl/forecast14_runtime.py`](../ml/rl_irrigator/kowr_rl/forecast14_runtime.py) |
 | Parametry upraw, gleb, nagrody i szumu | [`config/`](../ml/rl_irrigator/config/) |

@@ -39,13 +39,17 @@ curl -X POST http://127.0.0.1:8001/rl/recommend -H "Content-Type: application/js
 
 Pełne przykłady odpowiedzi są w [`examples/`](examples/).
 
-**Plan na 14 dni:** `"plan_days": 14` w zapytaniu dodaje `recommendation.plan_14d`:
+**Plan i prognoza wody na 14 dni:** `"plan_days": 14` w zapytaniu dodaje `recommendation.plan_14d`:
 - dawki na każdy dzień;
-- prawdopodobieństwo podlewania ze scenariuszy pogody z 10 lat;
+- prawdopodobieństwo podlewania z 51 członków ensemble ECMWF (dla dat bez ensemble: ze scenariuszy pogody z innych lat);
 - zakres zapotrzebowania na wodę (P10–P90);
-- pewność każdego dnia.
+- pewność każdego dnia;
+- `soil_zones`, czyli prognozę wody w trzech strefach gleby (0–28, 28–100, 100–200 cm, pojemność z SoilGrids):
+  - klasę wody każdej strefy z prawdopodobieństwami klas;
+  - zakres P10–P90 zapasu w strefie korzeni;
+  - prawdopodobieństwo stresu bez nawadniania i przy realizacji planu.
 
-Plan liczy się codziennie od nowa, a wiążąca jest dawka na dziś. Badanie: [`reports/plan14.md`](reports/plan14.md).
+Plan liczy się codziennie od nowa, a wiążąca jest dawka na dziś. Badania: [`reports/forecast14.md`](reports/forecast14.md) (E9, ensemble i strefy gleby) oraz [`reports/plan14.md`](reports/plan14.md) (E8).
 
 **Integracja z backendem zespołu** (`src/backend/main.py`, Tor C):
 
@@ -81,6 +85,8 @@ uv run python -m kowr_rl.evaluate --runs E6f_s2@dom E7_s2@domc --deploy E6f_s2@d
 uv run python scripts/export_policy.py E6f_s2@dom               # artifacts/models/ppo_irrigator_weights.npz
 uv run python scripts/make_examples.py                          # examples/*.json
 uv run python scripts/benchmark_latency.py                      # reports/latency.json
+# E9: prognoza wody na 14 dni (ensemble ECMWF + trzy strefy gleby), komplet poleceń w reports/forecast14.md
+uv run --group train python scripts/ens_calibrate.py && uv run --group train python scripts/forecast14_study.py fit
 tensorboard --logdir runs
 ```
 
@@ -155,6 +161,10 @@ Pełne rozbicie, co agent bierze pod uwagę przy decyzji, ze wszystkimi wzorami:
 | Open-Meteo Previous Runs API (`previous-runs-api.open-meteo.com`, `ecmwf_ifs025`) | archiwalne prognozy opadu z wyprzedzeniem 1–7 dni (od 2024): kalibracja, walidacja, test, rekomendacje dla dat historycznych | LIVE + PRE-FETCHED | CC BY 4.0 |
 | IUNG-PIB WMS `Susza:katgl_landuse2024` (`sgeo.iung.pl`) | kategoria podatności gleby na suszę i użytkowanie terenu w punkcie | LIVE + PRE-FETCHED (wybór punktów) | publiczna usługa IUNG-PIB (System Monitoringu Suszy Rolniczej) |
 | GUGiK ULDK (`uldk.gugik.gov.pl`) | geometria działki po numerze TERYT; województwo punktów treningowych | LIVE + PRE-FETCHED | dane publiczne (ustawa Prawo geodezyjne i kartograficzne) |
+| Open-Meteo Ensemble API (`ensemble-api.open-meteo.com`, `ecmwf_ifs025`, 51 członków) | pogoda na 14 dni dla planu i prognozy wody (`plan_days` > 7, data = dziś) | LIVE | CC BY 4.0 (dane ECMWF open data) |
+| ECMWF IFS ENS 0,25°, archiwum [dynamical.org](https://dynamical.org) (Zarr) | kalibracja (2024) i test (2025–2026) prognozy na 14 dni; opcjonalnie rekomendacje dla dat historycznych (`KOWR_RL_ENS_ARCHIVE=1`) | PRE-FETCHED (opcjonalnie LIVE) | CC BY 4.0 |
+| ISRIC SoilGrids 2.0 (`rest.isric.org`, `wv0033`, `wv1500`, 250 m) | pojemność wodna trzech stref gleby | LIVE (cache bez wygasania) + PRE-FETCHED | CC BY 4.0 |
+| Open-Meteo Historical Weather API, model `era5_land` (4 warstwy wilgotności gleby) | niezależne sprawdzenie modelu stref i prognozy | PRE-FETCHED | CC BY 4.0 (Copernicus ERA5-Land) |
 
 Do zewnętrznych serwisów wysyłane są wyłącznie współrzędne punktu lub numer działki. Nie są przetwarzane żadne dane osobowe.
 
@@ -167,6 +177,8 @@ Do zewnętrznych serwisów wysyłane są wyłącznie współrzędne punktu lub n
 | Pogoda punktów treningowych (Open-Meteo archive) | PRE-FETCHED | 21.11.2026, 12:37–12:48 UTC | 2016-01-01 → 2026-11-16, 0 brakujących dni |
 | Archiwalne prognozy ECMWF punktów (Previous Runs) | PRE-FETCHED | 21.11.2026, 12:37–12:48 UTC | 15 III – 31 X w latach 2024, 2025, 2026 (0,25% pustych komórek) |
 | Zestaw holdout (czysty test E6): siatka przesunięta o 0,35°, IUNG, pogoda i archiwalne prognozy ECMWF ([`data/holdout/MANIFEST.json`](data/holdout/MANIFEST.json)) | PRE-FETCHED | 21.11.2026, 15:17–15:26 UTC | 112 węzłów → 81 rolnych → 50 (16 województw, ≥ 35 km od punktów treningowych); pogoda 2016-01-01 → 2026-11-16; prognozy 15 III – 31 X 2025 i 2026 |
+| Archiwum ECMWF ENS ([`data/ens_archive/MANIFEST.json`](data/ens_archive/MANIFEST.json)) | PRE-FETCHED | 21.11.2026, 20:27–20:33 UTC | 94 przebiegi 00 UTC co tydzień 14 III – 23 X 2024–2026 (w 2024 od 1 IV), 100 punktów, 51 członków × 15 dni |
+| Profile SoilGrids ([`data/soils/soilgrids_profiles.json`](data/soils/soilgrids_profiles.json)) | PRE-FETCHED | 21.11.2026, 20:24–20:48 UTC | 100 punktów, 6 warstw 0–200 cm |
 | Wagi polityki RL `artifacts/models/ppo_irrigator_weights.npz` (E6f_s2@dom) | wytrenowane offline na danych PRE-FETCHED | 21.11.2026 | trening 2016–2023, walidacja 2024, test 2025–2026 (holdout + punkty treningowe) |
 
 Szczegóły (URL, znaczniki czasu dla każdego punktu, kontrola jakości) są w [`data/MANIFEST.json`](data/MANIFEST.json). Same dane (pogoda i archiwalne prognozy, pliki `.parquet`, ok. 6 MB) nie są w repozytorium. Pobiera je lokalnie skrypt `scripts/fetch_training_data.py` (polecenia w sekcji 1), a w repozytorium są tylko manifesty ze źródłami i datami pobrania. **Rekomendacja zawsze liczy się na żywo z danych działki.** Dane pobrane wcześniej służą wyłącznie do treningu i ewaluacji.
@@ -189,6 +201,7 @@ Szczegóły (URL, znaczniki czasu dla każdego punktu, kontrola jakości) są w 
 | Stable-Baselines3 / sb3-contrib | 2.9.2 | MIT | PPO / MaskablePPO |
 | Gymnasium | 1.4.0 | MIT | środowisko RL |
 | TensorBoard | 2.21.0 | Apache-2.0 | logi treningu |
+| xarray / zarr | 2026.9.0 / 3.1.6 | Apache-2.0 / MIT | archiwum ECMWF ENS (tylko grupa `train`) |
 | Matplotlib | 3.11.2 | licencja Matplotlib (PSF-podobna, permisywna) | wykresy raportu |
 | pytest | 9.2.0 | MIT | testy |
 
