@@ -1,0 +1,92 @@
+# Retention and agrotechnical measures ("zatrzymaj wodę tam, gdzie spadła").
+# Each entry becomes one RetentionMeasure in hydro_core/retention.py (RETENTION_MEASURES).
+# Applicability conditions are Python predicates registered under `applies_if` names.
+#
+# Effects are simulated with the same FAO-56 + SCS-CN balance as the assessment:
+#   delta_taw_mm  - extra water the root zone can hold (organic matter, less evaporation,
+#                   higher groundwater level near a dammed ditch)
+#   cn_delta      - change of the SCS curve number (negative = more infiltration, less runoff)
+# Values are literature-based assumptions for Polish conditions - DO WERYFIKACJI Z MENTOREM.
+#
+# group:
+#   bez_urzadzen  - the farmer can do it alone
+#   wymaga_zgody  - changes a water facility: requires a permit or notification
+#                   to PGW Wody Polskie (mentor finding 8.1, point 5)
+
+permit:
+  note: "Zmiana urządzeń wodnych wymaga zgłoszenia wodnoprawnego lub pozwolenia PGW Wody Polskie (Prawo wodne)."
+  url: "https://www.gov.pl/web/wody-polskie"
+
+measures:
+  miedzyplon:
+    title: "Międzyplon ścierniskowy lub ozimy"
+    category: "agrotechnika"
+    group: bez_urzadzen
+    delta_taw_mm: 5.0
+    cn_delta: -5.0
+    time_to_effect: "1 sezon"
+    rationale: "Okrywa glebę po zbiorze, zwiększa infiltrację opadu i ilość materii organicznej."
+    applies_if: [not_grassland]
+  mulcz:
+    title: "Mulcz z resztek pożniwnych"
+    category: "agrotechnika"
+    group: bez_urzadzen
+    delta_taw_mm: 8.0
+    cn_delta: -4.0
+    time_to_effect: "od razu"
+    rationale: "Ogranicza parowanie z powierzchni gleby i zaskorupianie po ulewie."
+    applies_if: [not_grassland]
+  uprawa_uproszczona:
+    title: "Uprawa uproszczona (bez orki)"
+    category: "agrotechnika"
+    group: bez_urzadzen
+    delta_taw_mm: 6.0
+    cn_delta: -3.0
+    time_to_effect: "2-3 sezony"
+    rationale: "Zachowuje strukturę gleby i kanaliki po korzeniach, mniej wody ucieka z parowaniem."
+    applies_if: [not_grassland]
+  materia_organiczna:
+    title: "Zwiększenie materii organicznej (obornik, kompost)"
+    category: "agrotechnika"
+    group: bez_urzadzen
+    delta_taw_mm: 10.0
+    cn_delta: -2.0
+    time_to_effect: "3-5 lat"
+    rationale: "Każdy 1% próchnicy więcej to ok. 10 mm wody więcej w strefie korzeniowej."
+    applies_if: []
+  pas_buforowy:
+    title: "Pas buforowy (zadarnienie) w dolnej części działki"
+    category: "nwrm"
+    group: bez_urzadzen
+    delta_taw_mm: 0.0
+    cn_delta: -6.0
+    time_to_effect: "1 sezon"
+    rationale: "Zatrzymuje spływ powierzchniowy z glebą przed opuszczeniem działki."
+    applies_if: [sloped_parcel]
+  zastawka_na_rowie:
+    title: "Zastawka (piętrzenie) na rowie melioracyjnym"
+    category: "urzadzenie_wodne"
+    group: wymaga_zgody
+    delta_taw_mm: 20.0
+    cn_delta: 0.0
+    time_to_effect: "od wiosny po zgodzie"
+    rationale: "Melioracja odprowadza wodę, którą można zatrzymać: piętrzenie podnosi poziom wód gruntowych przy działce."
+    applies_if: [ditch_nearby]
+  sterowany_odplyw:
+    title: "Sterowany odpływ z drenażu"
+    category: "urzadzenie_wodne"
+    group: wymaga_zgody
+    delta_taw_mm: 15.0
+    cn_delta: 0.0
+    time_to_effect: "od wiosny po zgodzie"
+    rationale: "Zamknięcie wylotu drenów po roztopach zatrzymuje wodę zimową w profilu glebowym."
+    applies_if: [ditch_touching]
+  zbiornik_w_zaglebieniu:
+    title: "Mała retencja w naturalnym zagłębieniu terenu"
+    category: "urzadzenie_wodne"
+    group: wymaga_zgody
+    delta_taw_mm: 4.0
+    cn_delta: -8.0
+    time_to_effect: "1 sezon po zgodzie"
+    rationale: "Woda ze spływu zbiera się w zagłębieniu zamiast odpływać do rowu."
+    applies_if: [has_depressions]

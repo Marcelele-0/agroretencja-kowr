@@ -1,0 +1,49 @@
+# WaterScore = sum(weight_i * component_i) over components that have data.
+# Components are Python functions registered in hydro_core/scoring.py (SCORE_COMPONENTS);
+# this file only sets their weights and thresholds, so tuning needs no code change.
+# A component without data (e.g. no cloud-free Sentinel-2 scene) is skipped and the weights of
+# the remaining ones are rescaled proportionally (blueprint 3.2).
+#
+# Pillars group components into the four fields of WaterScoreBreakdown
+# (balance / satellite / soil / topography). Nominal pillar weights 0.40 / 0.30 / 0.15 / 0.15.
+
+components:
+  zapas_wody_w_glebie: {weight: 0.28, pillar: balance}
+  kbw_iung: {weight: 0.12, pillar: balance}
+  wilgotnosc_lanu_ndmi: {weight: 0.30, pillar: satellite}
+  pojemnosc_wodna_gleby: {weight: 0.15, pillar: soil}
+  teren_splyw: {weight: 0.15, pillar: topography}
+
+# Component tuning
+storage:
+  score_at_raw: 60.0          # score when depletion Dr equals RAW (start of crop stress)
+satellite:
+  ndmi_anomaly_points_per_sigma: 15.0
+  ndmi_abs_low: -0.20         # absolute NDMI mapped to 0 (used without 10-year history)
+  ndmi_abs_high: 0.40         # absolute NDMI mapped to 100
+soil:
+  taw_reference_mm: 220.0     # TAW scored as 100
+topography:
+  slope_penalty_per_deg: 8.0
+  slope_penalty_max: 60.0
+  runoff_penalty_per_pct: 1.0 # per % of precipitation lost to runoff in the last 60 days
+  depression_bonus_max: 10.0
+
+# Absolute veto rules (hydro_core/scoring.py VETO_RULES); never averaged into WaterScore
+veto:
+  dr_critical_fraction: 0.85          # Dr > 0.85 TAW in a sensitive stage -> KRYTYCZNE
+  sensitive_stages: [dev, mid]
+  steep_slope_deg: 5.0                # mean slope > 5 deg on soil category I -> min. WYSOKIE
+  steep_light_soil_categories: [I]
+
+# Risk level from WaterScore when no veto fires
+risk_from_score:
+  niskie: 65.0        # score >= 65
+  umiarkowane: 45.0   # 45 <= score < 65
+  wysokie: 0.0        # score < 45
+
+# Water state -5..+5 shown in the UI: (score - 50) / 10, capped by the risk level
+water_state:
+  cap_by_risk:
+    krytyczne: -3.0
+    wysokie: -1.0

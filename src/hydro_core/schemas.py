@@ -143,6 +143,18 @@ class DataConfidence(BaseModel):
     missing_factors: list[str] = Field(default_factory=list)
 
 
+class ScoreComponentValue(BaseModel):
+    """One registered WaterScore component (see hydro_core.scoring.SCORE_COMPONENTS)."""
+
+    name: str
+    label: str
+    pillar: str
+    value: float | None = Field(default=None, ge=0.0, le=100.0)
+    weight_nominal: float = Field(..., ge=0.0)
+    weight_used: float = Field(..., ge=0.0)
+    explanation: str | None = None
+
+
 class WaterScoreBreakdown(BaseModel):
     """Decomposed deterministic WaterScore on a 0-100 scale."""
 
@@ -152,6 +164,28 @@ class WaterScoreBreakdown(BaseModel):
     soil_score: float = Field(..., ge=0.0, le=100.0)
     topography_score: float = Field(..., ge=0.0, le=100.0)
     weights_used: dict[str, float]
+    components: list[ScoreComponentValue] = Field(default_factory=list)
+
+
+class DayKind(str, Enum):
+    """Provenance of one day in the unified weather/water timeline."""
+
+    OBSERVED = "observed"
+    RECENT = "recent"
+    FORECAST = "forecast"
+    CLIMATOLOGY = "climatology"
+
+
+class WaterStatePoint(BaseModel):
+    """Daily water state -5..+5 around the analysis date (history and projection alike)."""
+
+    date: date
+    value: float = Field(..., ge=-5.0, le=5.0)
+    forecast: bool
+    kind: DayKind
+    storage_pct_taw: float | None = None
+    precipitation_mm: float | None = None
+    et0_mm: float | None = None
 
 
 class WaterRiskAssessment(BaseModel):
@@ -181,6 +215,11 @@ class YearlyDroughtPoint(BaseModel):
     min_kbw_margin_mm: float | None = None
     kbw_drought_periods: int = Field(default=0, ge=0)
     yield_loss_pct: float = Field(..., ge=0.0, le=100.0)
+    same_day_state: float | None = Field(default=None, ge=-5.0, le=5.0)
+    same_day_storage_pct_taw: float | None = None
+    season_precip_mm: float | None = None
+    season_etc_mm: float | None = None
+    is_partial: bool = False
 
 
 class WaterAssessmentSummary(BaseModel):
@@ -208,6 +247,15 @@ class WaterAssessmentSummary(BaseModel):
     confidence: DataConfidence
     history_10y: list[YearlyDroughtPoint]
     summary_text: str
+    water_state: float = Field(default=0.0, ge=-5.0, le=5.0)
+    water_state_timeline: list[WaterStatePoint] = Field(default_factory=list)
+    storage_pct_taw: float | None = None
+    days_to_stress: float | None = Field(default=None, ge=0.0)
+    kbw_is_drought: bool | None = None
+    in_season: bool = True
+    crop_stage: str | None = None
+    kc_today: float | None = None
+    runoff_60d_mm: float | None = Field(default=None, ge=0.0)
 
 
 class RetentionRecommendation(BaseModel):
@@ -221,6 +269,14 @@ class RetentionRecommendation(BaseModel):
     runoff_reduction_pct: float = Field(..., ge=0.0, le=100.0)
     priority_rank: int = Field(..., ge=1)
     map_hint: dict[str, Any] | None = None
+    group: str = "bez_urzadzen"
+    requires_permit: bool = False
+    permit_note: str | None = None
+    permit_url: str | None = None
+    effect_reserve_days: int = 0
+    effect_yield_pp: float = 0.0
+    retained_runoff_mm: float = 0.0
+    time_to_effect: str | None = None
 
 
 class WhatIfScenarioResult(BaseModel):
@@ -231,6 +287,10 @@ class WhatIfScenarioResult(BaseModel):
     delta_reserve_days: int
     saved_water_mm: float
     reference_dry_year: int
+    enabled_measures: list[str] = Field(default_factory=list)
+    baseline_stress_days: int = 0
+    scenario_stress_days: int = 0
+    retained_runoff_mm: float = 0.0
 
 
 class RetentionPlan(BaseModel):
@@ -250,6 +310,15 @@ class IrrigationStrategySummary(BaseModel):
     water_use_efficiency: float = Field(..., ge=0.0)
 
 
+class IrrigationPlanDay(BaseModel):
+    """One day of the 7-day irrigation plan (conditional on the assumed weather)."""
+
+    date: date
+    dose_mm: float = Field(..., ge=0.0)
+    precip_assumed_mm: float | None = None
+    stress_expected: bool = False
+
+
 class IrrigationAdvice(BaseModel):
     """Step 4 KOWR output: optional irrigation guidance using RL or FAO baseline."""
 
@@ -258,6 +327,37 @@ class IrrigationAdvice(BaseModel):
     rationale: str
     forecast_mode: str
     strategies_10y: list[IrrigationStrategySummary]
+    policy_used: str | None = None
+    plan_7d: list[IrrigationPlanDay] = Field(default_factory=list)
+    in_season: bool = True
+    limitations: list[str] = Field(default_factory=list)
+
+
+class AdviceKind(str, Enum):
+    """Type of farmer advice produced by hydro_core.advisor.ADVICE_RULES."""
+
+    NAWADNIAJ_TERAZ = "nawadniaj_teraz"
+    PRZYGOTUJ_NAWADNIANIE = "przygotuj_nawadnianie"
+    POCZEKAJ_NA_OPAD = "poczekaj_na_opad"
+    SUSZA_IUNG = "susza_iung"
+    OSTRZEZENIE = "ostrzezenie"
+    RETENCJA = "retencja"
+    POZA_SEZONEM = "poza_sezonem"
+    MONITORUJ = "monitoruj"
+
+
+class FarmerAdvice(BaseModel):
+    """Plain-language suggestion with its evidence, ordered by priority (1 = most urgent)."""
+
+    id: str
+    kind: AdviceKind
+    priority: int = Field(..., ge=1, le=5)
+    title: str
+    text: str
+    horizon_start: date | None = None
+    horizon_end: date | None = None
+    evidence: dict[str, float | str | None] = Field(default_factory=dict)
+    based_on: list[str] = Field(default_factory=list)
 
 
 class AuditMetadata(BaseModel):
@@ -309,3 +409,12 @@ class AnalysisResponse(BaseModel):
     irrigation: IrrigationAdvice
     map_layers: dict[str, Any] = Field(default_factory=dict)
     audit: AuditMetadata
+    advice: list[FarmerAdvice] = Field(default_factory=list)
+
+
+class AnalysisRefusal(BaseModel):
+    """Returned instead of an analysis when the parcel is out of scope (e.g. forest, built-up)."""
+
+    status: str
+    message: str
+    parcel: ParcelGeometry | None = None

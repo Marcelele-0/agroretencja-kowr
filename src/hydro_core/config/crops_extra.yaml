@@ -1,0 +1,60 @@
+# Crops of the backend contract (CropCode) that are NOT in ml/rl_irrigator/config/crops.yaml.
+# Same schema as the RL file, so both are loaded by kowr_rl.config.load_crops() and merged by
+# hydro_core.crops (RL file = single source of truth for the 4 shared crops).
+#
+# STATUS: DO WERYFIKACJI Z MENTOREM (dr inz. T. Bolewski, dr hab. D. Gozdowski).
+# Sources: FAO-56 Tab. 11 (stage lengths), Tab. 12 (Kc), Tab. 22 (p), Tab. 24 / FAO-33 (Ky).
+# Dates adapted to Polish conditions (assumption).
+
+verification_status: "do_weryfikacji_z_mentorem"
+
+pre_season:
+  start_month_day: [3, 1]
+  kc: 0.30
+  p: 0.55
+  source: "Same as ml/rl_irrigator/config/crops.yaml"
+
+crops:
+  pszenica_jara:
+    label_pl: "Pszenica jara"
+    kc_ini: 0.30
+    kc_mid: 1.15
+    kc_end: 0.30
+    stages_days: {ini: 20, dev: 25, mid: 60, late: 30}  # 135 d
+    sowing_month_day: [4, 1]
+    p: 0.55
+    ky: 1.15
+    source:
+      kc: "FAO-56 Tab. 12, Spring wheat: Kc ini 0.3 (cereals), Kc mid 1.15, Kc end 0.25-0.4"
+      stages_days: "FAO-56 Tab. 11, Spring wheat 20/25/60/30 = 135 d"
+      sowing: "PL practice: sowing late March - mid April (assumption 1 IV); harvest ~13 VIII"
+      p: "FAO-56 Tab. 22: 0.55"
+      ky: "FAO-56 Tab. 24 (FAO-33): spring wheat 1.15"
+  rzepak_ozimy:
+    label_pl: "Rzepak ozimy (od wznowienia wegetacji)"
+    kc_ini: 0.35
+    kc_mid: 1.10
+    kc_end: 0.35
+    stages_days: {ini: 20, dev: 35, mid: 45, late: 25}  # 125 d
+    sowing_month_day: [3, 20]  # spring regrowth (sown in August)
+    p: 0.60
+    ky: 1.00
+    source:
+      kc: "FAO-56 Tab. 12, Rapeseed/canola: Kc ini 0.35, Kc mid 1.0-1.15, Kc end 0.35"
+      stages_days: "Assumption for PL: regrowth ~20 III, flowering V, harvest ~22 VII"
+      p: "FAO-56 Tab. 22: 0.60"
+      ky: "Not in FAO-56 Tab. 24 - assumption 1.0 (oilseeds), DO WERYFIKACJI"
+  uzytki_zielone:
+    label_pl: "Łąki i pastwiska (użytki zielone)"
+    kc_ini: 0.90
+    kc_mid: 0.95
+    kc_end: 0.90
+    stages_days: {ini: 10, dev: 20, mid: 160, late: 24}  # 214 d (1 IV - 31 X)
+    sowing_month_day: [4, 1]
+    p: 0.60
+    ky: 1.00
+    source:
+      kc: "FAO-56 Tab. 12, Grass hay, average cutting effects: 0.90 / 0.95 / 0.90"
+      stages_days: "Growing season of permanent grassland in PL, 1 IV - 31 X (assumption)"
+      p: "FAO-56 Tab. 22, grazing pasture: 0.60"
+      ky: "Forage crops ~1.0 (FAO-33 alfalfa 1.1) - assumption, DO WERYFIKACJI"

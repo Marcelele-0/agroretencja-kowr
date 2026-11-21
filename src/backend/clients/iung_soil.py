@@ -38,6 +38,14 @@ _NON_AGRICULTURAL = {
 _CACHE_TTL_S = 30 * 24 * 3600
 
 
+class NonAgriculturalParcelError(SourceUnavailableError):
+    """The IUNG map shows no agricultural land on the parcel (forest, water, built-up, roads)."""
+
+    def __init__(self, message: str, land_cover: list[str]) -> None:
+        super().__init__(message)
+        self.land_cover = land_cover
+
+
 class IungSoilResult(BaseModel):
     """Soil category of the parcel from sample points (majority vote)."""
 
@@ -56,10 +64,13 @@ def classify_samples(values: list[int | None]) -> IungSoilResult:
     non_ag = [_NON_AGRICULTURAL[v] for v in values if v in _NON_AGRICULTURAL]
 
     if not cats and not organic:
-        raise SourceUnavailableError(
-            "W punktach działki mapa IUNG nie wskazuje gruntów ornych"
-            + (f" ({', '.join(sorted(set(non_ag)))})." if non_ag else " (brak danych).")
+        message = "W punktach działki mapa IUNG nie wskazuje gruntów ornych" + (
+            f" ({', '.join(sorted(set(non_ag)))})." if non_ag else " (brak danych)."
         )
+        known = [v for v in values if v is not None]
+        if non_ag and len(non_ag) == len(known):
+            raise NonAgriculturalParcelError(message, sorted(set(non_ag)))
+        raise SourceUnavailableError(message)
     notes: list[str] = []
     if organic > len(cats):
         category = IungSoilCategory.IV

@@ -51,7 +51,7 @@ System wspiera rolnika bez specjalistycznej wiedzy GIS w podejmowaniu decyzji wo
 
 ## 3. Skrócony opis architektury rozwiązania
 
-Architektura stosuje zasadę **Explainability by Design**: warstwa percepcji danych i lekkie modele ML są ściśle oddzielone od deterministycznego kalkulatora fizycznego FAO-56/33. Szczegółowa specyfikacja znajduje się w [docs/SOLUTION_BLUEPRINT.md](docs/SOLUTION_BLUEPRINT.md) oraz [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Architektura stosuje zasadę **Explainability by Design**: warstwa percepcji danych i lekkie modele ML są ściśle oddzielone od deterministycznego kalkulatora fizycznego FAO-56/33. Szczegółowa specyfikacja znajduje się w [docs/SOLUTION_BLUEPRINT.md](docs/SOLUTION_BLUEPRINT.md) oraz [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md). Architekturę backendu (rejestry rozszerzeń, jedna oś czasu historii i prognozy, decyzje ADR) opisuje [docs/BACKEND_ARCHITECTURE.md](docs/BACKEND_ARCHITECTURE.md).
 
 - **`src/hydro_core/`:** Wspólne kontrakty Pydantic v2, symulator bilansu FAO-56/33, przetwarzanie NMT 1 m (spadki, spływ D8, TWI), wyliczanie `WaterScore`, reguł weta `WaterRisk` i `DataConfidence (AoA)`.
 - **`src/backend/`:** Asynchroniczne API FastAPI (`asyncio.gather`) odpytujące równolegle 5 kategorii źródeł (budżet czasu `≤ 30 s`, cel `10–18 s`), lekka inferencja CPU (`LightGBM` + eksportowane wagi NumPy `.npz`) oraz generator raportów PDF.

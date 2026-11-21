@@ -70,6 +70,7 @@ class SourceResult(Generic[T]):
     fetch_time_s: float
     message: str | None
     audit: SourceAuditEntry
+    error: Exception | None = None
 
     @property
     def ok(self) -> bool:
@@ -107,7 +108,7 @@ class BaseSourceClient(ABC, Generic[T]):
                 perf_counter() - started,
             )
         except SourceUnavailableError as exc:
-            return self.missing(str(exc), perf_counter() - started)
+            return self.missing(str(exc), perf_counter() - started, error=exc)
         except httpx.HTTPStatusError as exc:
             return self.missing(
                 f"Serwer zwrócił błąd HTTP {exc.response.status_code}.", perf_counter() - started
@@ -136,8 +137,10 @@ class BaseSourceClient(ABC, Generic[T]):
             ),
         )
 
-    def missing(self, message: str, elapsed: float = 0.0) -> SourceResult[T]:
-        """Build an explicit 'brak danych' result."""
+    def missing(
+        self, message: str, elapsed: float = 0.0, error: Exception | None = None
+    ) -> SourceResult[T]:
+        """Build an explicit 'brak danych' result (``error`` keeps the typed reason, if any)."""
         return SourceResult(
             key=self.descriptor.key,
             data=None,
@@ -147,6 +150,7 @@ class BaseSourceClient(ABC, Generic[T]):
             audit=self._audit(
                 mode=DataMode.MISSING, observation_date="brak", elapsed=elapsed, message=message
             ),
+            error=error,
         )
 
     def _audit(

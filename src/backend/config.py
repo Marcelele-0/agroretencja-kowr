@@ -20,6 +20,13 @@ class Settings(BaseSettings):
 
     # Global
     analysis_deadline_s: float = 25.0
+    analysis_cache_ttl_s: float = 3600.0
+    # Frontend origins allowed by CORS (JSON list in .env, e.g. ["https://agroretencja.example"])
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+    ]
     http_user_agent: str = "AgroRetencja-KOWR/0.1 (prototyp HackNation 2026)"
     cache_dir: Path = PROJECT_ROOT / "data" / "cache"
 

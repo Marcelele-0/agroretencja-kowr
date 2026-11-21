@@ -323,8 +323,14 @@ def recommend(
     include_history: bool = False,
     client: HttpClient | None = None,
     today: dt.date | None = None,
+    _prefetched: tuple[int, DailySeries, list[SourceRecord], DailySeries | None] | None = None,
 ) -> dict[str, Any]:
-    """7-day irrigation recommendation for a point (or parcel) in Poland on ``date``."""
+    """7-day irrigation recommendation for a point (or parcel) in Poland on ``date``.
+
+    ``_prefetched = (iung_code, observed_weather, sources, forecast_series)`` lets the main
+    backend pass data it already fetched (same pattern as ``compare_strategies``): no second
+    request to IUNG / Open-Meteo, identical weather in steps 1 and 4.
+    """
     t_start = time.perf_counter()
     client = client or get_client()
     today = today or _today()
@@ -366,23 +372,28 @@ def recommend(
     c = crops[crop]
     season_start, season_end = c.season_start(date.year), c.season_end(date.year)
     in_season = season_start <= date <= season_end
-    need_live = date >= today - dt.timedelta(days=60)
-    common = _fetch_common(client, lat, lon, today, need_live)
-    soil_res = common["soil"]
-    if isinstance(soil_res, Exception):
-        return finish("no_data", f"Brak odpowiedzi warstwy glebowej IUNG-PIB: {soil_res}")
-    code, ssrc = soil_res
-    sources.append(ssrc)
+    if _prefetched is not None:
+        code, obs, pre_sources, fc_series = _prefetched
+        sources.extend(pre_sources)
+    else:
+        need_live = date >= today - dt.timedelta(days=60)
+        common = _fetch_common(client, lat, lon, today, need_live)
+        soil_res = common["soil"]
+        if isinstance(soil_res, Exception):
+            return finish("no_data", f"Brak odpowiedzi warstwy glebowej IUNG-PIB: {soil_res}")
+        code, ssrc = soil_res
+        sources.append(ssrc)
     if code not in (1, 2, 3, 4):
         status, msg = _soil_message(code)
         return finish(status, msg, location={"lat": lat, "lon": lon, "iung_code": code})
     soil = load_soils()["categories"][code]
     taw = float(soil["taw_mm"])
-    try:
-        obs, wsrc, fc_series = _observed_weather(common, today)
-    except DataUnavailableError as err:
-        return finish("no_data", str(err))
-    sources.extend(wsrc)
+    if _prefetched is None:
+        try:
+            obs, wsrc, fc_series = _observed_weather(common, today)
+        except DataUnavailableError as err:
+            return finish("no_data", str(err))
+        sources.extend(wsrc)
     location = {"lat": _r(lat, 5), "lon": _r(lon, 5), "iung_code": code, "soil_category": ROMAN[code], "soil_label": soil["label"], "taw_mm": taw}
     crop_info = {"key": c.key, "label": c.label_pl, "season_start": season_start.isoformat(), "season_end": season_end.isoformat(), "params": {"kc_ini": c.kc_ini, "kc_mid": c.kc_mid, "kc_end": c.kc_end, "p": c.p, "ky": c.ky}}
 

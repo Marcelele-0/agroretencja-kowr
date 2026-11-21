@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any
 
 from shapely import wkt
+from shapely.errors import GEOSException
 from shapely.geometry import mapping
 
 from backend.clients.base import (
@@ -21,6 +23,22 @@ _RESULT_FIELDS = "geom_wkt,teryt,voivodeship,county,commune,region,parcel"
 _SEARCH_FIELDS = "teryt,voivodeship,county,commune,region,parcel"
 _PARCEL_ID_RE = re.compile(r"^\d{6}_\d\.[0-9A-Za-z_.\-/]{1,40}$")
 _CACHE_TTL_S = 7 * 24 * 3600
+_CORRUPT_RETRIES = 2
+_CORRUPT_RETRY_DELAY_S = 0.3
+# Under load ULDK answers some requests with HTTP 302 to a placeholder page
+# (integracja01.gugik.gov.pl/resp/uldk.php) that returns "0" + a dummy WKB string
+# (observed 2026-11-21, random per request). Such answers are retried, not parsed.
+_BUSY_RETRIES = 4
+_BUSY_RETRY_DELAY_S = 0.2
+_BUSY_LOCATION_MARK = "/resp/"
+
+
+class UldkTransientError(SourceUnavailableError):
+    """ULDK is temporarily unable to answer (overload redirect, corrupt answer): retryable."""
+
+
+class CorruptGeometryError(UldkTransientError):
+    """ULDK answered, but the geometry text is not a valid parcel polygon (worth a retry)."""
 
 
 def normalize_parcel_id(raw: str) -> str:
@@ -53,9 +71,15 @@ def build_parcel(row: list[str]) -> ParcelGeometry:
     geom_text, teryt, voiv, county, commune, region, number = (row + [""] * 7)[:7]
     if ";" in geom_text:
         geom_text = geom_text.split(";", 1)[1]
-    geom = wkt.loads(geom_text)
+    try:
+        geom = wkt.loads(geom_text)
+    except (GEOSException, ValueError) as exc:
+        # ULDK intermittently returns a WKB-like hex string instead of WKT (observed 2026-11-21)
+        raise CorruptGeometryError("ULDK zwróciło uszkodzoną geometrię działki.") from exc
     if geom.is_empty:
         raise SourceUnavailableError("ULDK zwróciło pustą geometrię działki.")
+    if geom.geom_type not in ("Polygon", "MultiPolygon"):
+        raise CorruptGeometryError(f"ULDK zwróciło geometrię typu {geom.geom_type} zamiast poligonu.")
     area_ha = to_puwg92(geom).area / 10_000.0
     centroid = geom.representative_point() if not geom.centroid.within(geom) else geom.centroid
     return ParcelGeometry(
@@ -91,11 +115,19 @@ class UldkClient(BaseSourceClient[ParcelGeometry]):
         return self.settings.uldk_timeout_s
 
     async def _get(self, params: dict[str, str]) -> str:
-        response = await self.http.get(
-            self.settings.uldk_url, params=params, timeout=self.settings.uldk_timeout_s
-        )
-        response.raise_for_status()
-        return response.text
+        for _attempt in range(_BUSY_RETRIES + 1):
+            response = await self.http.get(
+                self.settings.uldk_url,
+                params=params,
+                timeout=self.settings.uldk_timeout_s,
+                follow_redirects=False,
+            )
+            if response.is_redirect and _BUSY_LOCATION_MARK in response.headers.get("location", ""):
+                await asyncio.sleep(_BUSY_RETRY_DELAY_S)
+                continue
+            response.raise_for_status()
+            return response.text
+        raise UldkTransientError("ULDK jest chwilowo przeciążone (odpowiedź zastępcza serwera GUGiK).")
 
     async def _fetch(self, **kwargs: Any) -> FetchOutcome[ParcelGeometry]:
         parcel_id: str | None = kwargs.get("parcel_id")
@@ -125,10 +157,19 @@ class UldkClient(BaseSourceClient[ParcelGeometry]):
         else:
             raise SourceUnavailableError("Podaj identyfikator działki albo wskaż punkt na mapie.")
 
-        _, rows = parse_uldk_response(await self._get(params))
-        if not rows:
-            raise SourceUnavailableError("Nie znaleziono działki w ULDK.")
-        parcel = build_parcel(rows[0])
+        parcel: ParcelGeometry | None = None
+        for attempt in range(_CORRUPT_RETRIES + 1):
+            _, rows = parse_uldk_response(await self._get(params))
+            if not rows:
+                raise SourceUnavailableError("Nie znaleziono działki w ULDK.")
+            try:
+                parcel = build_parcel(rows[0])
+                break
+            except CorruptGeometryError:
+                if attempt == _CORRUPT_RETRIES:
+                    raise
+                await asyncio.sleep(_CORRUPT_RETRY_DELAY_S)
+        assert parcel is not None
         await self.cache.set(f"uldk:id:{parcel.parcel_id}", parcel.model_dump(mode="json"), _CACHE_TTL_S)
         if cache_key and cache_key != f"uldk:id:{parcel.parcel_id}":
             await self.cache.set(cache_key, parcel.model_dump(mode="json"), _CACHE_TTL_S)
