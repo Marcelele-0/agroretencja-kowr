@@ -122,7 +122,7 @@ def test_budget_exhausted_means_no_irrigation(mock_client) -> None:
 def test_out_of_season_gives_history(mock_client) -> None:
     out = inf.recommend(52.1, 18.2, "pszenica_ozima", "2025-11-10", 150, client=mock_client, today=TODAY)
     assert out["status"] == "out_of_season"
-    assert "poza" in out["message"] or "po sezonem" in out["message"] or "sezonem" in out["message"]
+    assert "po sezonie uprawy" in out["message"] and "Brak rekomendacji dawek" in out["message"]
     assert out["history"] and {s["strategy"] for s in out["history"]} >= {"none", "fao_rule", "oracle"}
     assert "recommendation" not in out
 
