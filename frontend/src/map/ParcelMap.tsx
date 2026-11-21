@@ -33,8 +33,8 @@ function hatch(color: string): ImageData {
 const NO_VALUE = -99;
 const parcelFc = (ps: MapParcel[]) => ({ type: "FeatureCollection" as const, features: ps.map((p) => ({ type: "Feature" as const, properties: { id: p.id, value: p.value ?? NO_VALUE, active: p.active ? 1 : 0 }, geometry: p.geometry as never })) });
 
-export function ParcelMap({ parcels, bbox, onPick, popover, popoverAt, zones, padding, overlay, legend, className }: {
-  parcels?: MapParcel[] | null; bbox?: BBox | null; legend?: ReactNode; onPick?: ((lon: number, lat: number) => void) | null; popover?: ReactNode; popoverAt?: Position | null;
+export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zones, padding, overlay, legend, className }: {
+  parcels?: MapParcel[] | null; bbox?: BBox | null; flyTo?: { center: Position; zoom?: number; seq: number } | null; legend?: ReactNode; onPick?: ((lon: number, lat: number) => void) | null; popover?: ReactNode; popoverAt?: Position | null;
   zones?: MapZone[] | null; padding?: Partial<Pad>; overlay?: ReactNode; className?: string;
 }) {
   const box = useRef<HTMLDivElement>(null);
@@ -117,6 +117,12 @@ export function ParcelMap({ parcels, bbox, onPick, popover, popoverAt, zones, pa
     map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: { top: 80, bottom: 80, left: 40, right: 40, ...padding }, maxZoom: 17.2, duration: fitted.current ? 900 : 0 });
     fitted.current = true;
   }, [bbox?.join(","), padding?.top, padding?.bottom, padding?.left, padding?.right]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !flyTo) return;
+    map.flyTo({ center: flyTo.center, zoom: flyTo.zoom ?? 15.2, duration: 900 });
+  }, [flyTo?.seq]);
 
   // The popover follows the map through a direct style write, not a React render per frame.
   useEffect(() => {

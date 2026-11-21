@@ -1,4 +1,4 @@
-import { addDays, fromDay, isoOf, lastDayOfMonth, parts, seasonYear, toDay, todayIso, inSeason, type Iso } from "./dates";
+import { addDays, fromDay, isoOf, lastDayOfMonth, minIso, parts, seasonYear, toDay, todayIso, inSeason, type Iso } from "./dates";
 import { request, sourceFailure } from "./http";
 
 /** Open-Meteo: ERA5 reanalysis archive + forecast. Daily precipitation and FAO-56 reference evapotranspiration. CORS: *. */
@@ -119,16 +119,33 @@ function forecastChunk(lat: number, lon: number, today: Iso): Promise<Chunk> {
 }
 
 const seriesMem = new Map<string, Promise<DailySeries>>();
+const resolvedSeries = new Map<string, DailySeries>();
 /** Weather an analysis of `date` needs, from about 11 small archive requests (instead of one 11-year request) plus the forecast. */
 export function weatherFor(lat: number, lon: number, date: Iso): Promise<DailySeries> {
   const today = todayIso();
   const key = `${lat.toFixed(2)},${lon.toFixed(2)},${date},${today}`;
   const hit = seriesMem.get(key);
   if (hit) return hit;
-  const p = load(lat, lon, date, today);
+  const p = load(lat, lon, date, today).then((s) => {
+    resolvedSeries.set(key, s);
+    return s;
+  });
   seriesMem.set(key, p);
   p.catch(() => seriesMem.delete(key));
   return p;
+}
+
+/** Synchronous cache lookup for `weatherFor`: avoids loading flashes when switching to an already-covered date. */
+export function cachedWeatherFor(lat: number, lon: number, date: Iso, today: Iso = todayIso()): DailySeries | null {
+  const prefix = `${lat.toFixed(2)},${lon.toFixed(2)},`;
+  const exact = resolvedSeries.get(`${prefix}${date},${today}`);
+  if (exact) return exact;
+  const ranges = neededRanges(date, today);
+  for (const [k, s] of resolvedSeries) {
+    if (!k.startsWith(prefix)) continue;
+    if (ranges.every(([a, b]) => coversRange(s, a, b))) return s;
+  }
+  return null;
 }
 
 async function load(lat: number, lon: number, date: Iso, today: Iso): Promise<DailySeries> {
@@ -162,4 +179,67 @@ export function dayIndex(s: DailySeries, iso: Iso): number {
 }
 export function lastDate(s: DailySeries): Iso {
   return fromDay(s.startDay + s.p.length - 1);
+}
+
+/** True when `s` holds observations/forecast covering [from, to] with intact boundaries and at most 2 missing days per variable. */
+export function coversRange(s: DailySeries, from: Iso, to: Iso): boolean {
+  if (from > to) return false;
+  const a = dayIndex(s, from);
+  const b = dayIndex(s, to);
+  if (a < 0 || b >= s.p.length || b >= s.et0.length || b < a) return false;
+  if (s.p[a] === null || s.p[a] === undefined || s.p[b] === null || s.p[b] === undefined) return false;
+  if (s.et0[a] === null || s.et0[a] === undefined || s.et0[b] === null || s.et0[b] === undefined) return false;
+  let missP = 0;
+  let missE = 0;
+  for (let i = a; i <= b; i++) {
+    if (s.p[i] === null || s.p[i] === undefined) missP++;
+    if (s.et0[i] === null || s.et0[i] === undefined) missE++;
+    if (missP > 2 || missE > 2) return false;
+  }
+  return true;
+}
+
+const seasonSeriesMem = new Map<string, Promise<DailySeries>>();
+
+/** Weather series covering from 5.XII of the previous year through min(30.IX, today) for sliding-window season replay. */
+export function seasonWeatherFor(lat: number, lon: number, year: number): Promise<DailySeries> {
+  const today = todayIso();
+  const key = `${lat.toFixed(2)},${lon.toFixed(2)},${year},${today}`;
+  const hit = seasonSeriesMem.get(key);
+  if (hit) return hit;
+  const p = loadSeason(lat, lon, year, today);
+  seasonSeriesMem.set(key, p);
+  p.catch(() => seasonSeriesMem.delete(key));
+  return p;
+}
+
+async function loadSeason(lat: number, lon: number, year: number, today: Iso): Promise<DailySeries> {
+  const from = isoOf(year - 1, 12, 5);
+  const rawTo = minIso(isoOf(year, 9, 30), today);
+  const to = rawTo < from ? from : rawTo;
+  const archiveEnd = addDays(today, -ARCHIVE_LAG_DAYS);
+  const needArchive = from <= archiveEnd;
+  const needForecast = to > archiveEnd;
+  const archTo = to > archiveEnd ? archiveEnd : to;
+  const [archive, fc] = await Promise.all([
+    needArchive ? archiveChunk(lat, lon, from, archTo) : Promise.resolve(null),
+    needForecast ? forecastChunk(lat, lon, today).then((c) => c, () => null) : Promise.resolve(null),
+  ]);
+  const startDay = toDay(from);
+  const n = toDay(to) - startDay + 1;
+  const p: (number | null)[] = new Array(n).fill(null);
+  const et0: (number | null)[] = new Array(n).fill(null);
+  const put = (c: Chunk, overwrite: boolean) => c.p.forEach((pv, i) => {
+    const k = toDay(c.from) + i - startDay;
+    if (k < 0 || k >= n) return;
+    if (overwrite || p[k] === null) p[k] = pv ?? null;
+    if (overwrite || et0[k] === null) et0[k] = c.e[i] ?? null;
+  });
+  if (archive) put(archive, true);
+  if (fc) put(fc, false);
+  const g = archive ?? fc;
+  return {
+    start: from, startDay, p, et0, forecastFrom: addDays(today, 1), forecastOk: !!fc || !needForecast,
+    grid: { lat: g?.lat ?? lat, lon: g?.lon ?? lon, elevation: g?.elevation ?? null }, retrievedAt: new Date(),
+  };
 }

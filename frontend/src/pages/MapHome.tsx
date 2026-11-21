@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "../analysis/useAnalysis";
-import { Button, CropSelect, DateBar, ParcelPopover, ParcelSearch, Wordmark } from "../ds";
+import { Button, CropSelect, DateBar, ParcelPopover, ParcelSearch, Wordmark, cx } from "../ds";
 import { DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { todayIso, type Iso } from "../lib/dates";
+import type { Position } from "../lib/geo";
+import { searchPlace, type PlaceHit } from "../lib/geocoder";
 import { landUseAt, type LandUse } from "../lib/iung";
 import { weatherFor } from "../lib/openMeteo";
-import { ParcelNotFound, parcelById, parcelByPoint, type Parcel } from "../lib/uldk";
+import { DEMO_PRESETS } from "../lib/presets";
+import { ParcelNotFound, looksLikeParcelId, parcelById, parcelByPoint, type Parcel } from "../lib/uldk";
 import { ParcelMap, type MapParcel } from "../map/ParcelMap";
 import { ha } from "./shared";
 
@@ -32,15 +35,49 @@ export function MapHome() {
   /** Crop per parcel; a new parcel gets the crop chosen last. */
   const [crops, setCrops] = useState<Record<string, CropCode>>({});
   const [lastCrop, setLastCrop] = useState<CropCode>(DEFAULT_CROP);
-  const cropOfId = (id: string): CropCode => crops[id] ?? lastCrop;
-  const setCropFor = (id: string, c: CropCode) => { setCrops((m) => ({ ...m, [id]: c })); setLastCrop(c); };
+  const cropsRef = useRef<Record<string, CropCode>>(crops);
+  cropsRef.current = crops;
+  const lastCropRef = useRef<CropCode>(lastCrop);
+  lastCropRef.current = lastCrop;
+  const [flyTo, setFlyTo] = useState<{ center: Position; zoom?: number; seq: number } | null>(null);
+  const [placeHits, setPlaceHits] = useState<PlaceHit[]>([]);
+  const [activePlace, setActivePlace] = useState(0);
+  const [placeNote, setPlaceNote] = useState<string | null>(null);
   const [date, setDate] = useState<Iso>(todayIso());
   const seq = useRef(0);
-  const narrow = typeof window !== "undefined" && window.innerWidth < 720;
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches,
+  );
 
-  const writeUrl = (ps: Parcel[]) => setSp(ps.length ? { dzialki: ps.map((p) => p.id).join(",") } : {}, { replace: true });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 720px)");
+    setNarrow(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setNarrow(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const writeUrl = (ps: Parcel[], cropMap = cropsRef.current, fallback = lastCropRef.current) =>
+    setSp(ps.length ? { dzialki: ps.map((p) => `${p.id}~${cropMap[p.id] ?? fallback}`).join(",") } : {}, { replace: true });
+
+  const cropOfId = (id: string): CropCode => crops[id] ?? lastCrop;
+  const setCropFor = (id: string, c: CropCode) => {
+    const nextCrops = { ...cropsRef.current, [id]: c };
+    cropsRef.current = nextCrops;
+    lastCropRef.current = c;
+    setCrops(nextCrops);
+    setLastCrop(c);
+    writeUrl(sel, nextCrops, c);
+  };
   /** Freezes the crop of a newly added parcel, so a later change of the default does not move it. */
-  const assignCrop = (id: string) => setCrops((m) => (m[id] ? m : { ...m, [id]: lastCrop }));
+  const assignCrop = (id: string) => {
+    if (cropsRef.current[id]) return cropsRef.current;
+    const nextCrops = { ...cropsRef.current, [id]: lastCropRef.current };
+    cropsRef.current = nextCrops;
+    setCrops(nextCrops);
+    return nextCrops;
+  };
 
   const checkLand = (p: Parcel) => {
     setLand((m) => (m[p.id] && m[p.id] !== "error" ? m : { ...m, [p.id]: "loading" }));
@@ -65,8 +102,8 @@ export function MapHome() {
       setSel((s) => {
         const has = s.some((x) => x.id === p.id);
         const next = has && !fromSearch ? s.filter((x) => x.id !== p.id) : has ? s : [...s, p];
-        if (!has) assignCrop(p.id);
-        writeUrl(next);
+        const nextCrops = !has ? assignCrop(p.id) : cropsRef.current;
+        writeUrl(next, nextCrops, lastCropRef.current);
         return next;
       });
       checkLand(p);
@@ -83,21 +120,48 @@ export function MapHome() {
   useEffect(() => {
     const entries = (sp.get("dzialki") ?? sp.get("dzialka") ?? "").split(",").filter(Boolean).map((e) => e.split("~"));
     const ids = entries.map((e) => e[0]!);
-    setCrops(Object.fromEntries(entries.flatMap(([id, c]) => (isCropCode(c) ? [[id!, c]] : []))));
+    const initialCrops = Object.fromEntries(entries.flatMap(([id, c]) => (isCropCode(c) ? [[id!, c]] : []))) as Record<string, CropCode>;
+    cropsRef.current = initialCrops;
+    setCrops(initialCrops);
     if (!ids.length) return;
     Promise.allSettled(ids.map((id) => parcelById(id))).then((rs) => {
       const ps = rs.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-      setSel(ps); setFocus(ps[ps.length - 1] ?? null); ps.forEach(checkLand); writeUrl(ps);
+      setSel(ps); setFocus(ps[ps.length - 1] ?? null); ps.forEach(checkLand); writeUrl(ps, initialCrops, DEFAULT_CROP);
     });
     // Only the first render reads the URL; later changes come from this page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const search = (v: string) => {
-    if (!/_/.test(v)) { setError("Wpisz pełny identyfikator działki (TERYT), np. 060408_2.0166.7."); return; }
-    void toggle(() => parcelById(v), true);
+  const search = async (v: string) => {
+    setError(null);
+    setPlaceHits([]);
+    setPlaceNote(null);
+    if (looksLikeParcelId(v)) {
+      void toggle(() => parcelById(v), true);
+      return;
+    }
+    setBusy(true);
+    try {
+      const hits = await searchPlace(v);
+      if (!hits.length) {
+        setError("Nie znaleziono miejscowości ani działki. Wpisz nazwę miejscowości lub numer TERYT (np. 060408_2.0166.7).");
+      } else {
+        setFlyTo({ center: [hits[0]!.lon, hits[0]!.lat], zoom: 15.2, seq: Date.now() });
+        setPlaceHits(hits);
+        setActivePlace(0);
+        setPlaceNote(`Przeniesiono do: ${hits[0]!.label}. Kliknij działkę na mapie.`);
+      }
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
   };
-  const pick = (lon: number, lat: number) => void toggle(() => parcelByPoint(lon, lat));
+  const pick = (lon: number, lat: number) => {
+    setPlaceHits([]);
+    setPlaceNote(null);
+    void toggle(() => parcelByPoint(lon, lat));
+  };
   const remove = (id: string) => setSel((s) => { const n = s.filter((x) => x.id !== id); writeUrl(n); if (focus?.id === id) setFocus(null); return n; });
 
   const analyse = () => {
@@ -134,7 +198,32 @@ export function MapHome() {
           <Link to="/" className="rs-panel__brand" aria-label="Rusałka, strona startowa"><Wordmark /></Link>
           <Link className="ar-btn ar-btn--outline" to="/metoda">Jak liczymy</Link>
         </div>
-        <ParcelSearch className="rs-panel__search" value={text} onChange={setText} onSubmit={search} busy={busy} error={error} placeholder="Numer działki, np. 060408_2.0166.7" />
+        <ParcelSearch className="rs-panel__search" value={text} onChange={setText} onSubmit={search} busy={busy} error={error} placeholder="Miejscowość lub numer działki, np. Gniezno" />
+        {placeNote ? (
+          <div className="rs-places">
+            <p className="rs-places__note">{placeNote}</p>
+            {placeHits.length > 1 ? (
+              <ul className="rs-places__list">
+                {placeHits.map((h, i) => (
+                  <li key={`${h.label}-${i}`}>
+                    <button
+                      type="button"
+                      className={cx("rs-places__btn", i === activePlace && "is-on")}
+                      onClick={() => {
+                        setActivePlace(i);
+                        setFlyTo({ center: [h.lon, h.lat], zoom: 15.2, seq: Date.now() });
+                        setPlaceNote(`Przeniesiono do: ${h.label}. Kliknij działkę na mapie.`);
+                      }}
+                    >
+                      <b>{h.label}</b>
+                      {h.sub ? <span>{h.sub}</span> : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
         {sel.length ? (
           <>
             <div className="rs-panel__head">
@@ -161,10 +250,21 @@ export function MapHome() {
             </div>
           </>
         ) : (
-          <p className="rs-panel__empty">Kliknij działki na mapie albo wpisz numer. Możesz wybrać kilka.</p>
+          <>
+            <p className="rs-panel__empty">Kliknij działki na mapie albo wpisz miejscowość lub numer. Możesz wybrać kilka.</p>
+            <div className="rs-presets" aria-label="Przykładowe analizy">
+              <span className="ar-form__label">Przykłady (1 klik)</span>
+              {DEMO_PRESETS.map((p) => (
+                <Link key={p.id} to={p.href} className="rs-preset">
+                  <b>{p.title}</b>
+                  <span>{p.sub}</span>
+                </Link>
+              ))}
+            </div>
+          </>
         )}
       </aside>
-      <ParcelMap className="rs-home__map" onPick={pick} parcels={mapParcels} bbox={bbox} popover={popover} popoverAt={focus ? focus.centroid : null} padding={pad} />
+      <ParcelMap className="rs-home__map" onPick={pick} parcels={mapParcels} bbox={bbox} flyTo={flyTo} popover={popover} popoverAt={focus ? focus.centroid : null} padding={pad} />
     </main>
   );
 }
