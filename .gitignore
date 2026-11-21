@@ -1,0 +1,32 @@
+# Python & tooling
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Environment & secrets
+.env
+.env.*
+*.key
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Data caches & large raw datasets
+data/raw/
+data/cache/
+data/*.sqlite*
+data/*.duckdb*
+data/*.parquet
+ml/runs/
+*.log
