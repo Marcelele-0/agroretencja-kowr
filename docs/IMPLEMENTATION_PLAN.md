@@ -1,4 +1,4 @@
-# AgroRetencja KOWR — Plan Implementacji i Architektury
+# Rusałka (AgroRetencja KOWR): Plan Implementacji i Architektury
 
 > **Repozytorium:** Prywatny monorepo (`agroretencja/`), kod pisany w 100% od zera pod KOWR (§ 5 Regulaminu HackNation 2026).  
 > **Hardware treningowy (PC):** i7-14700K (28 wątków CPU) + RTX 4070 Ti SUPER (16 GB VRAM).  
@@ -40,7 +40,7 @@ agroretencja/
 ├── ml/
 │   ├── hydrofusion/            # [TOR B] Pobranie S2 COG + Open-Meteo + SoilGrids + trening GBDT
 │   └── rl_irrigator/           # [TOR B] Środowisko Gymnasium FAO-56/33 + trening PPO + eksport .npz
-├── frontend/                   # [TOR D] Vite + React + TS + Tailwind + MapLibre GL JS
+├── frontend/                   # [TOR D] Vite + React + TS + MapLibre GL JS (CSS z design systemu Rusałka, bez Tailwind)
 ├── artifacts/
 │   ├── models/                 # Zamrożone lekkie wagi produkcyjne (< 20 MB łącznie)
 │   └── validation/             # Raporty JSON + wykresy holdout do Sekcji #9 README
@@ -63,8 +63,11 @@ agroretencja/
 | Kategoria | Usługa / Endpoint | Status sondy | Latencja | Uwagi wdrożeniowe i fallback |
 | :--- | :--- | :---: | :---: | :--- |
 | **Granice działek** | `uldk.gugik.gov.pl` (`GetParcelById` / `GetParcelByXY`) | `HTTP 200` | `0,30 s` | Zwraca `TERYT + SRID=2180 POLYGON`. Fallback: `0_dzialki.parquet`. |
-| **NMT 1 m** | `mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WCS/DigitalTerrainModel` | `HTTP 200` | `0,91 s` | `WCS GetCoverage` GeoTIFF na bbox działki + bufor. Fallback: DEM 30 m. |
-| **Meteo 10 lat** | `archive-api.open-meteo.com/v1/archive` + `api.open-meteo.com/v1/forecast` | `HTTP 200` | `0,94 s` | 3653 dni (`P`, `ET0 FAO-56`, `Tmax`) w 1 JSON. |
+| **NMT 1 m** | `mapy.geoportal.gov.pl/wss/service/PZGIK/NMT/GRID1/WCS/DigitalTerrainModel` | `HTTP 200` | `0,91 s` (GetCapabilities) | `WCS GetCoverage` na bbox działki przekraczał 20 s: backend musi buforować wycinki. Fallback: DEM 30 m. |
+| **Ortofotomapa** | `mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMTS/StandardResolution` (WMTS, `EPSG:3857`) | `HTTP 200` | `0,09 s` / kafel | Cache 30 dni. WMS GetMap: 0,4–0,6 s / kafel bez cache; frontend używa WMS tylko od zoomu 16. |
+| **Granice działek (mapa)** | `integracja.gugik.gov.pl/cgi-bin/KrajowaIntegracjaEwidencjiGruntow` (KIEG WMS) | `HTTP 200` | `0,45 s` / kafel | Powyżej ok. 1,8 m/px zwraca pusty obraz: frontend prosi o 1024 px na kafel 512 px od zoomu 15. |
+| **Gleba i użytkowanie** | `sgeo.iung.pl/geoserver/Susza/wms` (`Susza:katgl_landuse2024`, GetFeatureInfo) | `HTTP 200` | `0,31 s` | Kategoria gleby I–IV oraz kody lasu, wody i zabudowy. |
+| **Meteo 10 lat** | `archive-api.open-meteo.com/v1/archive` + `api.open-meteo.com/v1/forecast` | `HTTP 200` | `0,12–0,46 s` | Limit ok. 600 zapytań/min na adres; długi zakres liczy się jako wiele zapytań (ok. 1 na 14 dni). Frontend pobiera tylko potrzebne zakresy, przez pośrednika serwera i z cache przeglądarki. |
 | **Meteo PL live** | `danepubliczne.imgw.pl/api/data/synop` | `HTTP 200` | `0,15 s` | Dane bieżące ze stacji synoptycznych IMGW-PIB. |
 | **Satelita S2** | `earth-search.aws.element84.com/v1/collections/sentinel-2-l2a` | `HTTP 200` | `0,55 s` | STAC search + `rasterio` COG HTTP Range na `B04, B08, B8A, B11, SCL`. |
 | **Gleba** | `rest.isric.org/soilgrids/v2.0/properties/query` + `susza.iung.pulawy.pl` | `HTTP 200` | `1,12 s` / `0,13 s` | `sand, clay, soc` (0–60 cm) mapowane do 4 kategorii `TAW` IUNG-PIB; cache SQLite. |
@@ -127,3 +130,17 @@ agroretencja/
 | Zachmurzenie `> 30%` na `Sentinel-2` w dacie wskazanej przez jury | `HydroFusion-PL` rekonstruuje $\widehat{\text{NDMI}} \pm \Delta_{90\%}$; gdy punkt jest poza domeną AoA ($DI > \tau_{95}$), system przechodzi na czysty bilans Meteo+Gleba+NMT i zmienia odznakę pewności na `OGRANICZONA`. |
 | Błąd `HTTP 401` na serwerach WFS Wody Polskie / ISOK | Odpytujemy publiczny `Geoportal BDOT10k WMS` + buforowaną sieć hydrologiczną Polski oraz `EDO /api/wms`. |
 | Brak zależności systemowych `WeasyPrint` (GTK/Pango) na innym hoście | Awaryjna ścieżka renderowania PDF lub kontener `Dockerfile` dla prostego uruchomienia przez jury. |
+
+---
+
+## 6. Stan prac (21.11.2026)
+
+| Faza | Stan | Uwagi |
+| :--- | :--- | :--- |
+| 1. Rdzeń fizyki `hydro_core` | w toku (Asia) | Wzór stanu wody i źródła składowe. Wynik: `assessment.water_state`, `assessment.components`, `audit.sources`. |
+| 2. Klienci API + FastAPI | w toku | Frontend ma własnych klientów ULDK, IUNG i Open-Meteo (`frontend/src/lib/`). |
+| 3. Trening ML: `FAO-RL-Irrigator` | gotowy (Piotr, gałąź `feat/RL`) | `/rl/recommend`, `/rl/compare`; opis: `docs/RL_IRRIGATION_DECISION_MODEL.md`. |
+| 3. Trening ML: `HydroFusion-PL` | nie rozpoczęty | Kolejność według blueprintu 8.1: najpierw działający potok, potem ML. |
+| 4. Frontend web | gotowy (`main`) | Opis: `frontend/README.md`. Raport PDF: druk strony do czasu `/api/report.pdf`. |
+| 5. Integracja, testy, README, pitch | w toku | README w 9 sekcjach zaktualizowane 21.11.2026. |
+

@@ -16,14 +16,16 @@ export function signed(n: number): string { return n > 0 ? `+${n}` : n < 0 ? `�
 
 const STEPS = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
 
-export function WaterBalance({ value, label = "Stan wody", size = "lg", tone, ticks = true, caption, className }: {
-  value: number | null; label?: string; size?: "lg" | "sm"; tone?: "surface" | "photo"; ticks?: boolean; caption?: ReactNode; className?: string;
+/** Water state for farmers: the word and the scale graphic. Numbers (−5…+5) only with `numbers` (method page, experts). */
+export function WaterBalance({ value, label = "Stan wody", size = "lg", tone, numbers = false, caption, className }: {
+  value: number | null; label?: string; size?: "lg" | "sm"; tone?: "surface" | "photo"; numbers?: boolean; caption?: ReactNode; className?: string;
 }) {
   const n = balStep(value);
   const name = n === null ? "Brak danych" : BAL[String(n)]!;
-  const aria = `${label}: ${n === null ? "brak danych" : `${signed(n)} w skali od −5 do +5, ${name.toLowerCase()}`}`;
+  const aria = `${label}: ${name.toLowerCase()}`;
   const cells = STEPS.map((i) => <span key={i} className={cx("ar-bal__cell", `ar-b-${balKey(i)}`, i === n && "ar-bal__cell--on")} />);
-  const read = <span className="ar-bal__read" aria-hidden="true"><span className="ar-bal__num">{n === null ? "—" : signed(n)}</span><span className="ar-bal__name">{name}</span></span>;
+
+  const read = <span className="ar-bal__read" aria-hidden="true">{numbers ? <span className="ar-bal__num">{n === null ? "—" : signed(n)}</span> : null}{n === null ? null : <i className={cx("rs-bal__dot", `ar-b-${balKey(n)}`)} />}<span className="ar-bal__name rs-bal__word">{name}</span></span>;
   if (size === "sm") {
     return <span className={cx("ar-bal", "ar-bal--sm", tone === "photo" && "ar-bal--photo", className)} role="img" aria-label={aria}><span className="ar-bal__cells" aria-hidden="true">{cells}</span>{read}</span>;
   }
@@ -31,7 +33,7 @@ export function WaterBalance({ value, label = "Stan wody", size = "lg", tone, ti
     <div className={cx("ar-bal", tone === "photo" && "ar-bal--photo", className)} role="group" aria-label={aria}>
       <div className="ar-bal__head"><span className="ar-bal__label">{label}</span>{read}</div>
       <div className="ar-bal__cells" aria-hidden="true">{cells}</div>
-      {ticks ? <div className="ar-bal__ticks" aria-hidden="true">{STEPS.map((i) => <span key={i} className={i === n ? "is-on" : ""}>{signed(i)}</span>)}</div> : null}
+      {numbers ? <div className="ar-bal__ticks" aria-hidden="true">{STEPS.map((i) => <span key={i} className={i === n ? "is-on" : ""}>{signed(i)}</span>)}</div> : null}
       <div className="ar-bal__ends" aria-hidden="true"><span>Susza</span><span>Optimum</span><span>Nadmiar wody</span></div>
       {caption ? <p className="ar-bal__caption">{caption}</p> : null}
     </div>

@@ -52,6 +52,20 @@ export function seasonWindows(s: DailySeries, year: number, thresholds: Threshol
   });
 }
 
+/** Progressive KBW across all 14 IUNG windows as of `at`: completed windows lock at `w.end`, active windows accumulate from `w.start` to `at`. */
+export function progressiveSeasonWindows(s: DailySeries, year: number, thresholds: Threshold[] | null, at: Iso): KbwWindow[] {
+  return windowsFor(year).map((w, i) => {
+    const t = thresholds?.[i];
+    const threshold = typeof t === "number" ? t : null;
+    if (at < w.start) {
+      return { index: i, ...w, kbw: null, threshold, notGrown: t === "-", drought: false };
+    }
+    const end = at < w.end ? at : w.end;
+    const k = kbw(s, w.start, end);
+    return { index: i, ...w, kbw: k === null ? null : Math.round(k), threshold, notGrown: t === "-", drought: k !== null && threshold !== null && k < threshold };
+  });
+}
+
 /** Index of the last window that ends on or before `at` in the season of `at`. */
 export function activeWindow(at: Iso): number | null {
   const y = seasonYear(at);

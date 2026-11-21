@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cx, Icon, type IconName } from "./core";
-import { BAL, balCls, balStep, signed } from "./status";
+import { BAL, balCls, balStep } from "./status";
 
 export function MetricTile({ icon, label, value, unit, tone = "surface", className }: { icon?: IconName; label: ReactNode; value: ReactNode; unit?: string; tone?: "glass" | "surface"; className?: string }) {
   return (
@@ -26,12 +26,12 @@ const IUNG_END = ["20.V", "31.V", "10.VI", "20.VI", "30.VI", "10.VII", "20.VII",
 const minus = (v: number) => String(v).replace("-", "−");
 
 export interface KbwWindowValue { kbw: number | null; threshold: number | null }
-export function KbwWindows({ windows, active, title, summary, thresholdLabel, legend = true, className }: {
-  windows: KbwWindowValue[]; active?: number | null; title?: string; summary?: ReactNode; thresholdLabel?: string; legend?: boolean; className?: string;
+export function KbwWindows({ windows, scaleWindows, active, onPickWindow, title, summary, thresholdLabel, legend = true, className }: {
+  windows: KbwWindowValue[]; scaleWindows?: KbwWindowValue[]; active?: number | null; onPickWindow?: (index: number) => void; title?: string; summary?: ReactNode; thresholdLabel?: string; legend?: boolean; className?: string;
 }) {
   const w = windows.slice(0, 14);
   const vals = [0];
-  w.forEach((x) => { if (x.kbw !== null) vals.push(x.kbw); if (x.threshold !== null) vals.push(x.threshold); });
+  (scaleWindows ?? w).forEach((x) => { if (x.kbw !== null) vals.push(x.kbw); if (x.threshold !== null) vals.push(x.threshold); });
   const lo = Math.min(...vals) * 1.1;
   let top = Math.max(...vals);
   top = top > 0 ? top * 1.2 : Math.abs(lo) * 0.08;
@@ -45,11 +45,20 @@ export function KbwWindows({ windows, active, title, summary, thresholdLabel, le
     if (st === "dry") dry++;
     const on = i === active;
     const tip = `${IUNG_START[i]}–${IUNG_END[i]}: KBW ${hasK ? `${x.kbw} mm` : "brak danych"}${hasT ? `, próg ${x.threshold} mm` : ", bez progu"}`;
-    return (
-      <div key={i} className={cx("ar-kbw__col", `ar-kbw__col--${st}`, on && "ar-kbw__col--on")} title={tip}>
+    const inner = (
+      <>
         {hasK ? <span className="ar-kbw__bar" style={{ top: `${y(Math.max(x.kbw!, 0))}%`, height: `${Math.abs(y(x.kbw!) - y(0))}%` }} /> : null}
         {hasT ? <span className="ar-kbw__th" style={{ top: `${y(x.threshold!)}%` }} /> : null}
         {on && hasK ? <span className="ar-kbw__val" style={{ top: `${y(Math.min(x.kbw!, 0))}%` }}>{minus(x.kbw!)}</span> : null}
+      </>
+    );
+    return onPickWindow && hasK ? (
+      <button type="button" key={i} className={cx("ar-kbw__col", `ar-kbw__col--${st}`, on && "ar-kbw__col--on", "rs-kbw__btn")} title={tip} aria-label={`Pokaż okno ${tip}`} onClick={() => onPickWindow(i)}>
+        {inner}
+      </button>
+    ) : (
+      <div key={i} className={cx("ar-kbw__col", `ar-kbw__col--${st}`, on && "ar-kbw__col--on")} title={tip}>
+        {inner}
       </div>
     );
   });
@@ -60,7 +69,7 @@ export function KbwWindows({ windows, active, title, summary, thresholdLabel, le
         <span className="ar-kbw__title">{title ?? "Klimatyczny bilans wodny w oknach IUNG"}</span>
         <span className="ar-kbw__sum">{summary ?? (known ? <>Susza wg progów IUNG w <b>{dry} z {known}</b> okien</> : "Brak progu IUNG dla tej uprawy")}</span>
       </figcaption>
-      <div className="ar-kbw__plot" role="img" aria-label={`${title ?? "KBW w oknach IUNG"}. ${aria}`}>
+      <div className="ar-kbw__plot" role={onPickWindow ? "group" : "img"} aria-label={`${title ?? "KBW w oknach IUNG"}. ${aria}`}>
         <span className="ar-kbw__zero" style={{ top: `${y(0)}%` }} aria-hidden="true" />
         {cols}
       </div>
@@ -71,27 +80,39 @@ export function KbwWindows({ windows, active, title, summary, thresholdLabel, le
           <span className="ar-kbw__key"><span className="ar-kbw__sw ar-kbw__sw--ok" />KBW powyżej progu</span>
           {known ? <span className="ar-kbw__key"><span className="ar-kbw__sw ar-kbw__sw--th" />{thresholdLabel ?? "Próg IUNG"}</span> : null}
           {active !== null && active !== undefined ? <span className="ar-kbw__key"><span className="ar-kbw__sw ar-kbw__sw--on" />Okno do {IUNG_END[active]}</span> : null}
+          {onPickWindow ? <span className="ar-kbw__key">Kliknij okno, aby zmienić datę</span> : null}
         </div>
       ) : null}
     </figure>
   );
 }
 
-export function YearCompare({ years, highlightYear, title, summary, droughtAt = -3, children, className }: {
-  years: { year: number; value: number | null }[]; highlightYear?: number; title?: string; summary?: ReactNode; droughtAt?: number; children?: ReactNode; className?: string;
+export function YearCompare({ years, highlightYear, onPickYear, title, summary, droughtAt = -3, children, className }: {
+  years: { year: number; value: number | null }[]; highlightYear?: number; onPickYear?: (year: number) => void; title?: string; summary?: ReactNode; droughtAt?: number; children?: ReactNode; className?: string;
 }) {
   const dry = years.filter((y) => y.value !== null && balStep(y.value)! <= droughtAt).length;
-  const label = years.map((y) => `${y.year}: ${y.value === null ? "brak danych" : `${signed(balStep(y.value)!)} ${BAL[String(balStep(y.value))]!.toLowerCase()}`}`).join(", ");
+  const label = years.map((y) => `${y.year}: ${y.value === null ? "brak danych" : BAL[String(balStep(y.value))]!.toLowerCase()}`).join(", ");
   return (
     <figure className={cx("ar-yrs", className)} style={{ "--n": years.length || 10 } as CSSProperties}>
       <figcaption className="ar-yrs__head">
         <span className="ar-yrs__title">{title ?? "Ten sam termin w każdym roku"}</span>
         <span className="ar-yrs__sum">{summary ?? <>Susza w <b>{dry} z {years.length}</b> lat</>}</span>
       </figcaption>
-      <div className="ar-yrs__row" role="img" aria-label={`${title ?? "Stan wody w kolejnych latach"}. ${label}`}>
+      <div className="ar-yrs__row" role={onPickYear ? "group" : "img"} aria-label={`${title ?? "Stan wody w kolejnych latach"}. ${label}`}>
         {years.map((y) => {
           const n = balStep(y.value);
-          return <span key={y.year} className={cx("ar-yrs__cell", n === null ? "ar-yrs__cell--none" : balCls(n), y.year === highlightYear && "ar-yrs__cell--on")} aria-hidden="true">{n === null ? "brak" : signed(n)}</span>;
+          return onPickYear && n !== null ? (
+            <button
+              type="button"
+              key={y.year}
+              className={cx("ar-yrs__cell", balCls(n), y.year === highlightYear && "ar-yrs__cell--on", "rs-yrs__btn")}
+              title={`${y.year}: ${BAL[String(n)]!.toLowerCase()}`}
+              aria-label={`Pokaż rok ${y.year}: ${BAL[String(n)]!.toLowerCase()}`}
+              onClick={() => onPickYear(y.year)}
+            />
+          ) : (
+            <span key={y.year} className={cx("ar-yrs__cell", n === null ? "ar-yrs__cell--none" : balCls(n), y.year === highlightYear && "ar-yrs__cell--on")} title={`${y.year}: ${n === null ? "brak danych" : BAL[String(n)]!.toLowerCase()}`} aria-hidden="true">{n === null ? "brak" : ""}</span>
+          );
         })}
       </div>
       <div className="ar-yrs__years" aria-hidden="true">{years.map((y) => <span key={y.year} className={y.year === highlightYear ? "is-on" : ""}>{"’" + String(y.year).slice(2)}</span>)}</div>
@@ -120,20 +141,20 @@ export function CauseBreakdown({ causes }: { causes: { key: string; pct: number;
 }
 
 /** Daily water state on the −5…+5 scale: bars go down (drought) or up (excess) from 0; forecast days are dimmed with a dashed edge. */
-export function StateTimeline({ days, selected, today, onPick, title, summary }: {
-  days: { date: string; value: number | null; forecast: boolean }[]; selected: string; today: string; onPick?: (date: string) => void; title?: string; summary?: ReactNode;
+export function StateTimeline({ days, selected, today, onPick, title, summary, compact, sliding }: {
+  days: { date: string; value: number | null; forecast: boolean }[]; selected: string; today: string; onPick?: (date: string) => void; title?: string; summary?: ReactNode; compact?: boolean; sliding?: boolean;
 }) {
   const label = (d: string) => { const [, m, dd] = d.split("-"); return `${Number(dd)}.${Number(m)}`; };
-  const aria = days.map((d) => `${d.date}: ${d.value === null ? "brak" : signed(d.value)}${d.forecast ? " (prognoza)" : ""}`).join(", ");
+  const aria = days.map((d) => `${d.date}: ${d.value === null ? "brak" : BAL[String(balStep(d.value))]!.toLowerCase()}${d.forecast ? " (prognoza)" : ""}`).join(", ");
   const hasForecast = days.some((d) => d.forecast);
   return (
-    <figure className="rs-st" style={{ "--n": days.length } as CSSProperties}>
-      <figcaption className="ar-kbw__head">
+    <figure className={cx("rs-st", compact && "rs-st--compact")} style={{ "--n": days.length } as CSSProperties}>
+      {compact ? null : <figcaption className="ar-kbw__head">
         <span className="ar-kbw__title">{title ?? "Stan wody dzień po dniu"}</span>
         {summary ? <span className="ar-kbw__sum">{summary}</span> : null}
-      </figcaption>
+      </figcaption>}
       <div className="rs-st__wrap">
-        <div className="rs-st__y" aria-hidden="true"><span>+5</span><span>0</span><span>−5</span></div>
+        {compact ? null : <div className="rs-st__y" aria-hidden="true"><span>nadmiar</span><span>optimum</span><span>susza</span></div>}
         <div className="rs-st__plot" role="img" aria-label={`${title ?? "Stan wody dzień po dniu"}. ${aria}`}>
           <span className="rs-st__zero" aria-hidden="true" />
           {days.map((d) => {
@@ -141,19 +162,19 @@ export function StateTimeline({ days, selected, today, onPick, title, summary }:
             const h = n === null ? 0 : Math.max(Math.abs(n), 0.35) * 10;
             const bar = <span className={cx("rs-st__bar", n === null ? "" : balCls(n))} style={n === null ? undefined : n >= 0 ? { bottom: "50%", height: `${h}%` } : { top: "50%", height: `${h}%` }} />;
             const cls = cx("rs-st__day", d.forecast && "rs-st__day--fc", d.date === selected && "rs-st__day--on", d.date === today && "rs-st__day--today");
-            const tip = `${label(d.date)}: ${n === null ? "brak danych" : `${signed(n)} ${BAL[String(n)]!.toLowerCase()}`}${d.forecast ? " (prognoza)" : ""}`;
+            const tip = `${label(d.date)}: ${n === null ? "brak danych" : BAL[String(n)]!.toLowerCase()}${d.forecast ? " (prognoza)" : ""}`;
             return onPick
               ? <button key={d.date} type="button" className={cls} title={tip} aria-label={`Pokaż ${tip}`} onClick={() => onPick(d.date)}>{bar}</button>
               : <span key={d.date} className={cls} title={tip}>{bar}</span>;
           })}
         </div>
       </div>
-      <div className="rs-st__x" aria-hidden="true">{days.map((d, i) => <span key={d.date}>{i % 7 === 0 || d.date === selected ? label(d.date) : ""}</span>)}</div>
-      <div className="ar-kbw__legend">
+      {compact ? null : <div className="rs-st__x" aria-hidden="true">{days.map((d, i) => <span key={d.date}>{d.date === today ? "dziś" : sliding ? (d.date.endsWith("-01") || d.date.endsWith("-15") ? label(d.date) : "") : i % 7 === 0 || d.date === selected ? label(d.date) : ""}</span>)}</div>}
+      {compact ? null : <div className="ar-kbw__legend">
         <span className="ar-kbw__key"><span className="ar-kbw__sw ar-b-m3" />Obserwacja</span>
         {hasForecast ? <span className="ar-kbw__key"><span className="ar-kbw__sw rs-st__sw-fc" />Prognoza</span> : null}
         <span className="ar-kbw__key"><span className="ar-kbw__sw ar-kbw__sw--on" />Wybrany dzień{onPick ? " (kliknij inny dzień)" : ""}</span>
-      </div>
+      </div>}
     </figure>
   );
 }

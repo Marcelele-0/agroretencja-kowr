@@ -1,5 +1,5 @@
 import { request } from "../lib/http";
-import type { AnalysisRequest, AnalysisResponse, RlRecommendRequest, RlRecommendResponse } from "./contract";
+import type { AnalysisRequest, AnalysisResponse, RlCompareResponse, RlRecommendRequest, RlRecommendResponse } from "./contract";
 
 /**
  * Loose hooks to the FastAPI backend. Empty VITE_API_URL = hooks off: the UI hides the steps that need the server.
@@ -19,6 +19,9 @@ export function postAnalyze(req: AnalysisRequest, signal?: AbortSignal): Promise
 }
 export function postRlRecommend(req: RlRecommendRequest, signal?: AbortSignal): Promise<RlRecommendResponse> {
   return post<RlRecommendResponse>("/rl/recommend", req, 20000, signal);
+}
+export function postRlCompare(req: { parcel_id: string; crop: string; budget_mm?: number }, signal?: AbortSignal): Promise<RlCompareResponse> {
+  return post<RlCompareResponse>("/rl/compare", req, 30000, signal);
 }
 export function reportPdfUrl(req: AnalysisRequest): string | null {
   if (!backendEnabled) return null;
