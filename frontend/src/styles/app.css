@@ -440,8 +440,11 @@ button.rs-st__day:hover { background: var(--hairline); }
 .rs-replay__bar .ar-btn--sm:not(.ar-btn--icon) { height: 34px; padding: 0 12px; gap: 8px; }
 .rs-replay__bar .ar-btn--icon { border: 1px solid var(--hairline); box-shadow: none; }
 .rs-replay__bar .ar-pill { height: 28px; padding: 0 9px; font-variant-numeric: tabular-nums; }
-.rs-replay__date { font: 600 13.5px/1.2 var(--font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rs-replay__range { flex: 1 1 120px; min-width: 100px; accent-color: var(--forest); cursor: pointer; }
+/* Fixed width (widest date) and a slightly smaller size: the changing date never rewraps the bar while playing. */
+.rs-replay__date { display: inline-grid; font: 600 12.5px/1.2 var(--font-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rs-replay__date > span { grid-area: 1 / 1; }
+.rs-replay__sizer { visibility: hidden; }
+.rs-replay__range { flex: 1 1 100px; min-width: 80px; accent-color: var(--forest); cursor: pointer; }
 
 .ar-bal__cell { transition: height .18s ease, background-color .18s ease; }
 .rs-bal__dot { transition: background-color .2s ease; }

@@ -687,7 +687,7 @@ function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAre
                   label={replay.playing ? "Wstrzymaj odtwarzanie" : "Wznów odtwarzanie"}
                   onClick={replay.onStart}
                 />
-                <b className="rs-replay__date">{formatLong(replay.date!)}</b>
+                <b className="rs-replay__date"><span>{formatLong(replay.date!)}</span><span className="rs-replay__sizer" aria-hidden="true">30 października 2026</span></b>
                 <input
                   className="rs-replay__range"
                   type="range"
