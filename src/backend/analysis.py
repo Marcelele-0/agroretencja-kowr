@@ -26,7 +26,7 @@ from backend.inference.hydrofusion import FALLBACK_LABEL, load_hydrofusion
 from backend.irrigation import IrrigationRequest, advise_irrigation
 from backend.map_layers import MapContext, build_map_layers
 from hydro_core.advisor import AdviceContext, build_advice
-from hydro_core.causes import attribute_causes, attribution_from_shap
+from hydro_core.causes import attribute_causes
 from hydro_core.crops import crop_params, stage_on, taw_for
 from hydro_core.fao_balance import BalanceScenario, run_balance
 from hydro_core.features import AnalysisInputs, FeatureContext, HydroContext, SatelliteObservation
@@ -136,12 +136,20 @@ def _rl_card_version() -> str:
 
 def _satellite(bundle: ParcelDataBundle) -> SatelliteObservation:
     s2 = bundle.sentinel2
-    if s2 is None or s2.current is None:
-        return SatelliteObservation(ndmi_history_mean=s2.ndmi_history_mean if s2 else None)
+    if s2 is None:
+        return SatelliteObservation()
+    prev = s2.previous
+    previous = {
+        "previous_ndmi": prev.ndmi_mean if prev else None,
+        "previous_acquired": prev.acquired if prev else None,
+    }
+    if s2.current is None:
+        return SatelliteObservation(ndmi_history_mean=s2.ndmi_history_mean, **previous)
     c = s2.current
     return SatelliteObservation(
         acquired=c.acquired, ndvi=c.ndvi_mean, ndmi=c.ndmi_mean, ndmi_p10=c.ndmi_p10, ndmi_p90=c.ndmi_p90,
         ndmi_history_mean=s2.ndmi_history_mean, ndmi_anomaly_z=s2.ndmi_anomaly_z, cloud_pct=c.scene_cloud_pct,
+        **previous,
     )
 
 
@@ -271,17 +279,25 @@ class AnalysisService:
                 prediction = hf.predict(fx)
             except Exception:
                 logger.warning("HydroFusion prediction failed", exc_info=True)
+        # Reconstruct only when there is no cloud-free scene; outside the Area of Applicability
+        # the model is not used (physical path, confidence lowered by the AoA check).
         if prediction is not None and prediction.inside_aoa and inputs.satellite.ndmi is None:
             inputs.satellite = SatelliteObservation(
                 ndmi=round(prediction.median, 4), interval=prediction.interval, reconstructed=True,
                 acquired=request.analysis_date, ndmi_history_mean=inputs.satellite.ndmi_history_mean,
+                previous_ndmi=inputs.satellite.previous_ndmi, previous_acquired=inputs.satellite.previous_acquired,
             )
             fx = FeatureContext(inputs)
 
         score = compute_water_score(fx)
         risk = assess_risk(fx, score)
         aoa = (prediction.dissimilarity_index, prediction.inside_aoa) if prediction else (None, True)
-        confidence = assess_confidence(fx, aoa=aoa)
+        outside_aoa = prediction is not None and not prediction.inside_aoa and inputs.satellite.ndmi is None
+        confidence = assess_confidence(fx, extra_penalty=1 if outside_aoa else 0, aoa=aoa)
+        if outside_aoa:
+            confidence.missing_factors.append(
+                "Warunki działki wykraczają poza dane treningowe HydroFusion-PL (AoA) – wilgotności pod chmurami nie odtworzono."
+            )
         state_value = water_state(score.total, risk.level)
 
         i0 = tl.analysis_index
@@ -299,10 +315,10 @@ class AnalysisService:
                 precipitation_mm=round(float(tl.precip[i]), 1), et0_mm=round(float(tl.et0[i]), 2),
             ))
 
-        if prediction is not None and prediction.inside_aoa:
-            causes = attribution_from_shap(fx, hf.features, prediction.shap, f"HydroFusion-PL {hf.version}: TreeSHAP")  # type: ignore[union-attr]
-        else:
-            causes = attribute_causes(fx)
+        # Causes stay physical (crop-aware counterfactuals): HydroFusion-PL is trained without crop
+        # information, so its TreeSHAP cannot attribute the crop factor (team decision 21.11.2026).
+        # hydro_core.causes.attribution_from_shap remains available for a crop-aware model.
+        causes = attribute_causes(fx)
 
         retention = build_retention_plan(fx)
         irrigation, irr_notes = advise_irrigation(

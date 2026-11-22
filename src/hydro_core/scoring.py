@@ -34,6 +34,7 @@ from hydro_core.schemas import (
     WaterRiskAssessment,
     WaterScoreBreakdown,
 )
+from hydro_core.text import num
 
 _RISK_ORDER = [RiskLevel.NISKIE, RiskLevel.UMIARKOWANE, RiskLevel.WYSOKIE, RiskLevel.KRYTYCZNE]
 
@@ -115,7 +116,13 @@ def _c_ndmi(fx: FeatureContext) -> ComponentResult:
     if ndmi is None:
         return None, None
     lo, hi = cfg["ndmi_abs_low"], cfg["ndmi_abs_high"]
-    return _clip(100.0 * (ndmi - lo) / (hi - lo)), f"NDMI łanu = {ndmi:.2f} (bez porównania z latami poprzednimi)."
+    sat = fx.inputs.satellite
+    if sat.reconstructed and sat.interval is not None:
+        text = (f"Zdjęcie zachmurzone: NDMI odtworzone modelem HydroFusion-PL = {num(ndmi, 2)} "
+                f"(przedział 90%: {num(sat.interval[0], 2)} … {num(sat.interval[1], 2)}).")
+    else:
+        text = f"NDMI łanu = {num(ndmi, 2)} (bez porównania z latami poprzednimi)."
+    return _clip(100.0 * (ndmi - lo) / (hi - lo)), text
 
 
 @component("pojemnosc_wodna_gleby", "Pojemność wodna gleby (kategoria IUNG)")

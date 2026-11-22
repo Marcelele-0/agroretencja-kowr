@@ -52,7 +52,13 @@ MODEL_FEATURES = [
     "taw_mm", "iung_category", "sand_pct", "soc_g_kg", "awc_mm_0_100",
     "doy",
     "ndmi_history_mean",
+    # last clear scene 16-60 days back (backend: S2ParcelSeries.previous). Experiment 22.11.2026 on
+    # the spatial hold-out: R2 0.28 -> 0.62, RMSE 0.180 -> 0.132 (persistence alone: R2 0.45).
+    "ndmi_prev",
+    "ndmi_prev_lag",
 ]
+CURRENT_WINDOW_DAYS = 15   # backend Settings.s2_current_window_days
+PREVIOUS_WINDOW_DAYS = 60  # backend Settings.s2_previous_window_days
 
 
 @dataclass(frozen=True)

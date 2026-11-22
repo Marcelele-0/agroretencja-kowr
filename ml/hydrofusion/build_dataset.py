@@ -21,12 +21,21 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import DATASET_FILE, MODEL_FEATURES, S2_FILE, SOIL_FILE, Point, load_points  # noqa: E402
+from common import (
+    CURRENT_WINDOW_DAYS,
+    DATASET_FILE,
+    MODEL_FEATURES,
+    PREVIOUS_WINDOW_DAYS,
+    S2_FILE,
+    SOIL_FILE,
+    Point,
+    load_points,
+)
 
-from hydro_core.crops import crop_params, taw_for  # noqa: E402
-from hydro_core.features import AnalysisInputs, FeatureContext, SatelliteObservation  # noqa: E402
-from hydro_core.schemas import CropCode, IungSoilCategory  # noqa: E402
-from hydro_core.timeline import build_timeline  # noqa: E402
+from hydro_core.crops import crop_params, taw_for
+from hydro_core.features import AnalysisInputs, FeatureContext, SatelliteObservation
+from hydro_core.schemas import CropCode, IungSoilCategory
+from hydro_core.timeline import build_timeline
 
 log = logging.getLogger("build_dataset")
 HISTORY_YEARS = 9          # backend Settings.s2_history_years
@@ -55,6 +64,17 @@ def history_mean(obs: pd.DataFrame, day: dt.date) -> float | None:
     return float(np.mean(vals)) if vals else None
 
 
+def previous_clear(obs: pd.DataFrame, day: dt.date) -> tuple[float | None, dt.date | None]:
+    """Runtime-equivalent last clear scene 16..60 days before ``day`` (most recent first)."""
+    lo = day - dt.timedelta(days=PREVIOUS_WINDOW_DAYS)
+    hi = day - dt.timedelta(days=CURRENT_WINDOW_DAYS + 1)
+    win = obs[(obs["day"] >= lo) & (obs["day"] <= hi)]
+    if not len(win):
+        return None, None
+    last = win.sort_values("day").iloc[-1]
+    return float(last["ndmi"]), last["day"]
+
+
 def point_rows(p: Point, s2: pd.DataFrame, soil: dict) -> list[dict]:
     weather = pd.read_parquet(p.weather_file)
     wdates = [d.date() for d in pd.to_datetime(weather["date"])]
@@ -72,6 +92,7 @@ def point_rows(p: Point, s2: pd.DataFrame, soil: dict) -> list[dict]:
         i1 = next((i for i, d in enumerate(wdates) if d > day), len(wdates))
         if i1 - i0 < 90:
             continue
+        prev_ndmi, prev_day = previous_clear(obs, day)
         tl = build_timeline(
             dates=wdates[i0:i1], precipitation_mm=precip[i0:i1], et0_mm=et0[i0:i1], tmax_c=None,
             analysis_date=day, today=day + dt.timedelta(days=365),
@@ -81,7 +102,10 @@ def point_rows(p: Point, s2: pd.DataFrame, soil: dict) -> list[dict]:
             soil_source="IUNG-PIB", taw_mm=taw_for(category), cn=70.0, timeline=tl,
             trace=None,  # type: ignore[arg-type]  - no crop-dependent feature is used
             kbw_periods=[], parcel_area_ha=1.0,
-            satellite=SatelliteObservation(ndmi_history_mean=history_mean(obs, day)),
+            satellite=SatelliteObservation(
+                ndmi_history_mean=history_mean(obs, day),
+                previous_ndmi=prev_ndmi, previous_acquired=prev_day,
+            ),
             soil_sand_pct=soil.get("sand_pct"), soil_soc_g_kg=soil.get("soc_g_kg"), soil_awc_mm=soil.get("awc_mm_0_100"),
         )
         vec = FeatureContext(inputs).vector(MODEL_FEATURES)

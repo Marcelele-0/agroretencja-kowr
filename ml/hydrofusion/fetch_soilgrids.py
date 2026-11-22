@@ -19,10 +19,10 @@ from pathlib import Path
 import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import SOIL_FILE, load_points  # noqa: E402
+from common import SOIL_FILE, load_points
 
-from backend.clients.base import SourceUnavailableError  # noqa: E402
-from backend.clients.soilgrids import _DEPTHS, _PROPERTIES, parse_soilgrids  # noqa: E402
+from backend.clients.base import SourceUnavailableError
+from backend.clients.soilgrids import _DEPTHS, _PROPERTIES, parse_soilgrids
 
 URL = "https://rest.isric.org/soilgrids/v2.0/properties/query"
 SPACING_S = 13.0

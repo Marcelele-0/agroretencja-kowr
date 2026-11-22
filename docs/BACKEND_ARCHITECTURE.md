@@ -140,15 +140,21 @@ Każde przejście na kolejny element jest zapisane w `audit.model_versions`.
 | ULDK przeciążone (przekierowanie GUGiK na `/resp/uldk.php`, zaobserwowane 21.11.2026) | ponowienie; jeśli nie pomoże, HTTP 503 `source_unavailable` |
 | Inne brakujące źródło | analiza idzie dalej; brak jest widoczny w `confidence.missing_factors` i w audycie |
 
-### ADR-6: Przyczyny niedoboru bez ML: scenariusze kontrfaktyczne
+### ADR-6: Przyczyny niedoboru zawsze fizyczne; HydroFusion-PL tylko pod chmurami
 
-Bez wag HydroFusion-PL krok 2 liczy dla ostatnich 60 dni, o ile mniejszy byłby niedobór transpiracji Σ(ETc − ETa) w czterech scenariuszach:
+Krok 2 liczy dla ostatnich 60 dni, o ile mniejszy byłby niedobór transpiracji Σ(ETc − ETa) w czterech scenariuszach:
 - **klimat:** pogoda przeciętna dla działki,
 - **gleba:** gleba kat. IV,
 - **spływ:** brak spływu,
 - **uprawa:** Kc = 1.
 
-Wyniki normalizuje się do 100%. Gdy wagi ML są dostępne i punkt leży w AoA, wynik pochodzi z TreeSHAP, zsumowanego po tych samych grupach `FEATURES`.
+Wyniki normalizuje się do 100%.
+
+**HydroFusion-PL** (wytrenowany 22.11.2026, [ml/hydrofusion/README.md](../ml/hydrofusion/README.md)) nie służy do przyczyn, bo uczono go bez informacji o uprawie, więc jego TreeSHAP nie oceni czynnika „uprawa”. Model odtwarza tylko NDMI, gdy w ostatnich 15 dniach nie ma bezchmurnego zdjęcia.
+
+**Wejście modelu:** ostatnie czyste zdjęcie z okna 16–60 dni. Klient Sentinel-2 dostarcza je jako `S2ParcelSeries.previous`, a okno ustawia `AGRO_S2_PREVIOUS_WINDOW_DAYS`.
+
+**Poza obszarem stosowalności** (DI > próg) model się nie włącza, a pewność danych spada o jeden poziom. Funkcja `causes.attribution_from_shap` zostaje na przyszły model, który pozna uprawę.
 
 ### ADR-7: `water_state` −5…+5 i oś dzienna
 

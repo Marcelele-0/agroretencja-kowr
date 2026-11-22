@@ -61,7 +61,11 @@ def test_analyze_returns_all_kowr_steps(client_factory) -> None:
     assert d["irrigation"]["strategies_10y"]
     assert d["advice"]
     assert {"parcel", "zones", "flows"} <= set(d["map_layers"])
-    assert d["audit"]["model_versions"]["hydrofusion"].startswith("brak wag")
+    hf_label = d["audit"]["model_versions"]["hydrofusion"]
+    assert hf_label.startswith(("brak wag", "HydroFusion-PL"))
+    # the synthetic bundle has no Sentinel-2 at all -> nothing to reconstruct from, no fake value
+    if hf_label.startswith("HydroFusion-PL"):
+        assert a["ndmi_value"] is None or a["ndmi_is_reconstructed"]
 
     # cached: What-If and PDF do not collect again
     w = client.post("/api/what-if", json={**BODY, "enabled_measures": ["mulcz", "materia_organiczna"]})

@@ -56,6 +56,8 @@ class SatelliteObservation:
     cloud_pct: float | None = None
     reconstructed: bool = False
     interval: tuple[float, float] | None = None
+    previous_ndmi: float | None = None  # last clear scene 16-60 days before the analysis date
+    previous_acquired: dt.date | None = None
 
 
 @dataclass(frozen=True)
@@ -433,6 +435,17 @@ def _ndmi_z(fx: FeatureContext) -> float | None:
 @feature("ndmi_history_mean", group="satelita", unit="", label="NDMI działki w tym samym terminie poprzednich lat")
 def _ndmi_hist(fx: FeatureContext) -> float | None:
     return fx.inputs.satellite.ndmi_history_mean
+
+
+@feature("ndmi_prev", group="satelita", unit="", label="NDMI z ostatniego bezchmurnego zdjęcia sprzed 16–60 dni")
+def _ndmi_prev(fx: FeatureContext) -> float | None:
+    return fx.inputs.satellite.previous_ndmi
+
+
+@feature("ndmi_prev_lag", group="satelita", unit="dni", label="Wiek tego zdjęcia")
+def _ndmi_prev_lag(fx: FeatureContext) -> float | None:
+    acq = fx.inputs.satellite.previous_acquired
+    return None if acq is None else float((fx.inputs.analysis_date - acq).days)
 
 
 @feature("s2_age_days", group="satelita", unit="dni", label="Wiek ostatniego bezchmurnego zdjęcia")

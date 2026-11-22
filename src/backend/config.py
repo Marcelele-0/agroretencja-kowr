@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     s2_max_scene_cloud_pct: float = 70.0
     s2_min_parcel_clear_fraction: float = 0.6
     s2_current_window_days: int = 15
+    # last clear scene 16..60 days back = HydroFusion-PL input (ml/hydrofusion/common.py)
+    s2_previous_window_days: int = 60
     s2_history_window_days: int = 10
     s2_history_years: int = 9
     s2_max_concurrent_reads: int = 16

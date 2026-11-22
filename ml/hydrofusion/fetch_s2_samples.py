@@ -32,9 +32,9 @@ from pyproj import Transformer
 from rasterio.windows import Window
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import CACHE_DIR, MIN_CLEAR_PIXELS, S2_FILE, S2_YEARS, SEASON_MONTHS, Point, load_points  # noqa: E402
+from common import CACHE_DIR, MIN_CLEAR_PIXELS, S2_FILE, S2_YEARS, SEASON_MONTHS, Point, load_points
 
-from backend.clients.sentinel2 import _GDAL_ENV, SCL_CLEAR, _band_scaling  # noqa: E402
+from backend.clients.sentinel2 import _GDAL_ENV, SCL_CLEAR, _band_scaling
 
 log = logging.getLogger("fetch_s2")
 STAC_URL = "https://earth-search.aws.element84.com/v1/search"
@@ -129,7 +129,7 @@ def process_point(p: Point, pool: ThreadPoolExecutor, client: httpx.Client) -> l
         for fut in as_completed(futures):
             try:
                 rows.append(fut.result())
-            except Exception:  # noqa: BLE001 - a broken scene must not stop the run
+            except Exception:
                 failed += 1
                 log.debug("scene %s failed", futures[fut], exc_info=True)
         if failed > max(3, 0.2 * len(items)):
