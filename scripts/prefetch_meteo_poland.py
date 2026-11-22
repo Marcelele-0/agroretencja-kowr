@@ -1,7 +1,8 @@
-"""Pre-fetch 10-year Poland daily weather grid (2016-2025) from Open-Meteo Archive.
+"""Pre-fetch 10+ year Poland daily weather grid (2016-2026) into data/cache/meteo/poland_grid_2016_2025.npz.
 
-Resumable batch downloads saved in data/cache/meteo/batches/ and compiled into
-data/cache/meteo/poland_grid_2016_2025.npz.
+Tries Open-Meteo Archive first; when Open-Meteo is rate-limited (HTTP 429), automatically switches
+to concurrent NASA POWER daily downloads (with FAO-56 Penman-Monteith ET0) and fills the most
+recent days from Open-Meteo Forecast API (past_days=14).
 
 Usage:
     uv run python scripts/prefetch_meteo_poland.py
@@ -10,16 +11,19 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import os
 import tempfile
 import time
+from datetime import date, timedelta
 from pathlib import Path
 
 import httpx
 import numpy as np
 from shapely.geometry import Point, Polygon
 
+from backend.clients.meteo import _POWER_PARAMS, merge_blocks, power_to_block
 from backend.config import get_settings
 
 DAILY_VARS = (
@@ -30,7 +34,7 @@ DAILY_VARS = (
     "temperature_2m_min",
 )
 START_DATE = "2016-01-01"
-END_DATE = "2025-12-31"
+END_DATE = date.today().isoformat()
 STEP_DEG = 0.45
 
 # Generous Poland outline buffered by ~25 km so every border parcel sits inside the grid
@@ -90,12 +94,8 @@ def fetch_batch(
             reason = _extract_429_reason(resp)
             lower = reason.lower()
             if "hourly" in lower or "daily" in lower:
-                print(f"[STOP] Open-Meteo quota: {reason}", flush=True)
+                print(f"[Open-Meteo 429] {reason} -> switching to NASA POWER fallback", flush=True)
                 raise QuotaExhaustedError(reason)
-            if ("minutely" in lower or "concurrent" in lower) and attempt < 3:
-                print(f"  HTTP 429 ({reason}), retrying in 62s...", flush=True)
-                time.sleep(62.0)
-                continue
             if attempt + 1 < max_attempts:
                 print(f"  HTTP 429 ({reason}), retrying in 62s...", flush=True)
                 time.sleep(62.0)
@@ -112,6 +112,154 @@ def fetch_batch(
         data = resp.json()
         return data if isinstance(data, list) else [data]
     raise RuntimeError("Unreachable")
+
+
+async def _fetch_nasa_point(
+    client: httpx.AsyncClient,
+    sem: asyncio.Semaphore,
+    nasa_url: str,
+    lat: float,
+    lon: float,
+) -> dict:
+    start_ymd = START_DATE.replace("-", "")
+    end_ymd = END_DATE.replace("-", "")
+    async with sem:
+        for attempt in range(4):
+            try:
+                resp = await client.get(
+                    nasa_url,
+                    params={
+                        "parameters": _POWER_PARAMS,
+                        "community": "AG",
+                        "latitude": f"{lat:.2f}",
+                        "longitude": f"{lon:.2f}",
+                        "start": start_ymd,
+                        "end": end_ymd,
+                        "format": "JSON",
+                    },
+                    timeout=45.0,
+                )
+                if resp.status_code == 200:
+                    block, elev = power_to_block(resp.json(), lat)
+                    return {
+                        "latitude": lat,
+                        "longitude": lon,
+                        "elevation": elev,
+                        "daily": block,
+                    }
+            except (httpx.HTTPError, ValueError, KeyError):
+                pass
+            await asyncio.sleep(1.0 * (attempt + 1))
+    raise RuntimeError(f"NASA POWER failed for ({lat}, {lon})")
+
+
+async def _fill_recent_from_forecast(
+    client: httpx.AsyncClient,
+    forecast_url: str,
+    rows: list[dict],
+) -> None:
+    """One multi-point 14-day forecast call per chunk (24 pts) to fill NASA POWER's 2-4 day trailing lag."""
+    if not rows:
+        return
+    recent_start = (date.today() - timedelta(days=14)).isoformat()
+    try:
+        resp = await client.get(
+            forecast_url,
+            params={
+                "latitude": ",".join(f"{r['latitude']:.2f}" for r in rows),
+                "longitude": ",".join(f"{r['longitude']:.2f}" for r in rows),
+                "start_date": recent_start,
+                "end_date": END_DATE,
+                "daily": ",".join(DAILY_VARS),
+                "timezone": "Europe/Warsaw",
+            },
+            timeout=20.0,
+        )
+        if resp.status_code != 200:
+            return
+        payload = resp.json()
+        f_list = payload if isinstance(payload, list) else [payload]
+        for row, fp in zip(rows, f_list, strict=False):
+            f_daily = fp.get("daily")
+            if not f_daily:
+                continue
+            block = row["daily"]
+            by_day = {d: i for i, d in enumerate(block["time"])}
+            for fi, fday in enumerate(f_daily["time"]):
+                bi = by_day.get(fday)
+                if bi is not None:
+                    for v in DAILY_VARS:
+                        if block[v][bi] is None and f_daily[v][fi] is not None:
+                            block[v][bi] = f_daily[v][fi]
+            row["daily"] = merge_blocks(
+                block,
+                {"time": f_daily["time"], **{v: f_daily[v] for v in DAILY_VARS}},
+            )
+    except (httpx.HTTPError, ValueError, KeyError):
+        return
+
+
+async def _fetch_batches_via_nasa_power(
+    batches: list[list[tuple[float, float]]],
+    batch_dir: Path,
+    out_path: Path,
+    concurrency: int = 12,
+) -> list[Path]:
+    s = get_settings()
+    sem = asyncio.Semaphore(concurrency)
+    done_files: list[Path] = []
+    async with httpx.AsyncClient(
+        headers={"User-Agent": s.http_user_agent},
+        limits=httpx.Limits(max_connections=concurrency + 4),
+    ) as client:
+        pending_indices: list[int] = []
+        for idx in range(len(batches)):
+            bf = batch_dir / f"step_045_batch_{idx:03d}.json"
+            if bf.exists() and bf.stat().st_size > 1000:
+                done_files.append(bf)
+            else:
+                pending_indices.append(idx)
+
+        print(
+            f"Fetching {len(pending_indices)} remaining batches ({sum(len(batches[i]) for i in pending_indices)} pts) "
+            f"via NASA POWER (concurrency={concurrency})...",
+            flush=True,
+        )
+        chunk_size = 4
+        for c_start in range(0, len(pending_indices), chunk_size):
+            c_idxs = pending_indices[c_start : c_start + chunk_size]
+            batch_tasks = {
+                idx: asyncio.gather(
+                    *(
+                        _fetch_nasa_point(client, sem, s.nasa_power_url, lat, lon)
+                        for lat, lon in batches[idx]
+                    )
+                )
+                for idx in c_idxs
+            }
+            chunk_rows: list[tuple[int, list[dict]]] = []
+            for idx, task in batch_tasks.items():
+                chunk_rows.append((idx, list(await task)))
+            await _fill_recent_from_forecast(
+                client,
+                s.open_meteo_forecast_url,
+                [r for _, rlist in chunk_rows for r in rlist],
+            )
+            for idx, rows in chunk_rows:
+                bf = batch_dir / f"step_045_batch_{idx:03d}.json"
+                fd, tmp = tempfile.mkstemp(dir=batch_dir, suffix=".json.tmp")
+                with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                    json.dump(rows, fh)
+                os.replace(tmp, bf)
+                done_files.append(bf)
+                print(f"[{len(done_files)}/{len(batches)}] saved batch {idx + 1} ({len(rows)} pts)", flush=True)
+            assemble_npz(done_files, out_path)
+            print(
+                f"  -> updated {out_path.name} ({len(done_files)}/{len(batches)} batches, "
+                f"{out_path.stat().st_size / 1e6:.1f} MB)",
+                flush=True,
+            )
+    return done_files
 
 
 def assemble_npz(batch_files: list[Path], out_path: Path) -> None:
@@ -138,21 +286,21 @@ def assemble_npz(batch_files: list[Path], out_path: Path) -> None:
             arrays[v][i, : len(vals)] = np.array(vals, dtype=np.float32)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=out_path.parent, suffix=".npz.tmp")
-    os.close(fd)
+    fd, tmp = tempfile.mkstemp(dir=out_path.parent, suffix=".tmp.npz")
     try:
-        np.savez_compressed(
-            tmp,
-            lats=lats,
-            lons=lons,
-            elevations=elevations,
-            dates=np.array(dates),
-            precip=arrays["precipitation_sum"],
-            et0=arrays["et0_fao_evapotranspiration"],
-            tmean=arrays["temperature_2m_mean"],
-            tmax=arrays["temperature_2m_max"],
-            tmin=arrays["temperature_2m_min"],
-        )
+        with os.fdopen(fd, "wb") as fh:
+            np.savez_compressed(
+                fh,
+                lats=lats,
+                lons=lons,
+                elevations=elevations,
+                dates=np.array(dates),
+                precip=arrays["precipitation_sum"],
+                et0=arrays["et0_fao_evapotranspiration"],
+                tmean=arrays["temperature_2m_mean"],
+                tmax=arrays["temperature_2m_max"],
+                tmin=arrays["temperature_2m_min"],
+            )
         os.replace(tmp, out_path)
     except Exception:
         if os.path.exists(tmp):
@@ -164,6 +312,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--batch-size", type=int, default=6)
     parser.add_argument("--pause", type=float, default=15.0)
+    parser.add_argument("--concurrency", type=int, default=12)
+    parser.add_argument("--provider", choices=("auto", "open-meteo", "nasa-power"), default="auto")
     args = parser.parse_args()
 
     s = get_settings()
@@ -175,39 +325,46 @@ def main() -> None:
     print(f"Poland meteo grid ({STEP_DEG} deg): {len(pts)} points in {len(batches)} batches -> {s.meteo_grid_path}")
 
     done_files: list[Path] = []
-    saved_new = 0
-    with httpx.Client(
-        headers={"User-Agent": s.http_user_agent},
-        limits=httpx.Limits(max_connections=1),
-    ) as client:
-        for idx, batch in enumerate(batches):
-            bf = batch_dir / f"step_045_batch_{idx:03d}.json"
-            if bf.exists() and bf.stat().st_size > 1000:
+    use_nasa = args.provider == "nasa-power"
+
+    if not use_nasa:
+        saved_new = 0
+        with httpx.Client(
+            headers={"User-Agent": s.http_user_agent},
+            limits=httpx.Limits(max_connections=1),
+        ) as client:
+            for idx, batch in enumerate(batches):
+                bf = batch_dir / f"step_045_batch_{idx:03d}.json"
+                if bf.exists() and bf.stat().st_size > 1000:
+                    done_files.append(bf)
+                    continue
+                try:
+                    rows = fetch_batch(client, s.open_meteo_archive_url, api_key, batch)
+                except QuotaExhaustedError:
+                    if args.provider == "auto":
+                        use_nasa = True
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    print(f"[WARN] batch {idx + 1}/{len(batches)} failed: {exc}", flush=True)
+                    if args.provider == "auto":
+                        use_nasa = True
+                    break
+                fd, tmp = tempfile.mkstemp(dir=batch_dir, suffix=".json.tmp")
+                with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                    json.dump(rows, fh)
+                os.replace(tmp, bf)
                 done_files.append(bf)
-                continue
-            try:
-                rows = fetch_batch(client, s.open_meteo_archive_url, api_key, batch)
-            except QuotaExhaustedError:
-                break
-            except Exception as exc:  # noqa: BLE001
-                print(f"[WARN] batch {idx + 1}/{len(batches)} failed: {exc}", flush=True)
-                break
-            fd, tmp = tempfile.mkstemp(dir=batch_dir, suffix=".json.tmp")
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump(rows, fh)
-            os.replace(tmp, bf)
-            done_files.append(bf)
-            saved_new += 1
-            print(f"[{idx + 1}/{len(batches)}] saved ({len(rows)} pts)", flush=True)
-            if saved_new % 5 == 0:
-                assemble_npz(done_files, s.meteo_grid_path)
-                print(
-                    f"  -> updated {s.meteo_grid_path.name} ({len(done_files)}/{len(batches)} batches, "
-                    f"{s.meteo_grid_path.stat().st_size / 1e6:.1f} MB)",
-                    flush=True,
-                )
-            if idx + 1 < len(batches):
-                time.sleep(args.pause)
+                saved_new += 1
+                print(f"[{idx + 1}/{len(batches)}] saved ({len(rows)} pts)", flush=True)
+                if saved_new % 5 == 0:
+                    assemble_npz(done_files, s.meteo_grid_path)
+                if idx + 1 < len(batches):
+                    time.sleep(args.pause)
+
+    if use_nasa:
+        done_files = asyncio.run(
+            _fetch_batches_via_nasa_power(batches, batch_dir, s.meteo_grid_path, concurrency=args.concurrency)
+        )
 
     if done_files:
         assemble_npz(done_files, s.meteo_grid_path)
