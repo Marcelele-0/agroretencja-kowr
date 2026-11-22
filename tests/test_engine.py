@@ -7,7 +7,14 @@ import datetime as dt
 import numpy as np
 import pytest
 from kowr_rl.simulator import balance_step
-from synthetic_data import ANALYSIS_DATE, TODAY, make_inputs, synthetic_dem, synthetic_weather
+from synthetic_data import (
+    ANALYSIS_DATE,
+    PARCEL_GEOJSON,
+    TODAY,
+    make_inputs,
+    synthetic_dem,
+    synthetic_weather,
+)
 
 from hydro_core.advisor import AdviceContext, build_advice
 from hydro_core.causes import attribute_causes
@@ -28,6 +35,7 @@ from hydro_core.scoring import (
     assess_confidence,
     assess_risk,
     compute_water_score,
+    physical_water_state,
     storage_score,
     water_state,
 )
@@ -220,3 +228,152 @@ def test_backend_crops_are_the_rl_crops():
     for code in CropCode:
         assert code.value in rl_crop_keys()
         assert all_crops()[code.value] == rl[resolve_crop(code.value)]
+
+
+def test_physical_water_state_three_regimes() -> None:
+    fx = make_inputs()
+    tr, tl, i0 = fx.trace, fx.timeline, fx.i0
+
+    # 1) Full field capacity with normal dry/moderate weather -> Optimum (~0.0, NOT false wet +3.5)
+    tr.dr[0, i0] = 0.0
+    tr.dp[0, max(0, i0 - 29) : i0 + 1] = 0.0
+    tr.ro[0, max(0, i0 - 29) : i0 + 1] = 0.0
+    tl.precip[max(0, i0 - 59) : i0 + 1] = 1.0
+    tl.et0[max(0, i0 - 59) : i0 + 1] = 1.5
+    assert physical_water_state(fx) == 0.0
+
+    # 2) Active water stress (Dr > RAW) -> strongly negative (<= -2.0)
+    raw = float(tr.raw[0, i0])
+    taw = float(tr.taw(0))
+    tr.dr[0, i0] = raw + 0.4 * (taw - raw)
+    assert physical_water_state(fx) <= -2.0
+
+    # 3) Saturated soil + heavy percolation / excess rainfall -> strongly positive (>= +2.0)
+    tr.dr[0, i0] = 0.0
+    tr.dp[0, max(0, i0 - 13) : i0 + 1] = 7.5  # 14d * 7.5 = 105 mm excess
+    assert physical_water_state(fx) >= 2.0
+
+
+def test_zones_layer_clipped_to_parcel_and_covers_100_pct() -> None:
+    from rasterio.features import geometry_mask
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+
+    from backend.clients.geo import parcel_shape, to_puwg92
+    from backend.map_layers import MapContext, build_map_layers
+
+    parcel_2180 = to_puwg92(parcel_shape(PARCEL_GEOJSON))
+    minx, _miny, _maxx, maxy = parcel_2180.bounds
+    res = 20.0
+    cols, rows = 30, 26
+    x0, y0 = minx - 40.0, maxy + 40.0
+    yy, xx = np.mgrid[0:rows, 0:cols]
+    elev = (120.0 + 0.15 * (cols - xx) + 0.08 * yy).astype("float32")
+    tr = (res, 0.0, x0, 0.0, -res, y0)
+    mask = geometry_mask([parcel_2180], out_shape=(rows, cols), transform=tr, invert=True)
+    terrain = analyse_terrain(elev, tr, res, mask)
+    layers = build_map_layers(
+        MapContext(
+            parcel_geojson=PARCEL_GEOJSON,
+            water_state=-0.8,
+            terrain=terrain,
+            hydro_geojson=None,
+            recommendations=[],
+            ndmi_grid=None,
+            ndmi_transform=None,
+            ndmi_crs=None,
+        )
+    )
+    zones = layers["zones"]
+    feats = zones["features"]
+    assert feats
+    total_pct = sum(f["properties"]["area_pct"] for f in feats)
+    assert 99.0 <= total_pct <= 101.0
+    p_geom = shape(PARCEL_GEOJSON)
+    z_union = unary_union([shape(f["geometry"]) for f in feats])
+    spill_pct = 100.0 * z_union.difference(p_geom).area / max(z_union.area, 1e-12)
+    cov_pct = 100.0 * z_union.intersection(p_geom).area / max(p_geom.area, 1e-12)
+    assert spill_pct < 0.5
+    assert cov_pct > 99.5
+
+
+def test_zones_are_continuous_across_shared_parcel_border() -> None:
+    import math
+
+    from rasterio.features import geometry_mask
+    from shapely.geometry import Point, box, mapping, shape
+    from shapely.ops import unary_union
+
+    from backend.clients.geo import to_wgs84
+    from backend.map_layers import MapContext, build_map_layers
+    from hydro_core.topography import terrain_wetness_offset
+
+    res = 30.0
+    buf = 390.0
+    box_a = box(344700.0, 468300.0, 345000.0, 468900.0)
+    box_b = box(345000.0, 468300.0, 345300.0, 468900.0)
+
+    def _terrain_for(p_2180):
+        minx, miny, maxx, maxy = p_2180.bounds
+        left = math.floor((minx - buf) / res) * res
+        bottom = math.floor((miny - buf) / res) * res
+        right = math.ceil((maxx + buf) / res) * res
+        top = math.ceil((maxy + buf) / res) * res
+        cols = round((right - left) / res)
+        rows = round((top - bottom) / res)
+        yy, xx = np.mgrid[0:rows, 0:cols]
+        xs = left + (xx + 0.5) * res
+        ys = top - (yy + 0.5) * res
+        elev = (100.0 + 3.0 * np.sin((xs - 345000.0) / 80.0) * np.cos((ys - 468600.0) / 80.0)).astype("float32")
+        tr = (res, 0.0, left, 0.0, -res, top)
+        mask = geometry_mask([p_2180], out_shape=(rows, cols), transform=tr, invert=True)
+        return analyse_terrain(elev, tr, res, mask)
+
+    t_a = _terrain_for(box_a)
+    t_b = _terrain_for(box_b)
+    off_a = terrain_wetness_offset(t_a)
+    off_b = terrain_wetness_offset(t_b)
+
+    # Identical TPI offset along shared border x=345000 (sampled at cell centers flanking x=345000)
+    for y_val in np.linspace(468330.0, 468870.0, 15):
+        ra = int((t_a.transform[5] - y_val) / res)
+        ca = int((344985.0 - t_a.transform[2]) / res)
+        rb = int((t_b.transform[5] - y_val) / res)
+        cb = int((344985.0 - t_b.transform[2]) / res)
+        assert abs(float(off_a[ra, ca] - off_b[rb, cb])) < 1e-4
+
+    geo_a = mapping(to_wgs84(box_a))
+    geo_b = mapping(to_wgs84(box_b))
+    z_a = build_map_layers(
+        MapContext(
+            parcel_geojson=geo_a, water_state=0.0, terrain=t_a,
+            hydro_geojson=None, recommendations=[], ndmi_grid=None, ndmi_transform=None, ndmi_crs=None,
+        )
+    )["zones"]
+    z_b = build_map_layers(
+        MapContext(
+            parcel_geojson=geo_b, water_state=0.0, terrain=t_b,
+            hydro_geojson=None, recommendations=[], ndmi_grid=None, ndmi_transform=None, ndmi_crs=None,
+        )
+    )["zones"]
+
+    assert len(z_a["features"]) > 1 and len(z_b["features"]) > 1
+    for p_geo, z_fc in ((geo_a, z_a), (geo_b, z_b)):
+        pg = shape(p_geo)
+        zu = unary_union([shape(f["geometry"]) for f in z_fc["features"]])
+        assert 100.0 * zu.difference(pg).area / max(zu.area, 1e-12) < 0.5
+        assert 100.0 * zu.intersection(pg).area / max(pg.area, 1e-12) > 99.5
+
+    # Classes on opposite sides (+/- 3m) of shared border x=345000 match across the boundary
+    def _val_at(z_fc, x_m: float, y_m: float) -> int:
+        pt = to_wgs84(Point(x_m, y_m))
+        for feat in z_fc["features"]:
+            if shape(feat["geometry"]).covers(pt):
+                return int(feat["properties"]["value"])
+        raise AssertionError(f"Point ({x_m}, {y_m}) not covered")
+
+    matches = sum(
+        _val_at(z_a, 344997.0, float(yv)) == _val_at(z_b, 345003.0, float(yv))
+        for yv in np.linspace(468320.0, 468880.0, 20)
+    )
+    assert matches >= 19

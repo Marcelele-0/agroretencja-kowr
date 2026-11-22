@@ -4,19 +4,20 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Button, cx } from "../ds";
 import type { AreaGeometry, BBox, Position } from "../lib/geo";
 
+const ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
 const WMS = "SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=EPSG:3857&BBOX={bbox-epsg-3857}";
-/** GUGiK orthophoto WMTS in the Google grid: pre-rendered, cached 30 days, about 85 ms per tile. */
-export const ORTHO_WMTS = "https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMTS/StandardResolution?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTOFOTOMAPA&STYLE=default&FORMAT=image/jpeg&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}";
-/** The WMS is slower but sharper close up; it draws over the WMTS from zoom 16. */
-export const ORTHO_WMS = `https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/StandardResolution?${WMS}&WIDTH=512&HEIGHT=512&LAYERS=Raster&FORMAT=image/jpeg`;
+/** GUGiK orthophoto WMTS (z0-z19) via disk cache proxy: ~85 ms on miss, <5 ms on hit. */
+export const ORTHO_WMTS = `${ORIGIN}/tiles/ortho-wmts/{z}/{x}/{y}.jpg`;
+/** The WMS is slower but sharper close up; it draws over the WMTS from zoom 16 via disk cache. */
+export const ORTHO_WMS = `${ORIGIN}/tiles/ortho-wms?${WMS}&WIDTH=512&HEIGHT=512&LAYERS=Raster&FORMAT=image/jpeg`;
 // KIEG draws parcels only below ~1.8 m/px and returns an empty image above. 1024 px per 512 px tile gives 1.2 m/px from zoom 15.
-export const KIEG_TILES = `https://integracja.gugik.gov.pl/cgi-bin/KrajowaIntegracjaEwidencjiGruntow?${WMS}&WIDTH=1024&HEIGHT=1024&LAYERS=dzialki,numery_dzialek&FORMAT=image/png&TRANSPARENT=true`;
+export const KIEG_TILES = `${ORIGIN}/tiles/kieg?${WMS}&WIDTH=1024&HEIGHT=1024&LAYERS=dzialki,numery_dzialek&FORMAT=image/png&TRANSPARENT=true`;
 const POLAND: BBox = [14.07, 49.0, 24.15, 54.84];
 const EMPTY = { type: "FeatureCollection" as const, features: [] };
 
-export interface MapZone { geometry: unknown; value: number }
+export interface MapZone { geometry: unknown; value: number; areaPct?: number; areaHa?: number }
 /** A selected parcel. `value` (−5…+5) colours it by water state; without it the parcel is field yellow. `active` gets the hatch and a thicker line. */
-export interface MapParcel { id: string; geometry: AreaGeometry; value?: number | null; active?: boolean }
+export interface MapParcel { id: string; geometry: AreaGeometry; value?: number | null; active?: boolean; hasZones?: boolean }
 interface Pad { top: number; bottom: number; left: number; right: number }
 
 function cssVar(name: string): string {
@@ -31,7 +32,8 @@ function hatch(color: string): ImageData {
   return g.getImageData(0, 0, n, n);
 }
 const NO_VALUE = -99;
-const parcelFc = (ps: MapParcel[]) => ({ type: "FeatureCollection" as const, features: ps.map((p) => ({ type: "Feature" as const, properties: { id: p.id, value: p.value ?? NO_VALUE, active: p.active ? 1 : 0 }, geometry: p.geometry as never })) });
+/** `zonesShown` = the zones source has features; without them no parcel may drop its flat fill (hasZones hides parcel-fill). */
+const parcelFc = (ps: MapParcel[], zonesShown: boolean) => ({ type: "FeatureCollection" as const, features: ps.map((p) => ({ type: "Feature" as const, properties: { id: p.id, value: p.value ?? NO_VALUE, active: p.active ? 1 : 0, hasZones: zonesShown && p.hasZones ? 1 : 0 }, geometry: p.geometry as never })) });
 
 export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zones, padding, overlay, legend, className }: {
   parcels?: MapParcel[] | null; bbox?: BBox | null; flyTo?: { center: Position; zoom?: number; seq: number } | null; legend?: ReactNode; onPick?: ((lon: number, lat: number) => void) | null; popover?: ReactNode; popoverAt?: Position | null;
@@ -51,8 +53,10 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     const d = data.current;
-    (map.getSource("parcel") as GeoJSONSource).setData(parcelFc(d.parcels ?? []));
+    (map.getSource("parcel") as GeoJSONSource).setData(parcelFc(d.parcels ?? [], !!d.zones?.length));
     (map.getSource("zones") as GeoJSONSource).setData({ type: "FeatureCollection", features: (d.zones ?? []).map((z) => ({ type: "Feature", properties: { value: z.value }, geometry: z.geometry as never })) });
+    // Feature count of the zones source, for diagnostics and browser tests.
+    if (box.current) box.current.dataset.zones = String(d.zones?.length ?? 0);
   };
 
   useEffect(() => {
@@ -61,7 +65,7 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
       style: {
         version: 8,
         sources: {
-          wmts: { type: "raster", tiles: [ORTHO_WMTS], tileSize: 256, maxzoom: 19 },
+          wmts: { type: "raster", tiles: [ORTHO_WMTS], tileSize: 256, minzoom: 0, maxzoom: 19 },
           wms: { type: "raster", tiles: [ORTHO_WMS], tileSize: 512, minzoom: 15, maxzoom: 19 },
           kieg: { type: "raster", tiles: [KIEG_TILES], tileSize: 512, minzoom: 15, maxzoom: 20 },
           parcel: { type: "geojson", data: EMPTY },
@@ -91,9 +95,9 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
       const steps = ["dry-5", "dry-4", "dry-3", "dry-2", "dry-1", "optimum", "wet-1", "wet-2", "wet-3", "wet-4", "wet-5"].map(cssVar);
       const byStep = ["step", ["round", ["get", "value"]], steps[0]!, -4, steps[1]!, -3, steps[2]!, -2, steps[3]!, -1, steps[4]!, 0, steps[5]!, 1, steps[6]!, 2, steps[7]!, 3, steps[8]!, 4, steps[9]!, 5, steps[10]!] as never;
       const noValue = ["==", ["get", "value"], NO_VALUE] as never;
-      map.addLayer({ id: "parcel-fill", type: "fill", source: "parcel", paint: { "fill-color": ["case", noValue, field, byStep] as never, "fill-opacity": ["case", noValue, 0.3, 0.62] as never } });
-      map.addLayer({ id: "parcel-hatch", type: "fill", source: "parcel", filter: ["==", ["get", "active"], 1], paint: { "fill-pattern": "hatch" } });
-      map.addLayer({ id: "zones", type: "fill", source: "zones", paint: { "fill-color": byStep, "fill-opacity": 0.7 } });
+      map.addLayer({ id: "parcel-fill", type: "fill", source: "parcel", filter: ["!=", ["get", "hasZones"], 1], paint: { "fill-color": ["case", noValue, field, byStep] as never, "fill-opacity": ["case", noValue, 0.3, 0.56] as never } });
+      map.addLayer({ id: "parcel-hatch", type: "fill", source: "parcel", filter: ["all", ["==", ["get", "active"], 1], ["!=", ["get", "hasZones"], 1]], paint: { "fill-pattern": "hatch" } });
+      map.addLayer({ id: "zones", type: "fill", source: "zones", paint: { "fill-color": byStep, "fill-opacity": 0.56 } });
       map.addLayer({ id: "parcel-line", type: "line", source: "parcel", paint: { "line-color": field, "line-width": ["case", ["==", ["get", "active"], 1], 3, 1.8] as never }, layout: { "line-join": "round" } });
       readyRef.current = true;
       sync();

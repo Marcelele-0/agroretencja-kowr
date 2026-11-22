@@ -4,7 +4,10 @@ import { API_URL, backendEnabled, postWhatIf, reportPdfUrl } from "../api/backen
 import type { AnalysisResponse, RlCompareResponse, RlPlan14d, RlRecommendResponse, RlSoilZoneDay, RlSource, WhatIfScenarioResult } from "../api/contract";
 import { computeLocal, soilCause, withLevers, type Levers, type LocalResult, type TimelineDay } from "../analysis/local";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
-import { BAL, balStep, cx, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
+import { useRowAnalyses } from "../analysis/useRowAnalyses";
+import { alignBins, zoneBins, zoneClassOrder, zonesFromFeatures, type JointZoneInput } from "../analysis/jointZones";
+import { useJointZones } from "../analysis/useJointZones";
+import { BAL, balKey, balStep, cx, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, LayerSwitch, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, simForBackend, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, cropOf, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, isoOf, minIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
@@ -29,6 +32,11 @@ const NO_LEVERS: Levers = { addMm: 0, etCut: 0 };
 function stateVar(n: number | null | undefined): string {
   if (n === null || n === undefined) return "var(--line-strong)";
   return `var(--${n < 0 ? `dry-${-n}` : n > 0 ? `wet-${n}` : "optimum"})`;
+}
+
+/** Drawable /api/analyze zones of a parcel (empty geometries of narrow strips are dropped, so the flat fill stays). */
+function zonesOf(resp: AnalysisResponse | null): MapZone[] | null {
+  return zonesFromFeatures(resp?.map_layers?.zones);
 }
 
 function seasonReplayDates(season: number, today: Iso): Iso[] {
@@ -80,6 +88,7 @@ export function Analysis() {
   const portfolio = usePortfolio(stableItems, date);
 
   const [active, setActive] = useState("ocena");
+  const [showZones, setShowZones] = useState(true);
   const [pickedByParcel, setPickedByParcel] = useState<Record<string, string[]>>({});
   const picked = useMemo(() => new Set(pickedByParcel[activeId] ?? []), [pickedByParcel, activeId]);
   const [whatIfData, setWhatIfData] = useState<WhatIfScenarioResult | null>(null);
@@ -144,7 +153,39 @@ export function Analysis() {
     return () => io.disconnect();
   }, [st.parcel.status, !!local, showIrr, activeId]);
 
-  const zones = useMemo<MapZone[] | null>(() => backend?.map_layers?.zones?.features.map((f) => ({ geometry: f.geometry, value: f.properties.value })) ?? null, [backend]);
+  const rowItems = useMemo(
+    () => portfolio.map((r) => ({ id: r.id, crop: r.crop, eligible: r.parcel.status === "ready" && r.land?.kind !== "nonAgri" })),
+    [portfolio],
+  );
+  const rowAnalyses = useRowAnalyses(rowItems, date);
+
+  const rowBackend = (r: PortfolioRow): AnalysisResponse | null => {
+    const own = rowAnalyses[r.id]?.data ?? null;
+    return r.id === activeId ? own ?? backend : own;
+  };
+  const rowBackendLoading = (r: PortfolioRow): boolean => {
+    if (r.id === activeId) return backendEnabled && st.backend.status === "loading" && !rowAnalyses[r.id]?.data;
+    return !!rowAnalyses[r.id]?.loading;
+  };
+
+  // Joint zones of all listed parcels on one grid. Base state: backend water_state when in, else the local stage.
+  const jointInputs = useMemo<JointZoneInput[]>(() => portfolio.flatMap((r) => {
+    if (r.parcel.status === "error") return [];
+    if (r.parcel.status === "loading" || !r.land) return [{ id: r.id, crop: r.crop, state: null, pending: true }];
+    if (r.land.kind === "nonAgri") return [];
+    const ws = rowBackend(r)?.assessment?.water_state;
+    const state = typeof ws === "number" && Number.isFinite(ws) ? ws : r.local?.stage ?? (r.id === activeId ? st.local?.stage : null) ?? null;
+    return [{ id: r.id, crop: r.crop, state, pending: state === null && !r.error }];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [portfolio, rowAnalyses, backend, activeId, st.local?.stage]);
+  const joint = useJointZones(jointInputs);
+
+  /** Fallback order per parcel: joint zones, then the zones of its own /api/analyze, then (in the histogram) the single-bin stage. */
+  const rowZones = (r: PortfolioRow): MapZone[] | null => joint.zones[r.id] ?? zonesOf(rowBackend(r));
+  /** The zones indicator shows only while the parcel has no zones at all. */
+  const rowZonesLoading = (r: PortfolioRow): boolean => !rowZones(r)?.length && (joint.loading || rowBackendLoading(r));
+  const zones = useMemo(() => joint.zones[activeId] ?? zonesOf(backend), [joint.zones, activeId, backend]);
+  const zonesLoading = backendEnabled && !zones?.length && (joint.loading || st.backend.status === "loading");
 
   const activeLand = landForCalc(st.land);
   const activeCat = activeLand?.kind === "mineral" ? activeLand.category : null;
@@ -203,13 +244,41 @@ export function Analysis() {
       const cat = l.kind === "mineral" ? l.category : null;
       return stageAt(s, replayDate, thresholdsFor(cropOf(r.crop).iung, cat), cat);
     }
+    const rb = rowBackend(r)?.assessment?.water_state;
+    if (rb !== undefined) return balStep(rb);
     return r.id === activeId ? local?.stage ?? r.local?.stage ?? null : r.local?.stage ?? null;
   };
 
-  /** Every parcel on the map, coloured by its water state; the expanded one has the hatch. */
-  const mapParcels = useMemo<MapParcel[]>(() => portfolio.flatMap((r) => (r.parcel.status === "ready"
-    ? [{ id: r.id, geometry: r.parcel.data.geometry, value: stageOf(r), active: r.id === activeId, label: `${r.parcel.data.number}, ${r.parcel.data.region}` }] : [])),
-  [portfolio, activeId, local?.stage, replay.active, replay.extra, replayDate, activeLand, st.weather]);
+  const allZones = useMemo<MapZone[] | null>(() => {
+    const list = portfolio.flatMap((r) => rowZones(r) ?? []);
+    return list.length ? list : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portfolio, activeId, backend, rowAnalyses, joint.zones, date]);
+
+  const hasMultiZones = useMemo(
+    () => portfolio.some((r) => (rowZones(r)?.length ?? 0) > 1),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [portfolio, activeId, backend, rowAnalyses, joint.zones, date],
+  );
+
+  /** One class order (dry→wet) shared by every row histogram and the detail histogram: a class keeps its slot across parcels. */
+  const zoneOrder = useMemo(() => zoneClassOrder(portfolio.flatMap((r) => (r.land?.kind === "nonAgri" ? [] : [{ zones: replay.active ? null : rowZones(r), fallbackStage: stageOf(r) }]))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [portfolio, activeId, local?.stage, backend, rowAnalyses, joint.zones, replay.active, replay.extra, replayDate, activeLand, st.weather, date]);
+
+  /** Every parcel on the map, coloured by its water state; parcels with loaded zones render them cleanly without overlapping fill/hatch. */
+  const mapParcels = useMemo<MapParcel[]>(() => portfolio.flatMap((r) => {
+    if (r.parcel.status !== "ready") return [];
+    const hasZ = !replay.active && showZones && !!(rowZones(r)?.length);
+    return [{
+      id: r.id,
+      geometry: r.parcel.data.geometry,
+      value: stageOf(r),
+      active: r.id === activeId,
+      hasZones: hasZ,
+    }];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [portfolio, activeId, local?.stage, backend, rowAnalyses, joint.zones, showZones, replay.active, replay.extra, replayDate, activeLand, st.weather, date]);
 
   if (!parcelId) return <Navigate to="/" replace />;
   const pdf = parcel && backendCrop(crop) ? reportPdfUrl({ parcel_id: parcel.id, crop: backendCrop(crop)!, analysis_date: date }) : null;
@@ -333,7 +402,18 @@ export function Analysis() {
       {st.parcel.status !== "error" && land?.kind !== "nonAgri" && !backendRefused ? (
         <>
           <section id="ocena" className="rs-section">
-            {local ? <Assessment local={local} components={backendComponents(backend?.assessment)} replay={replayView} onPickDate={(d) => write(items, activeId, { data: d })} /> : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
+            {local ? (
+              <Assessment
+                local={local}
+                components={backendComponents(backend?.assessment)}
+                zones={zones}
+                zoneOrder={zoneOrder}
+                parcelAreaHa={parcel?.areaHa ?? null}
+                zonesLoading={zonesLoading}
+                replay={replayView}
+                onPickDate={(d) => write(items, activeId, { data: d })}
+              />
+            ) : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
           </section>
           <section id="przyczyny" className="rs-section">
             <h3 className="ar-section-title">{causesTitle(local)}</h3>
@@ -364,7 +444,8 @@ export function Analysis() {
 
       <div className="rs-grid">
         <aside className="rs-side">
-          <ParcelMap className="rs-side__map" parcels={mapParcels} bbox={parcel?.bbox} zones={zones} padding={{ top: 70, bottom: 40 }}
+          <ParcelMap className="rs-side__map" parcels={mapParcels} bbox={parcel?.bbox} zones={showZones && !replay.active ? allZones : null} padding={{ top: 70, bottom: 40 }}
+            overlay={!replay.active && hasMultiZones ? <LayerSwitch label="Widok stref na działce" value={showZones ? "zones" : "flat"} onChange={(v) => setShowZones(v === "zones")} options={[{ id: "zones", label: "Strefy na działce" }, { id: "flat", label: "Jednolity kolor" }]} /> : null}
             onPick={pickListed} />
         </aside>
 
@@ -380,6 +461,7 @@ export function Analysis() {
               const on = r.id === activeId;
               const stage = stageOf(r);
               const mini = miniTimelineOf(r);
+              const rZones = rowZones(r);
               return (
                 <li key={r.id} className={`rs-pitem${on ? " is-on" : ""}`} style={{ "--state": stateVar(stage) } as CSSProperties}>
                   <div className="rs-pitem__row" role="button" tabIndex={0} aria-pressed={on}
@@ -387,9 +469,16 @@ export function Analysis() {
                     <div className="rs-pitem__name">
                       <b>{p ? `Działka ${p.number}, ${p.region}` : r.id}</b>
                     </div>
-                    <div className="rs-pitem__state">{r.local || (on && local) ? <WaterBalance size="sm" value={stage} /> : <span className="ar-muted">{r.land?.kind === "nonAgri" ? "grunt nierolny" : r.error ?? "…"}</span>}</div>
+                    <div className="rs-pitem__state">{r.local || (on && local) || stage !== null ? <WaterBalance size="sm" value={stage} /> : <span className="ar-muted">{r.land?.kind === "nonAgri" ? "grunt nierolny" : r.error ?? "…"}</span>}</div>
                     {mini ? <div className="rs-pitem__mini"><StateTimeline compact days={mini.days} selected={mini.selected} today={todayIso()} /></div> : <span />}
                   </div>
+                  {r.land?.kind !== "nonAgri" && (stage !== null || rZones?.length) ? (
+                    <ZoneHistogram compact zones={replay.active ? null : rZones} order={zoneOrder} fallbackStage={stage} areaHa={p?.areaHa} loading={!replay.active && rowZonesLoading(r)} />
+                  ) : (
+                    <p className="rs-zhist rs-zhist--compact rs-zhist__note ar-muted">
+                      {r.land?.kind === "nonAgri" ? "Grunt nierolny: bez stref wilgotności." : r.parcel.status === "error" || r.error ? "Brak danych do stref wilgotności." : "Liczę stan wody…"}
+                    </p>
+                  )}
                 </li>
               );
             })}
@@ -508,7 +597,16 @@ interface ReplayView {
   onApplyDate: () => void;
 }
 
-function Assessment({ local, onPickDate, components, replay }: { local: LocalResult; onPickDate: (d: Iso) => void; components?: NonNullable<AnalysisResponse["assessment"]>["components"]; replay: ReplayView }) {
+function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAreaHa, zonesLoading, replay }: {
+  local: LocalResult;
+  onPickDate: (d: Iso) => void;
+  components?: NonNullable<AnalysisResponse["assessment"]>["components"];
+  zones: MapZone[] | null;
+  zoneOrder: number[];
+  parcelAreaHa: number | null;
+  zonesLoading: boolean;
+  replay: ReplayView;
+}) {
   const [mode, setMode] = useState<"day" | "month">("day");
   const { min, max } = dateBounds();
   const ys = mode === "day" ? local.years : local.yearsMonth;
@@ -522,6 +620,7 @@ function Assessment({ local, onPickDate, components, replay }: { local: LocalRes
     <>
       <div className="ar-card rs-hero">
         <WaterBalance value={heroStage} caption={heroCaption} />
+        <ZoneHistogram zones={replay.active ? null : zones} order={zoneOrder} fallbackStage={heroStage} areaHa={parcelAreaHa} loading={!replay.active && zonesLoading} />
         <div className="rs-status">
           {heroStage !== null ? <RiskChip level={heroRisk.level} side={heroRisk.side} veto={heroRisk.veto} vetoReason={heroRisk.vetoReason} /> : null}
           <ConfidenceBadge level={local.confidence.level} detail={local.confidence.detail} />
@@ -607,6 +706,87 @@ function Assessment({ local, onPickDate, components, replay }: { local: LocalRes
         </YearCompare>
       </div>
     </>
+  );
+}
+
+/**
+ * Distribution histogram of intra-parcel wetness zones strictly within parcel boundaries; falls back immediately to parcel-wide stage before zones arrive.
+ * `order` is the class order shared by all parcels: absent classes keep their slot (0 %), so a class sits in the same place in every row.
+ */
+function ZoneHistogram({ zones, order, fallbackStage, areaHa, loading, compact }: {
+  zones: MapZone[] | null;
+  order?: number[];
+  fallbackStage: number | null;
+  areaHa?: number | null;
+  loading?: boolean;
+  compact?: boolean;
+}) {
+  const isFallback = !zones?.length;
+  const own = zoneBins(zones, fallbackStage, areaHa);
+  if (!own.length) return null;
+  const bins = alignBins(own, order);
+  const present = own.filter((b) => b.pct > 0).length;
+
+  if (compact) {
+    return (
+      <div className="rs-zhist rs-zhist--compact" aria-label="Histogram wilgotności na działce">
+        <div className="rs-zhist__stack" aria-hidden="true">
+          {bins.filter((b) => b.pct > 0).map((b) => {
+            const label = BAL[String(b.step)] ?? String(b.step);
+            return <span key={b.step} className={cx("rs-zhist__seg", `ar-b-${balKey(b.step)}`)} style={{ width: `${b.pct}%` }} title={`${label} · ${dec(b.pct, 0)}%`} />;
+          })}
+        </div>
+        <div className="rs-zhist__chips">
+          {bins.map((b) => {
+            const cls = `ar-b-${balKey(b.step)}`;
+            const label = BAL[String(b.step)] ?? String(b.step);
+            return (
+              <span key={b.step} className={cx("rs-zhist__chip", b.pct <= 0 && "is-empty")} title={`${label} · ${dec(b.pct, 0)}%`}>
+                <i className={cx("rs-zhist__sw", cls)} aria-hidden="true" />
+                <span className="rs-zhist__name">{label}</span> <b>{dec(b.pct, 0)}%</b>
+              </span>
+            );
+          })}
+          {loading && isFallback ? <span className="ar-muted rs-zhist__wait">· strefy…</span> : null}
+        </div>
+      </div>
+    );
+  }
+
+  const meta = loading && isFallback
+    ? "obliczam strefy…"
+    : present === 1
+      ? "jednolity stan"
+      : `${present} ${present >= 2 && present <= 4 ? "strefy" : "stref"}`;
+  const note = loading && isFallback
+    ? "Wstępny rozkład z bilansu działki; szczegółowe strefy z modelu terenu ładują się w tle."
+    : isFallback
+      ? "Jednolity rozkład dla całej działki na wybraną datę."
+      : present === 1
+        ? "Cała działka ma jednolity stan wilgotności (płaski teren)."
+        : "Udział powierzchni wg globalnej rzeźby terenu (TPI) w granicach działki.";
+
+  return (
+    <div className="rs-zhist" aria-label="Histogram wilgotności na działce">
+      <div className="rs-zhist__head">
+        <h4 className="rs-subtitle">Rozkład wilgotności na działce</h4>
+        <span className="ar-muted rs-zhist__meta">{meta}</span>
+      </div>
+      <ul className="rs-zhist__list">
+        {bins.map((b) => {
+          const cls = `ar-b-${balKey(b.step)}`;
+          const label = BAL[String(b.step)] ?? String(b.step);
+          return (
+            <li key={b.step} className={cx("rs-zhist__row", b.pct <= 0 && "is-empty")}>
+              <span className="rs-zhist__lbl"><i className={cx("rs-zhist__sw", cls)} aria-hidden="true" />{label}</span>
+              <span className="rs-zhist__track" aria-hidden="true">{b.pct > 0 ? <span className={cx("rs-zhist__bar", cls)} style={{ width: `${Math.max(4, b.pct)}%` }} /> : null}</span>
+              <span className="rs-zhist__val">{dec(b.pct, 0)}%{b.ha > 0 ? <span className="ar-muted"> · {dec(b.ha, 2)} ha</span> : null}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="ar-muted rs-zhist__note">{note}</p>
+    </div>
   );
 }
 
@@ -815,7 +995,7 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
                 <tr>
                   <td>Dodatkowa rezerwa wody</td>
                   <td>0 dni</td>
-                  <td><b>+{activeWhatIf.delta_reserve_days} dni</b></td>
+                  <td><b>{activeWhatIf.delta_reserve_days > 0 ? `+${activeWhatIf.delta_reserve_days}` : activeWhatIf.delta_reserve_days < 0 ? `−${-activeWhatIf.delta_reserve_days}` : "0"} dni</b></td>
                 </tr>
                 <tr>
                   <td>Zatrzymana woda{activeWhatIf.retained_runoff_mm ? ` (spływ −${dec(activeWhatIf.retained_runoff_mm, 0)} mm)` : ""}</td>

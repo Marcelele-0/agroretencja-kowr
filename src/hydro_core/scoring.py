@@ -274,24 +274,59 @@ def water_state(score: float, risk: RiskLevel | None = None) -> float:
     return round(max(-5.0, min(5.0, value)), 1)
 
 
+def physical_water_state(
+    fx: FeatureContext,
+    idx: int | None = None,
+    risk: RiskLevel | None = None,
+    b: int = 0,
+) -> float:
+    """Bipolar physical water state (−5…0…+5): 0 at optimum without excess runoff/percolation."""
+    i = fx.i0 if idx is None else int(idx)
+    tr = fx.trace
+    tl = fx.timeline
+    dr = float(tr.dr[b, i])
+    raw = max(float(tr.raw[b, i]), 1e-6)
+    taw = max(float(tr.taw(b)), 1e-6)
+    kbw60 = tl.sum_before(tl.precip - tl.et0, 60, i)
+
+    if dr > 0.35 * raw:
+        if dr <= raw:
+            val = -1.5 * (dr - 0.35 * raw) / max(0.65 * raw, 1e-6)
+        else:
+            val = -1.5 - 3.5 * min(1.0, (dr - raw) / max(taw - raw, 1e-6))
+        if kbw60 is not None and kbw60 < -120.0:
+            val += max(-0.5, (kbw60 + 120.0) / 200.0)
+        if i == fx.i0:
+            ndmi_z = fx.get("ndmi_anomaly_z")
+            if ndmi_z is not None and ndmi_z < -0.5:
+                val += max(-0.5, 0.25 * (ndmi_z + 0.5))
+        val = max(-5.0, min(0.0, val))
+    else:
+        sat_gate = max(0.0, 1.0 - dr / max(0.25 * raw, 10.0))
+        excess_14 = float(np.nansum(tr.dp[b, max(0, i - 13) : i + 1] + tr.ro[b, max(0, i - 13) : i + 1]))
+        excess_30 = float(np.nansum(tr.dp[b, max(0, i - 29) : i + 1] + tr.ro[b, max(0, i - 29) : i + 1]))
+        w14 = max(0.0, (excess_14 - 25.0) / 30.0)
+        w30 = max(0.0, (excess_30 - 40.0) / 45.0)
+        w60 = max(0.0, (kbw60 - 40.0) / 55.0) if kbw60 is not None else 0.0
+        val = min(5.0, sat_gate * max(w14, w30, w60))
+
+    caps = scoring_config()["water_state"]["cap_by_risk"]
+    if risk is not None and risk.value in caps:
+        val = min(val, float(caps[risk.value]))
+    return round(max(-5.0, min(5.0, val)), 1)
+
+
 DAILY_COMPONENT = "zapas_wody_w_glebie"
 
 
 def daily_water_states(
     fx: FeatureContext, score: WaterScoreBreakdown, indices: np.ndarray, b: int = 0
 ) -> np.ndarray:
-    """Water state on the given timeline days: the storage component follows the daily balance,
-    the other components are held at their analysis-date values (same weights as WaterScore)."""
-    tr = fx.trace
-    taw = tr.taw(b)
-    others = [(r.weight_nominal, r.value) for r in score.components if r.name != DAILY_COMPONENT and r.value is not None]
-    w_storage = next((r.weight_nominal for r in score.components if r.name == DAILY_COMPONENT), 0.0)
-    w_total = w_storage + sum(w for w, _ in others)
-    fixed_part = sum(w * v for w, v in others)
+    """Bipolar physical water state on the given timeline days."""
+    _ = score  # kept in signature for caller compatibility
     out = np.empty(len(indices))
     for k, i in enumerate(indices):
-        s = storage_score(float(tr.dr[b, i]), float(tr.raw[b, i]), taw)
-        out[k] = water_state((w_storage * s + fixed_part) / w_total if w_total > 0 else 50.0)
+        out[k] = physical_water_state(fx, idx=int(i), risk=None, b=b)
     return out
 
 

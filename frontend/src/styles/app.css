@@ -197,6 +197,31 @@ button.rs-st__day:hover { background: var(--hairline); }
 /* ---------- Hero and collapsible details ---------- */
 .rs-hero { gap: 16px; }
 .rs-hero .rs-status { padding-top: 14px; border-top: 1px solid var(--hairline); }
+.rs-zhist { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--hairline); }
+.rs-zhist__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rs-zhist__meta { font-size: 12px; font-variant-numeric: tabular-nums; }
+.rs-zhist__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rs-zhist__row { display: grid; grid-template-columns: minmax(115px, auto) minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 12.5px; }
+.rs-zhist__lbl { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rs-zhist__sw { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+.rs-zhist__track { position: relative; height: 9px; border-radius: var(--radius-pill); background: var(--surface-sunk); overflow: hidden; }
+.rs-zhist__bar { display: block; height: 100%; border-radius: var(--radius-pill); transition: width .22s ease; }
+.rs-zhist__val { font-family: var(--font-mono); font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.rs-zhist__note { margin: 0; font-size: 11.5px; line-height: 1.35; }
+.rs-zhist--compact { gap: 5px; padding: 0 12px 10px; border-top: 0; }
+.rs-zhist__stack { display: flex; gap: 2px; height: 7px; border-radius: var(--radius-pill); overflow: hidden; background: var(--surface-sunk); }
+.rs-zhist__seg { height: 100%; transition: width .22s ease; }
+.rs-zhist__seg:first-child { border-radius: var(--radius-pill) 0 0 var(--radius-pill); }
+.rs-zhist__seg:last-child { border-radius: 0 var(--radius-pill) var(--radius-pill) 0; }
+.rs-zhist__seg:only-child { border-radius: var(--radius-pill); }
+/* Fixed-width cells in the shared class order: every row of the list puts a class in the same column. */
+.rs-zhist__chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 10px; align-items: center; font-size: 11.5px; line-height: 1.25; }
+.rs-zhist__chip { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; }
+.rs-zhist__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rs-zhist__chip b { flex: none; font-family: var(--font-mono); font-weight: 600; font-size: 11px; }
+.rs-zhist__chip.is-empty, .rs-zhist__row.is-empty { opacity: .4; }
+@media (max-width: 380px) { .rs-zhist__chips { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); font-size: 11px; } }
+.rs-zhist__wait { font-size: 11px; }
 .rs-more { gap: 12px; }
 .rs-more > summary { cursor: pointer; font-weight: 600; font-size: 14px; list-style-position: inside; }
 .rs-more[open] > summary { margin-bottom: 4px; }

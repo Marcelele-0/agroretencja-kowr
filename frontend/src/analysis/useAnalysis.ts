@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BackendError, backendEnabled, postAnalyze, postRlCompare, postRlRecommend } from "../api/backend";
+import { analyzeCache } from "../api/analyzeCache";
+import { BackendError, backendEnabled, postRlCompare, postRlRecommend } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse } from "../api/contract";
 import { backendCrop, type CropCode } from "../lib/crops";
 import { inSeason, todayIso, type Iso } from "../lib/dates";
@@ -129,8 +130,14 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
     const sameTarget = prevTarget.current?.parcelId === p.id && prevTarget.current?.crop === q.crop;
     prevTarget.current = { parcelId: p.id, crop: q.crop };
     if (backendEnabled && bc) {
-      if (!sameTarget) setBackend(LOADING);
-      postAnalyze({ parcel_id: p.id, crop: bc, analysis_date: q.date }, ctl.signal).then((data) => setBackend({ status: "ready", data }), (e) => !isAbort(e) && setBackend(errorRes(e)));
+      // Shared cache: a result already fetched for the parcel list shows at once; aborting only detaches this listener.
+      const req = { parcel_id: p.id, crop: bc, analysis_date: q.date };
+      const hit = analyzeCache.peek(req);
+      if (hit) setBackend({ status: "ready", data: hit });
+      else {
+        if (!sameTarget) setBackend(LOADING);
+        analyzeCache.get(req, { signal: ctl.signal, priority: true }).then((data) => setBackend({ status: "ready", data }), (e) => !isAbort(e) && !ctl.signal.aborted && setBackend(errorRes(e)));
+      }
     } else if (import.meta.env.DEV && new URLSearchParams(location.search).has("fixtures")) {
       import("../api/fixtures").then((m) => { if (!ctl.signal.aborted) setBackend({ status: "ready", data: m.BACKEND_FIXTURE }); });
     } else setBackend(OFF);
@@ -159,7 +166,9 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
       { name: "GUGiK, Usługa Lokalizacji Działek Katastralnych", what: "granica, gmina, obręb, powierzchnia z granic", url: ULDK_URL, retrievedAt: p.retrievedAt, resolution: "działka ewidencyjna", license: "otwarte dane PZGiK" },
       { name: "IUNG-PIB, warstwa Susza:katgl_landuse2024 (WMS)", what: "kategoria gleby I–IV i użytkowanie", url: IUNG_WMS, retrievedAt: landAt, resolution: "punkt w środku działki", license: "publiczna usługa IUNG-PIB" },
       { name: "IUNG-PIB, progi suszy SMSR", what: "krytyczne KBW dla uprawy, gleby i okna", url: IUNG_PROGI.source, retrievedAt: new Date(`${IUNG_PROGI.retrieved}T12:00:00`), resolution: "cała Polska, jeden próg", license: "Rozporządzenie MRiRW z 11.04.2019" },
-      { name: "Open-Meteo, archiwum ERA5 i prognoza", what: "dzienny opad i ewapotranspiracja ET₀ (FAO-56)", url: ARCHIVE_URL, retrievedAt: wd.retrievedAt, resolution: `siatka ok. 9 km (${wd.grid.lat.toFixed(2)}° N, ${wd.grid.lon.toFixed(2)}° E)`, license: "CC BY 4.0" },
+      wd.providers?.includes("nasa-power")
+        ? { name: "NASA POWER (zapas za Open-Meteo) i Open-Meteo", what: "dzienny opad i ewapotranspiracja ET₀ (FAO-56, liczona z danych NASA POWER)", url: "https://power.larc.nasa.gov/", retrievedAt: wd.retrievedAt, resolution: `siatka 0,5° (${wd.grid.lat.toFixed(2)}° N, ${wd.grid.lon.toFixed(2)}° E)`, license: "NASA POWER: dane publiczne NASA; Open-Meteo: CC BY 4.0" }
+        : { name: "Open-Meteo, archiwum ERA5 i prognoza", what: "dzienny opad i ewapotranspiracja ET₀ (FAO-56)", url: ARCHIVE_URL, retrievedAt: wd.retrievedAt, resolution: `siatka ok. 9 km (${wd.grid.lat.toFixed(2)}° N, ${wd.grid.lon.toFixed(2)}° E)`, license: "CC BY 4.0" },
       { ...STATIC_SOURCES.ortho, retrievedAt: null },
       { ...STATIC_SOURCES.kieg, retrievedAt: null },
     ];

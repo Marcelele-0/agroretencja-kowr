@@ -418,3 +418,31 @@ class AnalysisRefusal(BaseModel):
     status: str
     message: str
     parcel: ParcelGeometry | None = None
+
+
+class ZonesParcel(BaseModel):
+    """One parcel of a joint wetness-zones request."""
+
+    parcel_id: str = Field(min_length=3, max_length=60, description="Cadastral TERYT parcel ID.")
+    water_state: float = Field(ge=-5.0, le=5.0, description="Parcel water state on the -5..+5 scale.")
+    crop: str | None = Field(
+        default=None,
+        max_length=40,
+        description="Frontend crop code; neighbours with different crops keep a hard border (no blending).",
+    )
+
+
+class ZonesRequest(BaseModel):
+    """Joint intra-parcel wetness zones for 1-12 parcels (adjacent parcels meet without jumps)."""
+
+    parcels: list[ZonesParcel] = Field(min_length=1, max_length=12)
+
+
+class ZonesResponse(BaseModel):
+    """Zones per parcel (GeoJSON FeatureCollection, EPSG:4326; same features as map_layers.zones)."""
+
+    zones: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    errors: dict[str, str] = Field(default_factory=dict)
+    grid_m: float
+    dem_source: str
+    elapsed_s: float

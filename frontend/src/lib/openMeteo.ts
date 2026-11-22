@@ -19,46 +19,74 @@ export interface DailySeries {
   forecastOk: boolean;
   grid: { lat: number; lon: number; elevation: number | null };
   retrievedAt: Date;
+  /** Weather providers behind the series: "open-meteo", or "nasa-power" when the server fell back to the backend. */
+  providers?: string[];
 }
 
-interface Chunk { from: Iso; p: (number | null)[]; e: (number | null)[]; lat?: number; lon?: number; elevation?: number }
-interface OmDaily { daily?: { time: string[]; precipitation_sum: (number | null)[]; et0_fao_evapotranspiration: (number | null)[] }; latitude?: number; longitude?: number; elevation?: number; reason?: string }
+interface Chunk { from: Iso; p: (number | null)[]; e: (number | null)[]; lat?: number; lon?: number; elevation?: number; provider?: string }
+interface OmDaily { daily?: { time: string[]; precipitation_sum: (number | null)[]; et0_fao_evapotranspiration: (number | null)[] }; latitude?: number; longitude?: number; elevation?: number; reason?: string; provider?: string }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Same-origin proxy of our server (/om/…); without it (plain static hosting) the browser calls Open-Meteo directly. */
 let proxyOk = true;
-async function viaServer(url: string): Promise<{ status: number; ok: boolean; text: string }> {
+async function viaServer(url: string): Promise<{ status: number; ok: boolean; text: string; proxied: boolean }> {
   if (typeof window !== "undefined" && proxyOk) {
     const local = url.replace(ARCHIVE_URL, "/om/archive").replace(FORECAST_URL, "/om/forecast");
     const r = await request(local, 20000);
     const head = r.text.trimStart().toLowerCase();
     // Only disable the proxy when running on plain static hosting without Vite middleware (404 / SPA HTML fallback).
-    if (r.status !== 404 && !head.startsWith("<!") && !head.startsWith("<html")) return r;
+    if (r.status !== 404 && !head.startsWith("<!") && !head.startsWith("<html")) return { ...r, proxied: true };
     proxyOk = false;
   }
-  return request(url, 20000);
+  return { ...(await request(url, 20000)), proxied: false };
 }
-/** Open-Meteo limits each network address to about 600 calls a minute: on 429 or a timeout, wait and try again (3 attempts). */
+/**
+ * The server proxy already retries 5xx and answers from the backend when Open-Meteo is limited, so its reply is final.
+ * Direct calls (static hosting) get one more try after a 5xx or a network error, never after a 429: the quota does not reset in seconds.
+ */
 async function getJson(url: string): Promise<OmDaily> {
-  let res: { status: number; ok: boolean; text: string } | null = null;
-  for (const [i, pause] of [0, 4000, 15000].entries()) {
-    if (pause) await wait(pause);
+  let res: { status: number; ok: boolean; text: string; proxied: boolean } | null = null;
+  let err: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt) await wait(1500);
+    const viaProxy = typeof window !== "undefined" && proxyOk;
     try {
       res = await viaServer(url);
+      err = null;
     } catch (e) {
-      if (i === 2) throw sourceFailure("Open-Meteo", e);
+      res = null;
+      err = e;
+      if (viaProxy) break;
       continue;
     }
-    if (res.status !== 429 && res.status < 500) break;
+    if (res.proxied || res.status < 500) break;
   }
-  if (!res || !res.ok) throw sourceFailure("Open-Meteo", null, res?.status ?? 0);
+  if (!res) throw sourceFailure("Open-Meteo", err);
+  if (!res.ok) throw sourceFailure("Open-Meteo", null, res.status);
   const json = JSON.parse(res.text) as OmDaily;
   if (!json.daily) throw sourceFailure("Open-Meteo", null, 502);
   return json;
 }
 function toChunk(j: OmDaily): Chunk {
   const d = j.daily!;
-  return { from: d.time[0]!, p: d.precipitation_sum, e: d.et0_fao_evapotranspiration, lat: j.latitude, lon: j.longitude, elevation: j.elevation };
+  return { from: d.time[0]!, p: d.precipitation_sum, e: d.et0_fao_evapotranspiration, lat: j.latitude, lon: j.longitude, elevation: j.elevation, provider: j.provider };
+}
+/** Distinct providers of the chunks; chunks without a provider field come straight from Open-Meteo. */
+function providersOf(chunks: (Chunk | null)[]): string[] {
+  return [...new Set(chunks.filter((c): c is Chunk => !!c).flatMap((c) => (c.provider ?? "open-meteo").split("+")))];
+}
+
+/** A failed range is not asked again for 60 s within one page view: the server proxy has already tried every source. */
+const FAIL_TTL_MS = 60_000;
+const failed = new Map<string, { at: number; err: unknown }>();
+function recentFailure(key: string): Promise<never> | null {
+  const f = failed.get(key);
+  if (!f) return null;
+  if (Date.now() - f.at > FAIL_TTL_MS) {
+    failed.delete(key);
+    return null;
+  }
+  return Promise.reject(f.err);
 }
 
 /** The 10 years the "same term" comparison shows: ending this year if the day has passed, else last year. */
@@ -112,9 +140,21 @@ function archiveChunk(lat: number, lon: number, from: Iso, to: Iso): Promise<Chu
   } catch {
     try { localStorage.removeItem(LS + key); } catch { /* storage blocked: fetch instead */ }
   }
+  const recent = recentFailure(`a:${key}`);
+  if (recent) return recent;
   const p = getJson(`${ARCHIVE_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&daily=${DAILY}&timezone=Europe%2FWarsaw&start_date=${from}&end_date=${to}`).then(toChunk);
   mem.set(key, p);
-  p.then((c) => { try { localStorage.setItem(LS + key, JSON.stringify(c)); } catch { /* quota: memory only */ } }, () => mem.delete(key));
+  p.then(
+    (c) => {
+      // Fallback data stays in memory only: the next page view asks Open-Meteo again.
+      if (c.provider && c.provider !== "open-meteo") return;
+      try { localStorage.setItem(LS + key, JSON.stringify(c)); } catch { /* quota: memory only */ }
+    },
+    (err: unknown) => {
+      mem.delete(key);
+      failed.set(`a:${key}`, { at: Date.now(), err });
+    },
+  );
   return p;
 }
 const fcMem = new Map<string, Promise<Chunk>>();
@@ -122,9 +162,14 @@ function forecastChunk(lat: number, lon: number, today: Iso): Promise<Chunk> {
   const key = `${lat.toFixed(2)},${lon.toFixed(2)},${today}`;
   const hit = fcMem.get(key);
   if (hit) return hit;
+  const recent = recentFailure(`f:${key}`);
+  if (recent) return recent;
   const p = getJson(`${FORECAST_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&daily=${DAILY}&timezone=Europe%2FWarsaw&past_days=${ARCHIVE_LAG_DAYS + 7}&forecast_days=16`).then(toChunk);
   fcMem.set(key, p);
-  p.catch(() => fcMem.delete(key));
+  p.catch((err: unknown) => {
+    fcMem.delete(key);
+    failed.set(`f:${key}`, { at: Date.now(), err });
+  });
   return p;
 }
 
@@ -197,6 +242,7 @@ async function load(lat: number, lon: number, date: Iso, today: Iso): Promise<Da
   return {
     start: from, startDay, p, et0, forecastFrom: addDays(today, 1), forecastOk: !!fc || !needForecast,
     grid: { lat: g?.lat ?? lat, lon: g?.lon ?? lon, elevation: g?.elevation ?? null }, retrievedAt: new Date(),
+    providers: providersOf([...archive, fc]),
   };
 }
 
@@ -267,5 +313,6 @@ async function loadSeason(lat: number, lon: number, year: number, today: Iso): P
   return {
     start: from, startDay, p, et0, forecastFrom: addDays(today, 1), forecastOk: !!fc || !needForecast,
     grid: { lat: g?.lat ?? lat, lon: g?.lon ?? lon, elevation: g?.elevation ?? null }, retrievedAt: new Date(),
+    providers: providersOf([archive, fc]),
   };
 }

@@ -5,6 +5,9 @@ Adding a source = one ``SOURCES.add(SourceSpec(...))`` entry: a client class (su
 the analysis date (``None`` = skip the source for this request, e.g. forecast for old dates).
 ``ParcelDataCollector`` runs every registered source; results land in ``bundle.results[key]``.
 
+A source may also declare ``defer_if``: once that predicate holds for the results gathered so far,
+the collector stops waiting for it (the fetch keeps running in the background and fills the cache).
+
 Soil category uses a chain of responsibility (``SOIL_PROVIDERS``): the first provider that
 returns a category wins (IUNG map first, SoilGrids texture estimate second).
 """
@@ -24,6 +27,7 @@ from backend.clients.meteo import WeatherForecastClient, WeatherHistoryClient
 from backend.clients.nmt import NmtClient
 from backend.clients.sentinel2 import Sentinel2Client
 from backend.clients.soilgrids import SoilGridsClient, SoilGridsProfile
+from backend.inference.hydrofusion import load_hydrofusion
 from hydro_core.registry import Registry
 from hydro_core.schemas import IungSoilCategory, ParcelGeometry
 
@@ -56,14 +60,20 @@ class SourceSpec:
     key: str
     client_cls: type[BaseSourceClient[Any]]
     build_kwargs: Callable[[SourceRequest], dict[str, Any] | None]
+    # True = the analysis result no longer depends on this source; do not wait for it.
+    defer_if: Callable[[dict[str, SourceResult[Any]]], bool] | None = None
 
 
 SOURCES: Registry[SourceSpec] = Registry("źródła danych")
 
 
-def _register(key: str, client_cls: type[BaseSourceClient[Any]]):
+def _register(
+    key: str,
+    client_cls: type[BaseSourceClient[Any]],
+    defer_if: Callable[[dict[str, SourceResult[Any]]], bool] | None = None,
+):
     def deco(fn: Callable[[SourceRequest], dict[str, Any] | None]) -> Callable[..., Any]:
-        SOURCES.add(key, SourceSpec(key, client_cls, fn))
+        SOURCES.add(key, SourceSpec(key, client_cls, fn, defer_if))
         return fn
 
     return deco
@@ -101,7 +111,24 @@ def _iung(r: SourceRequest) -> dict[str, Any]:
     return {"parcel_id": r.parcel.parcel_id, "geojson": r.parcel.geojson}
 
 
-@_register("soilgrids", SoilGridsClient)
+# Features computed from the SoilGrids profile (hydro_core.features); only an ML model may read them.
+SOILGRIDS_FEATURES = frozenset({"sand_pct", "soc_g_kg", "awc_mm_0_100"})
+
+
+def _soilgrids_not_needed(results: dict[str, SourceResult[Any]]) -> bool:
+    """SoilGrids only matters as the soil-category fallback or as an input of a loaded ML model.
+
+    ISRIC answers in 6-8 s or times out, so once the IUNG map gave the category the analysis
+    does not wait; the outcome is the same as the SoilGrids-timeout branch.
+    """
+    iung = results.get("iung")
+    if iung is None or iung.data is None:
+        return False
+    hf = load_hydrofusion()
+    return hf is None or not SOILGRIDS_FEATURES.intersection(hf.features)
+
+
+@_register("soilgrids", SoilGridsClient, defer_if=_soilgrids_not_needed)
 def _soilgrids(r: SourceRequest) -> dict[str, Any]:
     return r.point
 

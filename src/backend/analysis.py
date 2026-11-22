@@ -53,7 +53,7 @@ from hydro_core.scoring import (
     assess_risk,
     compute_water_score,
     daily_water_states,
-    water_state,
+    physical_water_state,
 )
 from hydro_core.text import days, num
 from hydro_core.timeline import build_timeline, kind_is_forecast
@@ -282,7 +282,7 @@ class AnalysisService:
         risk = assess_risk(fx, score)
         aoa = (prediction.dissimilarity_index, prediction.inside_aoa) if prediction else (None, True)
         confidence = assess_confidence(fx, aoa=aoa)
-        state_value = water_state(score.total, risk.level)
+        state_value = physical_water_state(fx, risk=risk.level)
 
         i0 = tl.analysis_index
         idx = np.arange(max(0, i0 - TIMELINE_DAYS_BEFORE), len(tl))

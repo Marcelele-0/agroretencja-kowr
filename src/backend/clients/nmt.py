@@ -8,12 +8,14 @@ Output raster is always in EPSG:2180 (metres), NaN = nodata.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import math
 import os
 import re
 import tempfile
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -22,9 +24,10 @@ import rasterio
 from pydantic import BaseModel, ConfigDict
 from rasterio.features import geometry_mask
 from rasterio.io import MemoryFile
-from rasterio.merge import merge
 from rasterio.transform import from_origin
 from rasterio.warp import Resampling, reproject
+from rasterio.windows import Window, from_bounds
+from shapely.geometry import box
 
 from backend.clients.base import (
     BaseSourceClient,
@@ -32,8 +35,8 @@ from backend.clients.base import (
     SourceDescriptor,
     SourceUnavailableError,
 )
-from backend.clients.geo import PUWG1992, parcel_shape, to_puwg92
-from hydro_core.schemas import DataMode
+from backend.clients.geo import PUWG1992, parcel_shape, to_puwg92, to_wgs84
+from hydro_core.schemas import DataMode, ParcelGeometry
 
 _GDAL_ENV = {
     "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
@@ -105,38 +108,58 @@ def _copernicus_tile_names(bbox_wgs84: tuple[float, float, float, float]) -> lis
 
 
 def _read_copernicus(
-    url_template: str, bbox_wgs84: tuple[float, float, float, float], bounds_2180: tuple[float, ...], parcel_2180: Any
+    url_template: str,
+    bbox_wgs84: tuple[float, float, float, float],
+    bounds_2180: tuple[float, ...],
+    parcel_2180: Any,
+    local_dir: Path | None = None,
 ) -> DemRaster:
-    """Read Copernicus DEM tiles covering the bbox and resample to a 30 m grid in EPSG:2180."""
-    hrefs = [url_template.format(name=n) for n in _copernicus_tile_names(bbox_wgs84)]
-    minx, miny, maxx, maxy = bbox_wgs84
-    pad = 0.003
-    with rasterio.Env(**_GDAL_ENV):
-        datasets = [rasterio.open(h) for h in hrefs]
-        try:
-            src_arr, src_transform = merge(
-                datasets, bounds=(minx - pad, miny - pad, maxx + pad, maxy + pad)
-            )
-            src_crs = datasets[0].crs
-        finally:
-            for ds in datasets:
-                ds.close()
-
+    """Read Copernicus DEM tiles (local first, S3 fallback) and resample to a snapped 30 m grid in EPSG:2180."""
     left, bottom, right, top = bounds_2180
-    width = max(1, math.ceil((right - left) / _FALLBACK_RES_M))
-    height = max(1, math.ceil((top - bottom) / _FALLBACK_RES_M))
+    b_wgs = to_wgs84(box(left, bottom, right, top)).bounds
+    pad_lon, pad_lat = 0.003, 0.002
+    read_bbox = (
+        min(bbox_wgs84[0], b_wgs[0]) - pad_lon,
+        min(bbox_wgs84[1], b_wgs[1]) - pad_lat,
+        max(bbox_wgs84[2], b_wgs[2]) + pad_lon,
+        max(bbox_wgs84[3], b_wgs[3]) + pad_lat,
+    )
+    hrefs: list[str] = []
+    for name in _copernicus_tile_names(read_bbox):
+        local_tile = None if local_dir is None else local_dir / f"{name}.tif"
+        if local_tile is not None and local_tile.exists():
+            hrefs.append(str(local_tile))
+        else:
+            hrefs.append(url_template.format(name=name))
+
+    width = max(1, round((right - left) / _FALLBACK_RES_M))
+    height = max(1, round((top - bottom) / _FALLBACK_RES_M))
     dst_transform = from_origin(left, top, _FALLBACK_RES_M, _FALLBACK_RES_M)
     dst = np.full((height, width), np.nan, dtype="float32")
-    reproject(
-        source=src_arr[0].astype("float32"),
-        destination=dst,
-        src_transform=src_transform,
-        src_crs=src_crs,
-        dst_transform=dst_transform,
-        dst_crs=PUWG1992,
-        resampling=Resampling.bilinear,
-        dst_nodata=np.nan,
-    )
+    with rasterio.Env(**_GDAL_ENV):
+        for h in hrefs:
+            with rasterio.open(h) as ds:
+                win = from_bounds(*read_bbox, transform=ds.transform).round_offsets().round_lengths()
+                win = win.intersection(Window(0, 0, ds.width, ds.height))
+                if win.width <= 0 or win.height <= 0:
+                    continue
+                arr = ds.read(1, window=win).astype("float32")
+                if ds.nodata is not None:
+                    arr[arr == ds.nodata] = np.nan
+                tmp = np.full((height, width), np.nan, dtype="float32")
+                reproject(
+                    source=arr,
+                    destination=tmp,
+                    src_transform=ds.window_transform(win),
+                    src_crs=ds.crs,
+                    dst_transform=dst_transform,
+                    dst_crs=PUWG1992,
+                    resampling=Resampling.bilinear,
+                    dst_nodata=np.nan,
+                    ERROR_THRESHOLD=0,
+                )
+                fill = np.isnan(dst) & np.isfinite(tmp)
+                dst[fill] = tmp[fill]
     return _finalize(
         dst, dst_transform, _FALLBACK_RES_M, "Copernicus DEM GLO-30 (model pokrycia terenu)", True, parcel_2180
     )
@@ -167,15 +190,32 @@ def _read_and_store_copernicus(
     bounds_2180: tuple[float, ...],
     parcel_2180: Any,
     path: Path,
+    local_dir: Path | None = None,
 ) -> DemRaster:
-    dem = _read_copernicus(url_template, bbox_wgs84, bounds_2180, parcel_2180)
+    dem = _read_copernicus(url_template, bbox_wgs84, bounds_2180, parcel_2180, local_dir=local_dir)
     save_dem(path, dem)
     return dem
+
+
+_COP_TILE_M = 3000.0  # Copernicus tile cache for parcel groups (multiple of the 30 m lattice)
+
+
+def _read_and_store_copernicus_tile(
+    url_template: str, bounds_2180: tuple[float, float, float, float], path: Path, local_dir: Path | None
+) -> DemRaster:
+    """Read one fixed Copernicus tile (EPSG:2180, 30 m lattice) and store it in the cache."""
+    tile = box(*bounds_2180)
+    bbox_wgs84: tuple[float, float, float, float] = to_wgs84(tile).bounds  # type: ignore[assignment]
+    return _read_and_store_copernicus(url_template, bbox_wgs84, bounds_2180, tile, path, local_dir)
 
 
 _BACKGROUND_TASKS: set[asyncio.Task[Any]] = set()
 _INFLIGHT: dict[str, asyncio.Task[Any]] = {}
 _GUGIK_SLOW_UNTIL = 0.0  # monotonic time; while in the future, GUGiK gets only a short wait
+_GUGIK_STATE_KEY = "nmt:gugik_slow"  # same state in the SQLite cache: survives a server restart
+# The stored state may live longer than the in-process cooldown: every request still starts a
+# background download, and one that answers within nmt_gugik_timeout_s clears the state at once.
+_GUGIK_STATE_TTL_S = 6 * 3600.0
 
 
 def _start_background(key: str, coro: Any) -> asyncio.Task[Any]:
@@ -193,8 +233,28 @@ def _start_background(key: str, coro: Any) -> asyncio.Task[Any]:
     return task
 
 
-def _gugik_wait_s(normal_s: float, short_s: float) -> float:
-    return short_s if time.monotonic() < _GUGIK_SLOW_UNTIL else normal_s
+def _dem_bounds(
+    parcel_2180: Any, buffer_m: float, max_pixels_per_side: int
+) -> tuple[tuple[float, float, float, float], tuple[float, float, float, float]]:
+    """Snapped EPSG:2180 bounds (parcel + buffer) of the GUGiK 1 m request and the Copernicus grid."""
+    minx, miny, maxx, maxy = parcel_2180.bounds
+    g_buf = max(buffer_m, 120.0)
+    raw_span = max(maxx - minx + 2 * g_buf, maxy - miny + 2 * g_buf)
+    g_res = float(max(1, math.ceil(raw_span / max_pixels_per_side)))
+    gugik_bounds = (
+        math.floor((minx - g_buf) / g_res) * g_res,
+        math.floor((miny - g_buf) / g_res) * g_res,
+        math.ceil((maxx + g_buf) / g_res) * g_res,
+        math.ceil((maxy + g_buf) / g_res) * g_res,
+    )
+    cop_buf = 390.0
+    cop_bounds = (
+        math.floor((minx - cop_buf) / _FALLBACK_RES_M) * _FALLBACK_RES_M,
+        math.floor((miny - cop_buf) / _FALLBACK_RES_M) * _FALLBACK_RES_M,
+        math.ceil((maxx + cop_buf) / _FALLBACK_RES_M) * _FALLBACK_RES_M,
+        math.ceil((maxy + cop_buf) / _FALLBACK_RES_M) * _FALLBACK_RES_M,
+    )
+    return gugik_bounds, cop_bounds
 
 
 def _mark_gugik_slow(cooldown_s: float) -> None:
@@ -228,10 +288,44 @@ class NmtClient(BaseSourceClient[DemRaster]):
         safe = re.sub(r"[^0-9A-Za-z_.-]", "_", parcel_id)
         return self.settings.cache_dir / "nmt" / f"{safe}_{kind}.npz"
 
+    async def _set_gugik_slow(self, slow: bool) -> None:
+        """Record whether GUGiK is slow, in this process and in the cache (for the cooldown period)."""
+        cooldown = self.settings.nmt_gugik_cooldown_s
+        if slow:
+            _mark_gugik_slow(cooldown)
+        else:
+            _mark_gugik_ok()
+        with contextlib.suppress(Exception):  # the state is an optimisation only
+            await self.cache.set(_GUGIK_STATE_KEY, {"slow": slow}, max(cooldown, _GUGIK_STATE_TTL_S))
+
+    async def _gugik_is_slow(self) -> bool:
+        if time.monotonic() < _GUGIK_SLOW_UNTIL:
+            return True
+        with contextlib.suppress(Exception):
+            state = await self.cache.get(_GUGIK_STATE_KEY)
+            return bool(state and state.get("slow"))
+        return False
+
     async def _gugik(
         self, bounds: tuple[float, float, float, float], parcel_2180: Any, store_path: Path
     ) -> DemRaster:
-        """Download NMT 1 m; the result is always stored, also when it arrives after the deadline."""
+        """Download NMT 1 m; the result is always stored, also when it arrives after the deadline.
+
+        Every background download also refreshes the slow/ok state: only an answer within
+        ``nmt_gugik_timeout_s`` ends the cooldown, so a slow service is never probed in the foreground.
+        """
+        started = time.monotonic()
+        try:
+            dem = await self._gugik_download(bounds, parcel_2180, store_path)
+        except Exception:
+            await self._set_gugik_slow(True)
+            raise
+        await self._set_gugik_slow(time.monotonic() - started > self.settings.nmt_gugik_timeout_s)
+        return dem
+
+    async def _gugik_download(
+        self, bounds: tuple[float, float, float, float], parcel_2180: Any, store_path: Path
+    ) -> DemRaster:
         s = self.settings
         left, bottom, right, top = bounds
         side = max(right - left, top - bottom)
@@ -255,7 +349,6 @@ class NmtClient(BaseSourceClient[DemRaster]):
             raise SourceUnavailableError("Usługa NMT GUGiK zwróciła błąd zamiast rastra.")
         dem = await asyncio.to_thread(_decode_gugik_tiff, resp.content, parcel_2180, resolution)
         await asyncio.to_thread(save_dem, store_path, dem)
-        _mark_gugik_ok()
         return dem
 
     async def _fetch(self, **kwargs: Any) -> FetchOutcome[DemRaster]:
@@ -264,7 +357,7 @@ class NmtClient(BaseSourceClient[DemRaster]):
         parcel_id: str = kwargs["parcel_id"]
         s = self.settings
         gugik_path = self._cache_path(parcel_id, "gugik1m")
-        cop_path = self._cache_path(parcel_id, "cop30m")
+        cop_path = self._cache_path(parcel_id, "cop30m_g2")
 
         if gugik_path.exists():
             dem = await asyncio.to_thread(load_dem, gugik_path)
@@ -273,12 +366,11 @@ class NmtClient(BaseSourceClient[DemRaster]):
             )
 
         parcel_2180 = to_puwg92(parcel_shape(geojson))
-        minx, miny, maxx, maxy = parcel_2180.bounds
-        b = s.nmt_buffer_m
-        bounds = (math.floor(minx - b), math.floor(miny - b), math.ceil(maxx + b), math.ceil(maxy + b))
+        gugik_bounds, cop_bounds = _dem_bounds(parcel_2180, s.nmt_buffer_m, s.nmt_max_pixels_per_side)
 
-        gugik_task = _start_background(str(gugik_path), self._gugik(bounds, parcel_2180, gugik_path))
-        gugik_wait = _gugik_wait_s(s.nmt_gugik_timeout_s, s.nmt_gugik_short_wait_s)
+        gugik_task = _start_background(str(gugik_path), self._gugik(gugik_bounds, parcel_2180, gugik_path))
+        slow = await self._gugik_is_slow()
+        gugik_wait = s.nmt_gugik_short_wait_s if slow else s.nmt_gugik_timeout_s
         if cop_path.exists():
             cop_task: asyncio.Task[DemRaster] = asyncio.create_task(asyncio.to_thread(load_dem, cop_path))
         else:
@@ -287,25 +379,34 @@ class NmtClient(BaseSourceClient[DemRaster]):
                     _read_and_store_copernicus,
                     s.copernicus_dem_url_template,
                     bbox_wgs84,
-                    bounds,
+                    cop_bounds,
                     parcel_2180,
                     cop_path,
+                    s.copernicus_dem_dir,
                 )
             )
         try:
             try:
-                dem = await asyncio.wait_for(asyncio.shield(gugik_task), timeout=gugik_wait)
+                if slow:
+                    # Known slow: GUGiK gets only the time the fallback needs (at most the short wait).
+                    await asyncio.wait(
+                        {gugik_task, cop_task}, timeout=gugik_wait, return_when=asyncio.FIRST_COMPLETED
+                    )
+                    if not gugik_task.done():
+                        raise TimeoutError
+                    dem = gugik_task.result()
+                else:
+                    dem = await asyncio.wait_for(asyncio.shield(gugik_task), timeout=gugik_wait)
                 return FetchOutcome(
                     data=dem, mode=DataMode.LIVE, observation_date="NMT GUGiK (aktualny zasób PZGiK)"
                 )
             except TimeoutError:
-                _mark_gugik_slow(s.nmt_gugik_cooldown_s)
+                await self._set_gugik_slow(True)
                 gugik_problem = (
-                    f"nie odpowiedziała w {gugik_wait:.0f} s (pobieranie trwa w tle; "
-                    "kolejna analiza tej działki użyje NMT 1 m)"
-                )
+                    "nie odpowiada w ostatnich minutach" if slow else f"nie odpowiedziała w {gugik_wait:.0f} s"
+                ) + " (pobieranie trwa w tle; kolejna analiza tej działki użyje NMT 1 m)"
             except Exception as exc:  # noqa: BLE001 - any failure switches to the fallback model
-                _mark_gugik_slow(s.nmt_gugik_cooldown_s)
+                await self._set_gugik_slow(True)
                 gugik_problem = f"zwróciła błąd ({type(exc).__name__})"
 
             try:
@@ -333,6 +434,67 @@ class NmtClient(BaseSourceClient[DemRaster]):
             attribution="Copernicus DEM GLO-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH "
             "2014-2018 provided under COPERNICUS by the European Union and ESA",
         )
+
+    def group_source(self, parcel_ids: Sequence[str]) -> str:
+        """'gugik' when the 1 m model of every parcel is cached, else 'copernicus'."""
+        if parcel_ids and all(self._cache_path(pid, "gugik1m").exists() for pid in parcel_ids):
+            return "gugik"
+        return "copernicus"
+
+    def _cop_tile_path(self, ix: int, iy: int) -> Path:
+        return self.settings.cache_dir / "nmt" / "tiles" / f"cop30_{_COP_TILE_M:.0f}_{ix}_{iy}.npz"
+
+    async def group_dems(self, parcels: Sequence[ParcelGeometry]) -> list[DemRaster]:
+        """DEM rasters covering a parcel group from ONE source (no terrain jumps at shared borders).
+
+        GUGiK 1 m (one raster per parcel) only when it is cached for every parcel; otherwise
+        Copernicus GLO-30 tiles of a fixed 3 km EPSG:2180 grid around all parcels, cached on disk
+        and shared by every later group in the area. Never waits for the GUGiK WCS: missing 1 m
+        models download in the background (same task as the analysis). Empty list = no elevation.
+        """
+        s = self.settings
+        ids = [p.parcel_id for p in parcels]
+        if self.group_source(ids) == "gugik":
+            loaded = await asyncio.gather(
+                *(asyncio.to_thread(load_dem, self._cache_path(pid, "gugik1m")) for pid in ids),
+                return_exceptions=True,
+            )
+            if not any(isinstance(d, BaseException) for d in loaded):
+                return [d for d in loaded if isinstance(d, DemRaster)]
+
+        tiles: set[tuple[int, int]] = set()
+        for p in parcels:
+            parcel_2180 = to_puwg92(parcel_shape(p.geojson))
+            gugik_bounds, cop_bounds = _dem_bounds(parcel_2180, s.nmt_buffer_m, s.nmt_max_pixels_per_side)
+            gugik_path = self._cache_path(p.parcel_id, "gugik1m")
+            if not gugik_path.exists():
+                _start_background(str(gugik_path), self._gugik(gugik_bounds, parcel_2180, gugik_path))
+            left, bottom, right, top = cop_bounds
+            for ix in range(math.floor(left / _COP_TILE_M), math.ceil(right / _COP_TILE_M)):
+                for iy in range(math.floor(bottom / _COP_TILE_M), math.ceil(top / _COP_TILE_M)):
+                    tiles.add((ix, iy))
+
+        async def tile(ix: int, iy: int) -> DemRaster | None:
+            path = self._cop_tile_path(ix, iy)
+            try:
+                if path.exists():
+                    return await asyncio.to_thread(load_dem, path)
+                task = _start_background(
+                    str(path),
+                    asyncio.to_thread(
+                        _read_and_store_copernicus_tile,
+                        s.copernicus_dem_url_template,
+                        (ix * _COP_TILE_M, iy * _COP_TILE_M, (ix + 1) * _COP_TILE_M, (iy + 1) * _COP_TILE_M),
+                        path,
+                        s.copernicus_dem_dir,
+                    ),
+                )
+                return await asyncio.wait_for(asyncio.shield(task), timeout=s.nmt_timeout_s)
+            except Exception:  # noqa: BLE001 - a tile without elevation leaves a gap (offset 0)
+                return None
+
+        loaded_tiles = await asyncio.gather(*(tile(ix, iy) for ix, iy in sorted(tiles)))
+        return [d for d in loaded_tiles if d is not None]
 
 
 def pending_background_tasks() -> list[asyncio.Task[Any]]:
