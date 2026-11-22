@@ -644,6 +644,7 @@ function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAre
   replay: ReplayView;
 }) {
   const [mode, setMode] = useState<"day" | "month">("day");
+  const confFrozen = useRef<{ level: LocalResult["confidence"]["level"]; detail: string } | null>(null);
   const { min, max } = dateBounds();
   const ys = mode === "day" ? local.years : local.yearsMonth;
   const [y, m] = parts(local.date);
@@ -651,6 +652,9 @@ function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAre
   const thLabel = local.category && local.thresholds ? `Próg IUNG: ${local.crop.label.toLowerCase()}, gleba kat. ${local.category}` : undefined;
   const heroStage = replay.active ? replay.stage : local.stage;
   const heroRisk = replay.active && replay.risk ? replay.risk : local.risk;
+  const confDetail = terrainWaiting ? `${local.confidence.detail} NMT 1 m pobiera się w tle – ocena odświeży się sama.` : local.confidence.detail;
+  // During the season replay the confidence text stays as it was before playback, so the card does not jump.
+  if (!replay.active) confFrozen.current = { level: local.confidence.level, detail: confDetail };
   const heroCaption = replay.active && replay.date ? `Odtwarzanie sezonu ${local.season} · ${formatLong(replay.date)}` : local.caption;
   return (
     <>
@@ -660,8 +664,8 @@ function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAre
         <div className="rs-status">
           {heroStage !== null ? <RiskChip level={heroRisk.level} side={heroRisk.side} veto={heroRisk.veto} vetoReason={heroRisk.vetoReason} /> : null}
           <ConfidenceBadge
-            level={local.confidence.level}
-            detail={terrainWaiting ? `${local.confidence.detail} NMT 1 m pobiera się w tle – ocena odświeży się sama.` : local.confidence.detail}
+            level={replay.active && confFrozen.current ? confFrozen.current.level : local.confidence.level}
+            detail={replay.active && confFrozen.current ? confFrozen.current.detail : confDetail}
           />
         </div>
         {farmer}
