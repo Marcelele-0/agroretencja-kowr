@@ -255,12 +255,6 @@ export function Analysis() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portfolio, activeId, backend, rowAnalyses, joint.zones, date]);
 
-  const hasMultiZones = useMemo(
-    () => portfolio.some((r) => (rowZones(r)?.length ?? 0) > 1),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [portfolio, activeId, backend, rowAnalyses, joint.zones, date],
-  );
-
   /** One class order (dry→wet) shared by every row histogram and the detail histogram: a class keeps its slot across parcels. */
   const zoneOrder = useMemo(() => zoneClassOrder(portfolio.flatMap((r) => (r.land?.kind === "nonAgri" ? [] : [{ zones: replay.active ? null : rowZones(r), fallbackStage: stageOf(r) }]))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -446,7 +440,7 @@ export function Analysis() {
       <div className="rs-grid">
         <aside className="rs-side">
           <ParcelMap className="rs-side__map" parcels={mapParcels} bbox={parcel?.bbox} zones={showZones && !replay.active ? allZones : null} padding={{ top: 70, bottom: 40 }}
-            overlay={!replay.active && hasMultiZones ? <LayerSwitch label="Widok stref na działce" value={showZones ? "zones" : "flat"} onChange={(v) => setShowZones(v === "zones")} options={[{ id: "zones", label: "Strefy na działce" }, { id: "flat", label: "Jednolity kolor" }]} /> : null}
+            overlay={!replay.active && (!!allZones?.length || zonesLoading) ? <LayerSwitch label="Widok stref na działce" value={showZones ? "zones" : "flat"} onChange={(v) => setShowZones(v === "zones")} options={[{ id: "zones", label: "Strefy na działce" }, { id: "flat", label: "Jednolity kolor" }]} /> : null}
             onPick={pickListed} />
         </aside>
 
