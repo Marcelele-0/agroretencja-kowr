@@ -8,9 +8,10 @@
     "scan": "node capture/scan.mjs",
     "studio": "node capture/scan.mjs && remotion studio src/index.ts",
     "capture": "node capture/record.mjs",
-    "render": "node capture/scan.mjs && remotion render src/index.ts Promo out/rusalka-promo.mp4 --codec h264 --crf 18",
+    "render": "node capture/trim.mjs && node capture/scan.mjs && remotion render src/index.ts Promo out/rusalka-promo.mp4 --codec h264 --crf 18",
     "still": "node capture/scan.mjs && remotion still src/index.ts Promo",
-    "typecheck": "node capture/scan.mjs && tsc --noEmit"
+    "typecheck": "node capture/scan.mjs && tsc --noEmit",
+    "trim": "node capture/trim.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.541",

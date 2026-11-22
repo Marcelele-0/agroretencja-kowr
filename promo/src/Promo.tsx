@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { AbsoluteFill, Audio, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
-import { audio, clip } from "./assets";
+import { audio, clip, keptLen } from "./assets";
 import { BandWipe, Finish, clamp } from "./parts";
 import { Future, Models } from "./scenes2";
 import { Analysis, Crops, Extremes, Hook, MAX, Measures, Today, Mobile, Ortho, Outro, Proof, RATES, Replay, Reveal, Search, Sources } from "./scenes";
@@ -12,7 +12,7 @@ const FADE = 14;
 const WIPE = 26;
 const clipDur = (name: keyof typeof RATES, fallback: number, max = 600) => {
   const c = clip(name);
-  return c ? Math.min(max, Math.round(c.durationInFrames / RATES[name])) : fallback;
+  return c ? Math.min(max, Math.round(keptLen(c) / RATES[name])) : fallback;
 };
 
 const SCENES: Scene[] = [

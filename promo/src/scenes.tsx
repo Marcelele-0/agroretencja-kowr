@@ -1,5 +1,5 @@
 import { AbsoluteFill, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { ai, clip, usesFallbackPhotos, type Clip } from "./assets";
+import { ai, clip, keptLen, toKept, usesFallbackPhotos, type Clip } from "./assets";
 import { BRoll, Caption, Line, Missing, Phone, ScreenClip, Wordmark, clamp, ease, type ZoomKey } from "./parts";
 import { C, FONT, H, SCALE, W } from "./theme";
 
@@ -133,7 +133,7 @@ export function Ortho() {
 }
 
 const box = (c: Clip, name: string) => c.boxes[name] ?? null;
-const mark = (c: Clip, name: string, rate: number, fallback = 0) => Math.round((c.marks[name] ?? fallback) / rate);
+const mark = (c: Clip, name: string, rate: number, fallback = 0) => Math.round(toKept(c, c.marks[name] ?? fallback) / rate);
 
 export const RATES = { map_search: 1.2, analysis_load: 1, irrigation: 1, today: 1, crops: 1.15, replay: 1, detail_scroll: 1.25, mobile: 1.1 } as const;
 export const MAX = { replay: 180, detail_scroll: 300 } as const;
@@ -162,7 +162,7 @@ export function Analysis() {
   const zones = mark(c, "zonesVisible", r, c.durationInFrames * 0.5);
   const keys: ZoomKey[] = [
     { at: zones + 18, box: box(c, "map"), scale: 1.35 },
-    { at: Math.round(c.durationInFrames / r) - 50, box: box(c, "firstHistogram") ?? box(c, "cards"), scale: 1.8 },
+    { at: Math.round(keptLen(c) / r) - 50, box: box(c, "firstHistogram") ?? box(c, "cards"), scale: 1.8 },
   ];
   return (
     <AbsoluteFill>
@@ -232,10 +232,9 @@ export function Crops() {
 export function Replay() {
   const c = clip("replay");
   if (!c) return <Missing name="replay" />;
-  const start = c.marks.start ?? 0;
   return (
     <AbsoluteFill>
-      <ScreenClip clip={c} rate={RATES.replay} offset={Math.max(0, start - 15)} />
+      <ScreenClip clip={c} rate={RATES.replay} />
       <Caption title="Cały sezon w kilka sekund" body="Cofnij się do suszy 2019 albo sprawdź prognozę na najbliższe dni." at={8} />
     </AbsoluteFill>
   );

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AbsoluteFill, Easing, Img, OffthreadVideo, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import type { Box, Clip } from "./assets";
+import { segments, type Box, type Clip } from "./assets";
 import { C, FONT, H, SCALE, W } from "./theme";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -149,11 +149,32 @@ export function ScreenClip({ clip, rate = 1, keys = [], offset = 0 }: { clip: Cl
   return (
     <AbsoluteFill style={{ background: C.night, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
       <div style={{ width: clip.width, height: clip.height, transform: `scale(${fit}) scale(${s}) translate(${tx}px, ${ty}px)`, transformOrigin: "center center" }}>
-        <Sequence from={-Math.round(offset / rate)} layout="none">
-          <OffthreadVideo src={staticFile(clip.file)} muted playbackRate={rate} style={{ width: clip.width, height: clip.height }} />
-        </Sequence>
+        <ClipVideo clip={clip} rate={rate} offset={offset} style={{ width: clip.width, height: clip.height }} />
       </div>
     </AbsoluteFill>
+  );
+}
+
+/** Plays only the kept segments of a recording, back to back; `offset` (clip frames) skips the head. */
+export function ClipVideo({ clip, rate = 1, offset = 0, style }: { clip: Clip; rate?: number; offset?: number; style?: CSSProperties }) {
+  let out = 0;
+  const parts: { a: number; b: number; at: number }[] = [];
+  for (const [a0, b] of segments(clip)) {
+    const a = Math.max(a0, offset);
+    if (b <= a) continue;
+    parts.push({ a, b, at: out });
+    out += Math.round((b - a) / rate);
+  }
+  return (
+    <>
+      {parts.map(({ a, b, at }, i) => (
+        <Sequence key={a} from={at} durationInFrames={i === parts.length - 1 ? undefined : Math.round((b - a) / rate)} layout="none">
+          <Sequence from={-Math.round(a / rate)} layout="none">
+            <OffthreadVideo src={staticFile(clip.file)} muted playbackRate={rate} style={style} />
+          </Sequence>
+        </Sequence>
+      ))}
+    </>
   );
 }
 
@@ -165,7 +186,7 @@ export function Phone({ clip, rate = 1, height = 900 }: { clip: Clip; rate?: num
   return (
     <div style={{ position: "relative", width: sw + bezel * 2, height: sh + bezel * 2, borderRadius: 64, background: C.nav, padding: bezel, boxShadow: "0 60px 120px -40px rgba(0,0,0,.7), inset 0 0 0 1.5px #ffffff22" }}>
       <div style={{ width: sw, height: sh, borderRadius: 50, overflow: "hidden", background: "#000" }}>
-        <OffthreadVideo src={staticFile(clip.file)} muted playbackRate={rate} style={{ width: sw, height: sh, objectFit: "cover" }} />
+        <ClipVideo clip={clip} rate={rate} style={{ width: sw, height: sh, objectFit: "cover" }} />
       </div>
       <div style={{ position: "absolute", top: bezel + 12, left: "50%", width: 110, height: 30, marginLeft: -55, borderRadius: 20, background: "#000" }} />
     </div>
