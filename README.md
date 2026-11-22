@@ -190,3 +190,9 @@ Obszar: cała Polska. Okno czasowe: 10 lat wstecz od dnia analizy.
    - przejście z mapy do analizy: ok. 90 ms przy danych pobranych wcześniej.
 4. **Walidacja z IUNG (plan):** werdykt suszy dla działki porównany z wykazem gminnym SMSR z lat 2020–2025.
 5. **Walidacja modułu RL:** czasowy i przestrzenny hold-out, opisane w `ml/rl_irrigator/reports/` oraz `artifacts/validation/`.
+6. **Walidacja `HydroFusion-PL`** (wilgotność łanu NDMI w dni zachmurzone, 22.11.2026), opis w [ml/hydrofusion/README.md](ml/hydrofusion/README.md):
+   - **50 nowych lokalizacji** (12 175 obserwacji Sentinel-2): RMSE 0,133, MAE 0,099, R² 0,62, pokrycie przedziału 90%: 0,89;
+   - **lata suszy 2018 i 2023:** RMSE 0,131, R² 0,61, pokrycie 0,91;
+   - **porównanie:** model jest lepszy od metody „jak na ostatnim bezchmurnym zdjęciu” (RMSE 0,160) i „jak w poprzednich latach” (RMSE 0,187); bez spełnienia tej reguły model nie byłby wdrożony;
+   - **cel ze specyfikacji (R² ≥ 0,78) nie jest osiągnięty;** przyczyny i ograniczenia opisuje raport modelu.
+7. **Testy backendu bez sieci** (`uv run pytest tests`): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, WaterScore i weta, przyczyny, ranking retencji, porady, API kroków 1–5, odmowa dla działki nierolniczej, wczytanie i działanie HydroFusion-PL.

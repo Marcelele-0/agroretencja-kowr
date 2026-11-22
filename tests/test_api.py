@@ -70,7 +70,11 @@ def test_analyze_returns_all_kowr_steps(client_factory) -> None:
     assert 99.0 <= sum(f["properties"]["area_pct"] for f in z_feats) <= 101.0
     z_union = unary_union([shape(f["geometry"]) for f in z_feats])
     assert 100.0 * z_union.difference(parcel_geom).area / max(z_union.area, 1e-12) < 0.5
-    assert d["audit"]["model_versions"]["hydrofusion"].startswith("brak wag")
+    hf_label = d["audit"]["model_versions"]["hydrofusion"]
+    assert hf_label.startswith(("brak wag", "HydroFusion-PL"))
+    # the synthetic bundle has no Sentinel-2 at all -> nothing to reconstruct from, no fake value
+    if hf_label.startswith("HydroFusion-PL"):
+        assert a["ndmi_value"] is None or a["ndmi_is_reconstructed"]
 
     # cached: What-If and PDF do not collect again
     w = client.post("/api/what-if", json={**BODY, "enabled_measures": ["mulcz", "materia_organiczna"]})

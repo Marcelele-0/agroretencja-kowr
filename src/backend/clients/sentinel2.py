@@ -89,6 +89,9 @@ class S2ParcelSeries(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     current: S2SceneStats | None
+    # last clear scene older than the current window (16-60 days before the analysis date):
+    # input of HydroFusion-PL when the current window is cloudy (NDMI changes slowly)
+    previous: S2SceneStats | None = None
     current_ndmi_grid: np.ndarray | None = None
     grid_transform: tuple[float, float, float, float, float, float] | None = None
     grid_crs: str | None = None
@@ -366,9 +369,26 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
                 ordered = sorted(items, key=lambda it: it["properties"].get("eo:cloud_cover", 100.0))[:2]
             return await self._evaluate(ordered, geom, parcel_key, sem_current if idx == 0 else sem, current=(idx == 0))
 
+        previous_window = (
+            analysis_date - timedelta(days=s.s2_previous_window_days),
+            analysis_date - timedelta(days=s.s2_current_window_days + 1),
+        )
+
+        async def run_previous() -> S2SceneStats | None:
+            items = await self._search(bbox, *previous_window)
+            ordered = sorted(items, key=lambda it: it["properties"]["datetime"], reverse=True)[:4]
+            stats, _, _ = await self._evaluate(ordered, geom, parcel_key, sem, current=False)
+            return stats
+
         tasks = [asyncio.create_task(run_window(i)) for i in range(len(windows))]
+        previous_task = asyncio.create_task(run_previous())
         budget = max(1.0, s.s2_timeout_s - 1.0 - (perf_counter() - started))
-        await asyncio.wait(tasks, timeout=budget)
+        await asyncio.wait([*tasks, previous_task], timeout=budget)
+        previous: S2SceneStats | None = None
+        if previous_task.done() and not previous_task.cancelled() and previous_task.exception() is None:
+            previous = previous_task.result()
+        elif not previous_task.done():
+            previous_task.cancel()
 
         outcomes: list[tuple[S2SceneStats | None, np.ndarray | None, _Grid | None] | None] = []
         timed_out: list[int] = []
@@ -393,6 +413,7 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
 
         series = S2ParcelSeries(
             current=current,
+            previous=previous,
             current_ndmi_grid=grid_arr,
             grid_transform=tuple(grid.transform)[:6] if grid else None,  # type: ignore[arg-type]
             grid_crs=str(grid.crs) if grid else None,
@@ -426,7 +447,7 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
             )
         series.note = " ".join(notes) or None
 
-        if current is None and not history:
+        if current is None and not history and previous is None:
             raise SourceUnavailableError(series.note or "Brak bezchmurnych zdjęć Sentinel-2.")
         observation = current.acquired.isoformat() if current else "brak aktualnego zdjęcia"
         return FetchOutcome(data=series, mode=DataMode.LIVE, observation_date=observation, message=series.note)

@@ -86,7 +86,10 @@ def _collector(tmp_path: Path, iung_ok: bool) -> ParcelDataCollector:
     return col
 
 
-async def test_soilgrids_is_deferred_when_iung_gives_the_category(tmp_path: Path) -> None:
+async def test_soilgrids_is_deferred_when_iung_gives_the_category(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("backend.clients.registry.load_hydrofusion", lambda: None)
     col = _collector(tmp_path, iung_ok=True)
     started = perf_counter()
     bundle = await col.collect(REQUEST)

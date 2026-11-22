@@ -48,7 +48,7 @@ def main() -> None:
             r1 = recommend(lat, lon, crop, d, 150, client=client)
             cold = time.perf_counter() - t0
             t0 = time.perf_counter()
-            r2 = recommend(lat, lon, crop, d, 150, client=client)
+            recommend(lat, lon, crop, d, 150, client=client)
             warm = time.perf_counter() - t0
             rows.append({"lat": lat, "lon": lon, "crop": crop, "date": d.isoformat(), "status": r1["status"], "forecast_mode": r1.get("forecast_mode"), "cold_s": round(cold, 3), "warm_s": round(warm, 3)})
             print(f"{crop:15s} {d} ({lat:.2f},{lon:.2f}) {r1['status']:12s} cold {cold:5.2f}s  warm {warm:5.3f}s")

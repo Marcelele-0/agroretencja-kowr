@@ -116,16 +116,20 @@ SOILGRIDS_FEATURES = frozenset({"sand_pct", "soc_g_kg", "awc_mm_0_100"})
 
 
 def _soilgrids_not_needed(results: dict[str, SourceResult[Any]]) -> bool:
-    """SoilGrids only matters as the soil-category fallback or as an input of a loaded ML model.
+    """SoilGrids only matters as the soil-category fallback or when HydroFusion reconstructs NDMI.
 
     ISRIC answers in 6-8 s or times out, so once the IUNG map gave the category the analysis
-    does not wait; the outcome is the same as the SoilGrids-timeout branch.
+    does not wait when either no SoilGrids-using ML model is loaded or Sentinel-2 already
+    delivered a clear current observation (in-season reconstruction unused).
     """
     iung = results.get("iung")
     if iung is None or iung.data is None:
         return False
     hf = load_hydrofusion()
-    return hf is None or not SOILGRIDS_FEATURES.intersection(hf.features)
+    if hf is None or not SOILGRIDS_FEATURES.intersection(hf.features):
+        return True
+    s2 = results.get("sentinel2")
+    return s2 is not None and s2.data is not None and getattr(s2.data, "current", None) is not None
 
 
 @_register("soilgrids", SoilGridsClient, defer_if=_soilgrids_not_needed)
