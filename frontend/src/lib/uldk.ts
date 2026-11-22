@@ -1,5 +1,5 @@
 import { areaWgs84, bboxOf, centroid, parseWkt, toGeometry, type AreaGeometry, type BBox, type Position } from "./geo";
-import { isAbort, request, sourceFailure } from "./http";
+import { isAbort, requestViaProxy, SourceError, sourceFailure } from "./http";
 
 /** Usługa Lokalizacji Działek Katastralnych (GUGiK). CORS: *. Geometry requested in EPSG:4326 (lon lat). */
 export const ULDK_URL = "https://uldk.gugik.gov.pl/";
@@ -39,15 +39,33 @@ export function parseUldk(text: string, retrievedAt = new Date()): Parcel {
 const cache = new Map<string, Promise<Parcel>>();
 
 async function query(params: string, signal?: AbortSignal): Promise<Parcel> {
-  let res;
-  try {
-    res = await request(`${ULDK_URL}?${params}&result=${RESULT}&srid=4326`, 8000, signal);
-  } catch (e) {
-    if (isAbort(e)) throw e;
-    throw sourceFailure("ULDK", e);
+  const qs = `${params}&result=${RESULT}&srid=4326`;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let res: { status: number; ok: boolean; text: string };
+    try {
+      res = await requestViaProxy("/uldk", `/uldk?${qs}`, `${ULDK_URL}?${qs}`, 12000, signal);
+    } catch (e) {
+      if (isAbort(e)) throw e;
+      lastErr = e instanceof SourceError ? e : sourceFailure("ULDK", e);
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+      continue;
+    }
+    if (!res.ok) {
+      lastErr = sourceFailure("ULDK", null, res.status);
+      if (res.status < 500 && res.status !== 429) throw lastErr;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
+      continue;
+    }
+    try {
+      return parseUldk(res.text);
+    } catch (e) {
+      if (e instanceof ParcelNotFound) throw e;
+      lastErr = e;
+    }
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 300));
   }
-  if (!res.ok) throw sourceFailure("ULDK", null, res.status);
-  return parseUldk(res.text);
+  throw lastErr;
 }
 
 /** Normalises user input: trims and removes spaces. */

@@ -1,4 +1,4 @@
-import { isAbort, request, sourceFailure } from "./http";
+import { isAbort, requestViaProxy, sourceFailure } from "./http";
 
 export const UUG_URL = "https://services.gugik.gov.pl/uug/";
 
@@ -81,9 +81,10 @@ export function parseUug(text: string): PlaceHit[] {
 export async function searchPlace(query: string): Promise<PlaceHit[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
+  const qs = `request=GetAddress&address=${encodeURIComponent(trimmed)}&srid=4326`;
   let res;
   try {
-    res = await request(`${UUG_URL}?request=GetAddress&address=${encodeURIComponent(trimmed)}&srid=4326`, 8000);
+    res = await requestViaProxy("/uug", `/uug?${qs}`, `${UUG_URL}?${qs}`, 10000);
   } catch (e) {
     if (isAbort(e)) throw e;
     throw sourceFailure("GUGiK UUG", e);

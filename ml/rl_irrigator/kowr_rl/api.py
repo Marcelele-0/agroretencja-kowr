@@ -19,11 +19,12 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from pydantic import BaseModel, Field, model_validator
 
 from . import __version__
-from .config import load_crops, load_rl_config
+from .config import accepted_crop_codes, load_crops, load_rl_config
 from .data import DataUnavailableError
 from .inference import RL_WEIGHTS, compare_strategies, load_rl_policy, recommend, to_irrigation_advice
 
-CropKey = Literal["kukurydza", "ziemniak", "pszenica_ozima", "burak_cukrowy"]
+# Unknown codes are rejected by recommend()/compare_strategies() with status invalid_input -> HTTP 422.
+CROP_HELP = "Kod uprawy: klucz z config/crops.yaml albo alias (grupy SMSR frontendu, schemas.CropCode), patrz GET /rl/health"
 
 
 class _Location(BaseModel):
@@ -39,17 +40,18 @@ class _Location(BaseModel):
 
 
 class RecommendRequest(_Location):
-    crop: CropKey
+    crop: str = Field(description=CROP_HELP)
     date: dt.date = Field(description="Data analizy (ostatnie 10 lat, nie pozniej niz dzis)")
     budget_mm: float = Field(default=150.0, ge=0, le=1000, description="Budzet wody na sezon [mm] (np. pojemnosc zbiornika / limit poboru)")
     budget_used_mm: float = Field(default=0.0, ge=0, le=1000, description="Woda juz zuzyta w tym sezonie [mm]")
     policy: Literal["default", "rl", "fao_rule", "fao_forecast", "fao_small", "calendar", "none"] = "default"
     irrigation_history: list[tuple[dt.date, float]] | None = Field(default=None, description="Opcjonalnie: [(data, mm), ...] dotychczasowych nawodnien")
     include_history: bool = Field(default=False, description="Dolacz 10-letnie porownanie strategii")
+    plan_days: int = Field(default=7, ge=7, le=14, description="Dlugosc planu: 7 albo do 14 dni (plan_14d: prawdopodobienstwo podlewania z ensemble ECMWF i prognoza wody w 3 strefach gleby)")
 
 
 class CompareRequest(_Location):
-    crop: CropKey
+    crop: str = Field(description=CROP_HELP)
     budget_mm: float = Field(default=150.0, ge=0, le=1000)
     n_seasons: int = Field(default=10, ge=1, le=10)
     include_oracle: bool = True
@@ -70,6 +72,7 @@ def health() -> dict[str, Any]:
         "status": "ok",
         "version": __version__,
         "crops": list(load_crops()),
+        "crop_codes_accepted": accepted_crop_codes(),
         "default_policy": load_rl_config()["default_policy"],
         "rl_weights_loaded": load_rl_policy() is not None,
         "rl_weights": RL_WEIGHTS.name,
@@ -90,6 +93,7 @@ def post_recommend(req: RecommendRequest) -> dict[str, Any]:
             parcel_id=req.parcel_id,
             irrigation_history=[(d.isoformat(), mm) for d, mm in req.irrigation_history] if req.irrigation_history else None,
             include_history=req.include_history,
+            plan_days=req.plan_days,
         )
     except DataUnavailableError as err:
         raise HTTPException(status_code=503, detail=f"Zrodlo danych niedostepne: {err}") from err
@@ -101,7 +105,7 @@ def post_recommend(req: RecommendRequest) -> dict[str, Any]:
 
 @router.get("/recommend")
 def get_recommend(
-    crop: CropKey,
+    crop: str,
     date: dt.date,
     lat: float | None = None,
     lon: float | None = None,
@@ -123,7 +127,7 @@ def post_compare(req: CompareRequest) -> dict[str, Any]:
 
 
 @router.get("/compare")
-def get_compare(crop: CropKey, lat: float | None = None, lon: float | None = None, parcel_id: str | None = None, budget_mm: float = 150.0) -> dict[str, Any]:
+def get_compare(crop: str, lat: float | None = None, lon: float | None = None, parcel_id: str | None = None, budget_mm: float = 150.0) -> dict[str, Any]:
     return post_compare(CompareRequest(lat=lat, lon=lon, parcel_id=parcel_id, crop=crop, budget_mm=budget_mm))
 
 

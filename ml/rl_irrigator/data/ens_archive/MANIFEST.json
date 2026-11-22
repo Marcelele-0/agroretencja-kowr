@@ -1,0 +1,28 @@
+{
+ "source": "https://data.dynamical.org/ecmwf/ifs-ens/forecast-15-day-0-25-degree/latest.zarr",
+ "model": "ECMWF IFS ENS 0.25 (open data), 51 members, 00 UTC runs",
+ "license": "CC BY 4.0 (ECMWF, dynamical.org)",
+ "fetched_started_utc": "2026-11-21T20:27:26+00:00",
+ "fetched_finished_utc": "2026-11-21T20:32:48+00:00",
+ "init_dates": "weekly, 14 III - 23 X of each year (from 2024-04-01)",
+ "days": "UTC days 0..14 after the initialisation day",
+ "variables": {
+  "precip": "mm/day",
+  "t2m": "deg C daily mean",
+  "rs": "MJ m-2 day-1"
+ },
+ "summary": {
+  "2024": {
+   "inits": 30,
+   "requested": 30
+  },
+  "2025": {
+   "inits": 32,
+   "requested": 32
+  },
+  "2026": {
+   "inits": 32,
+   "requested": 32
+  }
+ }
+}

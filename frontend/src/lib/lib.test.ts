@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { BackendError, parseBackendError } from "../api/backend";
 import { quickPicks } from "../ds/inputs";
+import { projectParcelSvg, ReportDocumentBuilder } from "../report/reportBuilder";
 import { measureLook, simForBackend } from "./catalog";
 import { isCropCode } from "./crops";
 import { addDays, inSeason, isIso, seasonYear, toDay } from "./dates";
@@ -239,5 +241,94 @@ describe("backend measure levers, quick picks, and presets", () => {
     // Window 7 (1.VI-31.VII): hasn't started yet on 2018-05-31 -> null
     expect(prog[7]!.kbw).toBeNull();
     expect(prog[7]!.drought).toBe(false);
+  });
+});
+
+describe("backend error parsing and report builder", () => {
+  it("extracts Polish message and status code from backend HTTP errors", () => {
+    const refusal = parseBackendError(
+      "/api/analyze",
+      422,
+      JSON.stringify({ status: "not_arable", message: "To jest las, nie grunt rolny." }),
+    );
+    expect(refusal).toBeInstanceOf(BackendError);
+    expect(refusal.status).toBe(422);
+    expect(refusal.code).toBe("not_arable");
+    expect(refusal.message).toBe("To jest las, nie grunt rolny.");
+
+    const unavailable = parseBackendError(
+      "/api/analyze",
+      503,
+      JSON.stringify({ status: "no_data", message: "Brak odpowiedzi z bazy pogody." }),
+    );
+    expect(unavailable.status).toBe(503);
+    expect(unavailable.code).toBe("no_data");
+    expect(unavailable.message).toBe("Brak odpowiedzi z bazy pogody.");
+
+    const detail = parseBackendError("/api/what-if", 422, JSON.stringify({ detail: "Błędna data analizy." }));
+    expect(detail.message).toBe("Błędna data analizy.");
+
+    const plain = parseBackendError("/api/analyze", 502, "<html>Bad Gateway</html>");
+    expect(plain.message).toBe("/api/analyze: HTTP 502");
+  });
+
+  it("projects parcel geometry to SVG and builds 1 A4 sheet per parcel", () => {
+    const p = parseUldk(ULDK_OK);
+    const sil = projectParcelSvg(p.geometry, 120, 72, 6);
+    expect(sil).not.toBeNull();
+    expect(sil!.viewBox).toBe("0 0 120 72");
+    expect(sil!.paths).toHaveLength(1);
+    expect(sil!.paths[0]).toMatch(/^M[\d.]+ [\d.]+(?: L[\d.]+ [\d.]+)+ Z$/);
+    expect(sil!.widthM).toBeGreaterThan(100);
+    expect(sil!.heightM).toBeGreaterThan(200);
+
+    const manyRecs = Array.from({ length: 8 }, (_, i) => ({
+      id: `m_${i}`,
+      category: "agrotechnika",
+      title: `Działanie ${i + 1}`,
+      rationale: "Efekt",
+      delta_taw_mm: 5 + i,
+      runoff_reduction_pct: 10,
+      priority_rank: i + 1,
+    }));
+
+    const doc = new ReportDocumentBuilder()
+      .setMetadata("2026-07-15", "21.11.2026, 22:00")
+      .addParcelSheet({
+        parcelId: p.id,
+        parcel: p,
+        crop: "kukurydza_ziarno",
+        land: classifyIung(2),
+        local: null,
+        backend: {
+          retention: {
+            recommendations: manyRecs,
+            what_if_default: {
+              baseline_yield_loss_pct: 25,
+              scenario_yield_loss_pct: 15,
+              delta_reserve_days: 7,
+              saved_water_mm: 30,
+              reference_dry_year: 2019,
+            },
+          },
+        },
+      })
+      .addParcelSheet({
+        parcelId: "300302_5.0005.99",
+        parcel: null,
+        crop: "zboza_ozime",
+        land: classifyIung(11),
+        local: null,
+        nonAgriMessage: "Las: działka 99 nie jest gruntem rolnym.",
+      })
+      .build();
+
+    expect(doc.sheets).toHaveLength(2);
+    expect(doc.sheets[0]!.pageNumber).toBe(1);
+    expect(doc.sheets[0]!.totalPages).toBe(2);
+    expect(doc.sheets[0]!.measures).toHaveLength(5);
+    expect(doc.sheets[1]!.pageNumber).toBe(2);
+    expect(doc.sheets[1]!.totalPages).toBe(2);
+    expect(doc.sheets[1]!.nonAgriMessage).toContain("Las");
   });
 });

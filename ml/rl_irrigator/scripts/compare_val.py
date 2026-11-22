@@ -47,8 +47,14 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("policies", nargs="+")
     ap.add_argument("--out", default=str(REPORTS_DIR / "e6_val_selection.json"))
+    ap.add_argument("--synthetic-forecast", type=int, default=None, metavar="SEED",
+                    help="E8: replace the real forecasts by the calibrated synthetic ones (all 14 leads) with this noise seed")
     args = ap.parse_args()
     val = validation_batch()
+    if args.synthetic_forecast is not None:
+        from kowr_rl.forecast import noisy_forecast
+
+        val.forecast = noisy_forecast(val.fut, np.random.default_rng(args.synthetic_forecast))
     pts = np.array([m["point"] for m in val.meta])
     crop = np.array([m["crop"] for m in val.meta])
     soil = np.array([m["soil_cat"] for m in val.meta])

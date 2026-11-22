@@ -8,10 +8,10 @@ import pytest
 from conftest import synthetic_weather
 from kowr_rl.simulator import N_OBS, N_OBS_V1, SeasonSpec, SimState, action_mask, build_batch, simulate
 
-sb3_contrib = pytest.importorskip("sb3_contrib")
-
-
 def test_numpy_policy_matches_sb3(tmp_path, crops) -> None:
+    # needs the training stack (sb3-contrib and kowr_rl.env, absent in the runtime-only copy on main)
+    sb3_contrib = pytest.importorskip("sb3_contrib")
+    pytest.importorskip("kowr_rl.env")
     from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
     from kowr_rl.env import KowrIrrigationEnv

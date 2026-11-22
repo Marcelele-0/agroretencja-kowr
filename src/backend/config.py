@@ -27,6 +27,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        "https://licho-cachyos-pc.tail886ef4.ts.net",
     ]
     http_user_agent: str = "AgroRetencja-KOWR/0.1 (prototyp HackNation 2026)"
     cache_dir: Path = PROJECT_ROOT / "data" / "cache"

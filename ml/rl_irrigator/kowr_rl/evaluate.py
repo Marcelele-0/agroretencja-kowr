@@ -60,26 +60,31 @@ def ensure_npz(run: str) -> Path:
     """Export ``models/<run>/best_model.zip`` (+ VecNormalize) to ``policy.npz`` if needed.
 
     ``<run>@dom`` uses the E6 checkpoint ``best_dominant_model.zip`` (best validation reward
-    among checkpoints with yield >= FAO and water <= FAO at every budget level).
+    among checkpoints with yield >= FAO and water <= FAO at every budget level); ``<run>@domc``
+    the E7 checkpoint ``best_domcrops_model.zip`` (the same, and also for every crop).
     """
     run, _, ckpt = run.partition("@")
     d = MODELS_DIR / run
-    prefix = "best_dominant" if ckpt == "dom" else "best"
-    npz = d / ("policy_dominant.npz" if ckpt == "dom" else "policy.npz")
+    prefix = {"dom": "best_dominant", "domc": "best_domcrops"}.get(ckpt, "best")
+    npz = d / {"dom": "policy_dominant.npz", "domc": "policy_domcrops.npz"}.get(ckpt, "policy.npz")
     zip_path = d / f"{prefix}_model.zip"
     if npz.exists() and npz.stat().st_mtime >= zip_path.stat().st_mtime:
         return npz
-    from sb3_contrib import MaskablePPO
-    from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+    import pickle
 
-    from .env import KowrIrrigationEnv
+    from sb3_contrib import MaskablePPO
+
     from .policy import export_npz
 
     model = MaskablePPO.load(zip_path, device="cpu")
-    venv = VecNormalize.load(str(d / f"{prefix}_vecnormalize.pkl"), DummyVecEnv([lambda: KowrIrrigationEnv("val")]))
+    # unpickle the VecNormalize statistics directly: the env's observation space may have grown since
+    # the run was trained (v1 13, v2 17, v3 18 features); export_npz only needs obs_rms / clip / epsilon
+    with open(d / f"{prefix}_vecnormalize.pkl", "rb") as fh:
+        venv = pickle.load(fh)
     hist = json.loads((d / "val_history.json").read_text(encoding="utf-8"))["history"]
-    if ckpt == "dom":
-        hist = [h for h in hist if h.get("dominant")] or hist
+    if ckpt in ("dom", "domc"):
+        flag = "dominant" if ckpt == "dom" else "dominant_all_crops"
+        hist = [h for h in hist if h.get(flag)] or hist
     best = max(hist, key=lambda h: h["reward"])
     meta = {"run": run, "checkpoint": prefix, "val": best, "exported_at": dt.datetime.now().isoformat(timespec="seconds")}
     export_npz(model, venv, npz, meta=meta)
@@ -90,8 +95,9 @@ def best_run(runs: list[str]) -> str:
     def score(r: str) -> float:
         name, _, ckpt = r.partition("@")
         h = json.loads((MODELS_DIR / name / "val_history.json").read_text(encoding="utf-8"))["history"]
-        if ckpt == "dom":
-            h = [x for x in h if x.get("dominant")] or h
+        if ckpt in ("dom", "domc"):
+            flag = "dominant" if ckpt == "dom" else "dominant_all_crops"
+            h = [x for x in h if x.get(flag)] or h
         return max(x["reward"] for x in h)
 
     return max(runs, key=score)
@@ -294,6 +300,7 @@ def run_evaluation(
     split: str = "test",
     dataset: str = "train_points",
     ensemble: bool = False,
+    deploy: str | None = None,
 ) -> dict[str, Any]:
     import pandas as pd
 
@@ -324,7 +331,8 @@ def run_evaluation(
         deployed = "ensemble(" + "+".join(runs) + ")"
         policies[deployed] = EnsemblePolicy([policies[r] for r in runs])
     else:
-        deployed = best_run(runs)
+        # explicit choice (e.g. runs validated on different crop sets) or the best validation reward
+        deployed = deploy if deploy in runs else best_run(runs)
     for r, pol in policies.items():
         res = simulate(batch, pol)
         if r in runs:
@@ -381,7 +389,13 @@ def run_evaluation(
     small_vs_fao = decision_table(paired(df, "fao_small", "fao_rule"), budgets, rule, reps, rng) if "fao_small" in results else None
     vs_ff = {"d_yield": cluster_bootstrap(diff_ff, "yield_rel", reps, rng), "d_water": cluster_bootstrap(diff_ff, "water_mm", reps, rng)}
 
-    # Crop x soil (pooled over budgets)
+    # Per crop (pooled over soils and budgets) and crop x soil
+    per_crop = []
+    for c in crops:
+        sub = diff[diff.crop == c]
+        f = df[(df.strategy == "fao_rule") & (df.crop == c)]
+        per_crop.append({"crop": c, "fao_yield": float(f.yield_rel.mean()), "fao_water": float(f.water_mm.mean()),
+                         "d_yield": float(sub.yield_rel.mean()), "d_water": float(sub.water_mm.mean())})
     crop_soil = []
     for c in crops:
         for s in soils:
@@ -458,6 +472,7 @@ def run_evaluation(
         "n_points": int(len(points)),
         "robustness_synthetic_forecast": robust,
         "crop_soil": crop_soil,
+        "per_crop": per_crop,
         "ready": ready,
         "recommended_default_policy": "rl" if ready else "fao_rule",
         "bootstrap_reps": reps,
@@ -573,6 +588,12 @@ def write_report(out: dict[str, Any], order: list[str]) -> None:
     for s in order:
         L.append(f"| {LABELS[s]} | " + " | ".join(f"{out['per_budget'][s][b]['yield_rel']:.3f} / {out['per_budget'][s][b]['water_mm']:.0f}" for b in budgets) + " |")
 
+    if out.get("per_crop"):
+        L.append("\n## Wedlug uprawy (wszystkie gleby i budzety)\n")
+        L.append("| Uprawa | FAO: plon / woda | Delta plonu RL-FAO [pkt proc.] | Delta wody RL-FAO [mm] |")
+        L.append("|---|---|---|---|")
+        for r in out["per_crop"]:
+            L.append(f"| {crops[r['crop']].label_pl} | {r['fao_yield']:.3f} / {r['fao_water']:.0f} | {100 * r['d_yield']:+.2f} | {r['d_water']:+.1f} |")
     L.append("\n## Wedlug uprawy i kategorii gleby (wszystkie budzety)\n")
     L.append("| Uprawa | Gleba (TAW) | FAO: plon / woda | Delta plonu RL-FAO [pkt proc.] | Delta wody RL-FAO [mm] |")
     L.append("|---|---|---|---|---|")
@@ -604,8 +625,11 @@ def main() -> None:
     ap.add_argument("--split", choices=["test", "val"], default="test", help="val = dry run on the validation year (no test leakage)")
     ap.add_argument("--dataset", default="train_points", help="train_points (data/) or holdout (data/holdout, E6 clean test)")
     ap.add_argument("--ensemble", action="store_true", help="deploy the average of all --runs instead of the best one")
+    ap.add_argument("--deploy", default=None, help="run treated as the deployed agent (default: best validation reward)")
     args = ap.parse_args()
-    out = run_evaluation(args.runs, oracle=not args.no_oracle, reps=args.reps, split=args.split, dataset=args.dataset, ensemble=args.ensemble)
+    out = run_evaluation(
+        args.runs, oracle=not args.no_oracle, reps=args.reps, split=args.split, dataset=args.dataset, ensemble=args.ensemble, deploy=args.deploy
+    )
     print(json.dumps({k: out[k] for k in ("deployed_run", "ready", "recommended_default_policy")}))
     for r in out["rl_vs_fao"]:
         print(r["scope"], "dY=%+.4f [%+.4f, %+.4f]" % r["d_yield"], "dW=%+.1f [%+.1f, %+.1f]" % r["d_water"], "OK" if r["pass"] else "NO")

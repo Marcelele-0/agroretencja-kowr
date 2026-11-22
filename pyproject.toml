@@ -40,6 +40,10 @@ train = [
   "optuna>=4.0",
   "pandas>=2.2",
   "pyarrow>=17.0",
+  "zarr>=3.0",
+  "xarray>=2025.1",
+  "fsspec>=2024.10",
+  "aiohttp>=3.10",
 ]
 dev = [
   "pytest>=8.3",

@@ -43,12 +43,12 @@
    {
     "name": "IUNG-PIB WMS Susza:katgl_landuse2024 (kategorie podatnosci gleb na susze)",
     "url": "https://sgeo.iung.pl/geoserver/Susza/wms?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=Susza%3Akatgl_landuse2024&query_layers=Susza%3Akatgl_landuse2024&info_format=application%2Fjson&srs=EPSG%3A4326&bbox=23.859000%2C52.734000%2C23.861000%2C52.736000&width=101&height=101&x=50&y=50&styles=",
-    "retrieved_at": "2026-11-21T13:12:04+00:00",
+    "retrieved_at": "2026-11-21T18:44:39+00:00",
     "mode": "cache",
     "license": "IUNG-PIB, Mapa podatnosci gleb na susze (katgl_landuse2024), publiczna usluga WMS",
     "detail": "punkt 52.73500N 23.86000E"
    }
   ],
-  "timing_s": 0.002
+  "timing_s": 4.938
  }
 }

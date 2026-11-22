@@ -49,7 +49,7 @@ Adres backendu dla frontendu ustawia `VITE_API_URL` w `frontend/.env`. Bez backe
 
 ### Moduł nawadniania RL
 
-Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty bezpośrednio pod API FastAPI (`POST /rl/recommend`, `POST /rl/compare`) oraz używany w kroku 4 analizy (`src/backend/irrigation.py`). Opis decyzji: [docs/RL_IRRIGATION_DECISION_MODEL.md](docs/RL_IRRIGATION_DECISION_MODEL.md).
+Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty bezpośrednio pod API FastAPI (`POST /rl/recommend`, `POST /rl/compare`) oraz używany w kroku 4 analizy (`src/backend/irrigation.py`). Obsługuje wszystkie 15 upraw frontendu. Z `plan_days=14` daje plan na 14 dni z prognozy zespołowej ECMWF (51 wariantów) i prognozę wody w trzech strefach gleby (0–28, 28–100, 100–200 cm, SoilGrids) jako klasy z prawdopodobieństwem. Opis decyzji: [docs/RL_IRRIGATION_DECISION_MODEL.md](docs/RL_IRRIGATION_DECISION_MODEL.md), prognoza 14-dniowa: [ml/rl_irrigator/reports/forecast14.md](ml/rl_irrigator/reports/forecast14.md).
 
 ---
 
@@ -72,7 +72,7 @@ Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty bezpośrednio pod API FastAP
    - Wybrane działania przelicza symulacja na tych samych danych.
 5. **Nawadnianie:**
    - w sezonie: porada z prognozy opadu („poczekaj, za 5 dni prognozowany opad”);
-   - z modułem RL: dawka na dziś, plan na 7 dni i porównanie strategii z 10 sezonów.
+   - z modułem RL (wszystkie uprawy): dawka na dziś, plan na 14 dni z szansą podlewania w każdym dniu, woda w trzech strefach gleby i ryzyko stresu na 14 dni oraz porównanie strategii z 10 sezonów.
 6. **Raport:** tabela źródeł z czasem pobrania. Przycisk „Pobierz raport PDF” drukuje stronę, a z backendem pobiera PDF z serwera.
 
 ---
@@ -121,7 +121,8 @@ Obszar: cała Polska. Okno czasowe: 10 lat wstecz od dnia analizy.
 | ULDK, KIEG, ortofotomapa, IUNG WMS | **LIVE** | Każda analiza pyta usługę w chwili wyboru działki. |
 | Open-Meteo | **LIVE** + cache | Archiwum starsze niż 7 dni się nie zmienia, więc przeglądarka i backend je buforują. |
 | Progi IUNG SMSR | **PRE-FETCHED** (21.11.2026) | Tabela `frontend/src/data/iung-progi.json` z `susza.iung.pulawy.pl/progi`. Odświeżenie: `pnpm iung:progi`. |
-| Dane treningowe RL | **PRE-FETCHED** | Wersjonowany zbiór w `ml/rl_irrigator/data`. |
+| Dane treningowe RL | **PRE-FETCHED** | Pobierane lokalnie skryptami z `ml/rl_irrigator/scripts` (w repozytorium są tylko manifesty ze źródłami i datami pobrania). |
+| Prognoza zespołowa ECMWF, SoilGrids | **LIVE** + cache | Tylko dla planu 14-dniowego modułu RL; profil gleby punktu jest buforowany bez wygasania, prognoza przez 3 h. |
 
 ---
 

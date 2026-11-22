@@ -591,7 +591,7 @@
    {
     "name": "IUNG-PIB WMS Susza:katgl_landuse2024 (kategorie podatnosci gleb na susze)",
     "url": "https://sgeo.iung.pl/geoserver/Susza/wms?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=Susza%3Akatgl_landuse2024&query_layers=Susza%3Akatgl_landuse2024&info_format=application%2Fjson&srs=EPSG%3A4326&bbox=16.999000%2C52.599000%2C17.001000%2C52.601000&width=101&height=101&x=50&y=50&styles=",
-    "retrieved_at": "2026-11-21T12:36:47+00:00",
+    "retrieved_at": "2026-11-21T18:43:54+00:00",
     "mode": "cache",
     "license": "IUNG-PIB, Mapa podatnosci gleb na susze (katgl_landuse2024), publiczna usluga WMS",
     "detail": "punkt 52.60000N 17.00000E"
@@ -599,7 +599,7 @@
    {
     "name": "Open-Meteo Historical Weather API (best_match: ERA5/ERA5-Land/ECMWF IFS)",
     "url": "https://archive-api.open-meteo.com/v1/archive?latitude=52.6&longitude=17.0&start_date=2016-01-01&end_date=2026-11-20&daily=precipitation_sum%2Cet0_fao_evapotranspiration&timezone=Europe%2FWarsaw",
-    "retrieved_at": "2026-11-21T13:12:01+00:00",
+    "retrieved_at": "2026-11-21T18:46:21+00:00",
     "mode": "cache",
     "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
     "detail": "P i ET0 (FAO-56 Penman-Monteith) 2016-01-01..2026-11-20; punkt siatki 52.619N 16.959E"
@@ -607,12 +607,12 @@
    {
     "name": "Open-Meteo Forecast API (ecmwf_ifs025)",
     "url": "https://api.open-meteo.com/v1/forecast?latitude=52.6&longitude=17.0&daily=precipitation_sum%2Cet0_fao_evapotranspiration&past_days=92&forecast_days=16&models=ecmwf_ifs025&timezone=Europe%2FWarsaw",
-    "retrieved_at": "2026-11-21T13:12:03+00:00",
+    "retrieved_at": "2026-11-21T18:44:38+00:00",
     "mode": "cache",
     "license": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
     "detail": "ostatnie 92 dni i prognoza 16 dni"
    }
   ],
-  "timing_s": 0.336
+  "timing_s": 0.637
  }
 }

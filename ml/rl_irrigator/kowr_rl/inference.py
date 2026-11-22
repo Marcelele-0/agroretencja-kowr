@@ -23,7 +23,16 @@ import numpy as np
 
 from . import ARTIFACT_MODELS_DIR, __version__
 from .baselines import baseline_policies, run_oracle
-from .config import STAGE_LABELS_PL, STAGES, CropParams, load_crops, load_rl_config, load_soils
+from .config import (
+    STAGE_LABELS_PL,
+    STAGES,
+    CropParams,
+    accepted_crop_codes,
+    load_crops,
+    load_rl_config,
+    load_soils,
+    resolve_crop,
+)
 from .data import (
     PREVIOUS_RUNS_START,
     DailySeries,
@@ -39,6 +48,7 @@ from .data import (
 from .forecast import align_archived_forecast, noisy_forecast
 from .policy import EnsemblePolicy, NumpyPolicy, load_policy
 from .simulator import (
+    N_FC,
     N_LEADS,
     SeasonBatch,
     SeasonSpec,
@@ -88,7 +98,7 @@ def _today() -> dt.date:
 
 #: Runtime HTTP settings: worst case per source ~ 4 + 0.5 + 4 s, sources fetched in parallel,
 #: so a cold recommendation stays under ~10 s even when one public service is slow.
-RUNTIME_HTTP = {"timeout": 4.0, "retries": 1, "backoff_s": 0.5, "max_wait_s": 2.0}
+RUNTIME_HTTP = {"timeout": 5.0, "retries": 2, "backoff_s": 0.5, "max_wait_s": 2.0}  # worst case ~17 s < 20 s frontend timeout
 
 
 def get_client() -> HttpClient:
@@ -155,20 +165,37 @@ def _weather_climatology(arch: DailySeries, dates: np.ndarray, exclude_year: int
 # ======================================================================================
 # Data assembly
 # ======================================================================================
-def _fetch_common(client: HttpClient, lat: float, lon: float, today: dt.date, need_live: bool) -> dict[str, Any]:
-    """Parallel fetch: IUNG soil, 10-year archive, (live forecast)."""
+def _fetch_common(client: HttpClient, lat: float, lon: float, today: dt.date, need_live: bool,
+                  zones_for: dt.date | None = None, core: bool = True) -> dict[str, Any]:
+    """Parallel fetch: IUNG soil, 10-year archive, (live forecast); with ``zones_for`` (14-day plan)
+    also the SoilGrids profile and the ECMWF ensemble (live for today, archive if enabled).
+    ``core=False`` fetches only the 14-day sources (the caller already has soil and weather)."""
+    from . import forecast14_runtime as f14
+
     jobs: dict[str, Any] = {}
-    with ThreadPoolExecutor(max_workers=3) as ex:
-        jobs["soil"] = ex.submit(fetch_iung_code, client, lat, lon)
-        jobs["archive"] = ex.submit(fetch_archive, client, lat, lon, ARCHIVE_START, today - dt.timedelta(days=1))
-        if need_live:
+    optional = {"soilgrids", "ensemble"}
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        if core:
+            jobs["soil"] = ex.submit(fetch_iung_code, client, lat, lon)
+            jobs["archive"] = ex.submit(fetch_archive, client, lat, lon, ARCHIVE_START, today - dt.timedelta(days=1))
+        if core and need_live:
             jobs["forecast"] = ex.submit(fetch_forecast, client, lat, lon)
+        if zones_for is not None:
+            jobs["soilgrids"] = ex.submit(f14.fetch_soil_profile, client, lat, lon)
+            if zones_for >= today:
+                jobs["ensemble"] = ex.submit(f14.fetch_ensemble_live, client, lat, lon, zones_for)
+            elif f14.archive_enabled():
+                jobs["ensemble"] = ex.submit(f14.fetch_ensemble_archive, lat, lon, zones_for)
         out = {}
         for k, fut in jobs.items():
             try:
                 out[k] = fut.result()
             except DataUnavailableError as err:
                 out[k] = err
+            except Exception as err:  # optional sources never break the recommendation
+                if k not in optional:
+                    raise
+                out[k] = DataUnavailableError(f"{k}: {err}")
     return out
 
 
@@ -231,7 +258,7 @@ def _season_spec(
 ) -> SeasonSpec:
     """Weather for 1 March .. season end + 7: observed before ``date``, assumed afterwards."""
     pre_start = dt.date(year, 3, 1)
-    end = crop.season_end(year) + dt.timedelta(days=N_LEADS)
+    end = crop.season_end(year) + dt.timedelta(days=N_FC)
     dates = np.datetime64(pre_start, "D") + np.arange((end - pre_start).days + 1)
     clim_p, clim_e = _weather_climatology(obs, dates, year)
     p, e = clim_p.copy(), clim_e.copy()
@@ -251,14 +278,15 @@ def _season_spec(
 # ======================================================================================
 # Plan simulation
 # ======================================================================================
-def _forecast_rows(batch: SeasonBatch, t_date: int, issued: np.ndarray, past_rng: np.random.Generator) -> None:
+def _forecast_rows(batch: SeasonBatch, t_date: int, issued: np.ndarray, past_rng: np.random.Generator, days: int = 7) -> None:
     """Fill batch.forecast: synthetic for past days, issued forecast (shifted) for plan days."""
     batch.forecast = noisy_forecast(batch.fut, past_rng)
     L = int(batch.length[0])
-    for k in range(min(N_LEADS + 1, L - t_date)):
-        row = issued[k : k + N_LEADS]
-        if len(row) < N_LEADS:
-            row = np.concatenate([row, np.zeros(N_LEADS - len(row))])
+    width = batch.forecast.shape[2]
+    for k in range(min(max(N_LEADS, days) + 1, L - t_date)):
+        row = issued[k : k + width]
+        if len(row) < width:
+            row = np.concatenate([row, np.zeros(width - len(row))])
         batch.forecast[0, t_date + k] = row
 
 
@@ -275,6 +303,7 @@ def _run_plan(
     dr = batch.dr0.copy()
     bl_past = np.array([budget_used])
     past_irr = 0.0
+    past_doses = np.zeros(t_date)
     for t in range(t_date):
         if history is not None:
             irr = np.array([history.get(t, 0.0)])
@@ -283,6 +312,7 @@ def _run_plan(
             bl_past = bl_past - irr
         dr = balance_step(dr, batch.precip[:, t], irr, batch.et0[:, t], batch.kc[:, t], batch.taw, batch.p_tab)[0]
         past_irr += float(irr[0])
+        past_doses[t] = float(irr[0])
     state0 = SimState(t_date, dr.copy(), np.array([budget_left]), batch)
     bl = np.array([budget_left])
     plan = []
@@ -303,7 +333,147 @@ def _run_plan(
             }
         )
         dr, bl = dr_new, bl - irr
-    return {"plan": plan, "state0": state0, "past_irrigation_mm": past_irr}
+    return {"plan": plan, "state0": state0, "past_irrigation_mm": past_irr, "past_doses": past_doses}
+
+
+# Confidence of plan day k (1-based), from the E8 test (reports/plan14_holdout_prev7.json):
+# Brier skill of the irrigation-day probability vs the base rate 0.43 / 0.27 on days 2 / 3,
+# 0.10-0.17 on days 4-7 and below 0.1 from day 8 on.
+PLAN_DAY_CONFIDENCE = {**dict.fromkeys(range(1, 4), "wysoka"), **dict.fromkeys(range(4, 8), "srednia"), **dict.fromkeys(range(8, 15), "niska")}
+
+
+def _analog_arrays(obs: DailySeries, start: dt.date, n: int, skip_year: int) -> tuple[np.ndarray, np.ndarray]:
+    """(Y, 1, n) precipitation and ET0 of the same calendar days in the other archive years."""
+    dates = np.asarray(obs.dates, dtype="datetime64[D]")
+    P, E = [], []
+    for y in range(ARCHIVE_START.year, skip_year + 1):
+        if y == skip_year:
+            continue
+        try:
+            d0 = np.datetime64(start.replace(year=y), "D")
+        except ValueError:
+            continue
+        want = d0 + np.arange(n)
+        idx = np.clip(np.searchsorted(dates, want), 0, len(dates) - 1)
+        if not (dates[idx] == want).all():
+            continue
+        p, e = np.asarray(obs.precip)[idx], np.asarray(obs.et0)[idx]
+        if np.isfinite(p).all() and np.isfinite(e).all():
+            P.append(p)
+            E.append(e)
+    return np.asarray(P)[:, None, :], np.asarray(E)[:, None, :]
+
+
+def _edge_pad(x: np.ndarray, n: int) -> np.ndarray:
+    return x[:n] if len(x) >= n else np.pad(x, (0, n - len(x)), mode="edge")
+
+
+def _long_plan(batch: SeasonBatch, pol: Any, state0: SimState, t_date: int, date: dt.date, long_plan: list[dict[str, Any]],
+               issued_p: np.ndarray, fmode: str, obs: DailySeries, days: int, *, crop: CropParams | None = None,
+               taw: float | None = None, common: dict[str, Any] | None = None, sources: list[SourceRecord] | None = None,
+               past_doses: np.ndarray | None = None) -> dict[str, Any]:
+    """Plan for up to 14 days + irrigation probability and water need from weather scenarios: the 51
+    ECMWF ensemble members when available (E9), otherwise analog years (E8); plus the three-zone
+    soil-water forecast (``soil_zones``) with classes and probabilities."""
+    from . import forecast14_runtime as f14
+    from .forecast14 import N_DAYS, EnsCalibration
+    from .plan import make_plan, scenario_plans
+    from .soil3 import zone_awc_from_profile
+
+    common = common or {}
+    sources = sources if sources is not None else []
+    n_fc = {"live_ecmwf": 14, "archived_ecmwf": N_LEADS}.get(fmode, 0)
+    season_start = date - dt.timedelta(days=t_date)
+    T = batch.horizon + N_FC
+    span = days + N_FC
+    ana_p, ana_e = _analog_arrays(obs, season_start, T, date.year)
+    ens = common.get("ensemble")
+    ens = None if ens is None or isinstance(ens, Exception) else ens
+    calib = EnsCalibration.load()
+    ens_p = ens_e = None
+    if ens is not None:
+        ens_p, ens_e = f14.ens_weather(ens, calib, min(N_DAYS, ens["precip"].shape[1]))
+        sources.append(SourceRecord(name=ens["name"], url=ens["url"], retrieved_at=ens["retrieved_at"] or "",
+                                    mode="cache" if ens.get("from_cache") else "live", license=f14.ENS_LICENSE,
+                                    detail=f"{ens_p.shape[0]} czlonkow: opad, temperatura 2 m, promieniowanie; {ens_p.shape[1]} dni"))
+    out_days = []
+    prob = np.full(days, np.nan)
+    water = None
+    prob_source = None
+    sp = None
+    if ens_p is not None:
+        M, H = ens_p.shape
+        ap = np.repeat(_edge_pad(batch.clim_p[0, t_date:], span)[None], M, axis=0)
+        ae = np.repeat(_edge_pad(batch.clim_e[0, t_date:], span)[None], M, axis=0)
+        ap[:, :H], ae[:, :H] = ens_p, ens_e
+        bb = batch.subset(np.zeros(M, dtype=int))
+        sp = make_plan(bb, pol, t_date, np.repeat(state0.dr, M), np.repeat(state0.budget_left, M), days,
+                       precip_issued=ap, et0_issued=ae, keep_today_forecast=True)  # (M, days)
+        prob_source = "ecmwf_ens"
+    elif len(ana_p):
+        issued = np.full((1, span), np.nan)
+        issued[0, : min(n_fc, len(issued_p))] = issued_p[: min(n_fc, span)]
+        sp = scenario_plans(batch, pol, t_date, state0.dr, state0.budget_left, ana_p, ana_e, days,
+                            forecast_days=n_fc, precip_issued=issued)[:, 0]  # (Y, days)
+        prob_source = "analog_years"
+    if sp is not None:
+        prob = (sp > 0).mean(axis=0)
+        tot = sp.sum(axis=1)
+        water = {"expected_mm": _r(tot.mean()), "p10_mm": _r(np.percentile(tot, 10)), "p90_mm": _r(np.percentile(tot, 90)),
+                 "n_scenarios": len(tot)}
+
+    soil_zones = None
+    if crop is not None and taw is not None:
+        prof_res = common.get("soilgrids")
+        profile, psrc = None, "rownomierny rozklad wody z glebokoscia (profil SoilGrids niedostepny)"
+        if prof_res is not None and not isinstance(prof_res, Exception):
+            profile, pres = prof_res
+            sources.append(SourceRecord(name="ISRIC SoilGrids 2.0 (wv0033, wv1500)", url=pres.url, retrieved_at=pres.retrieved_at,
+                                        mode="cache" if pres.from_cache else "live", license=f14.SOILGRIDS_LICENSE,
+                                        detail="woda przy pojemnosci polowej i punkcie trwalego wiedniecia, 6 warstw 0-200 cm"))
+            psrc = "SoilGrids 2.0 (250 m), skalowane do TAW kategorii IUNG-PIB"
+        awc = zone_awc_from_profile(profile, taw)
+        zs = f14.zone_state(obs.dates, obs.precip, obs.et0, crop, date, awc, past_doses)
+        Hz = min(days, N_DAYS, crop.length - t_date)
+        if Hz >= 1:
+            sl = slice(t_date, t_date + Hz)
+            frac, kc, ft = zs["frac"][sl], zs["kc"][sl], zs["f_t"][sl]
+            za_p, za_e = _analog_arrays(obs, date, Hz, date.year)
+            za_p, za_e = (za_p[:, 0], za_e[:, 0]) if len(za_p) else (np.zeros((0, Hz)), np.zeros((0, Hz)))
+            post = f14.load_postproc()
+            ep = None if ens_p is None else ens_p[:, :Hz]
+            ee = None if ens_e is None else ens_e[:, :Hz]
+            fc = f14.zone_forecast(zs["d0"], awc, frac, kc, ft, crop.p, ep, ee, za_p, za_e, post)
+            doses = np.array([d["dose_mm"] for d in long_plan[:Hz]] + [0.0] * max(0, Hz - len(long_plan)))
+            fc_plan = f14.zone_forecast(zs["d0"], awc, frac, kc, ft, crop.p, ep, ee, za_p, za_e, post, irr=doses) if doses.sum() > 0 else None
+            if fc:
+                w_ens = np.asarray((post or {}).get("w_ens", [1.0] * N_DAYS)[:Hz])
+                mixed = [i + 1 for i, w in enumerate(w_ens) if w < 1.0]
+                wsrc = (f"ECMWF ENS ({ep.shape[0]} czlonkow)" + (f", od dnia {mixed[0]} laczony z latami analogicznymi (wagi z roku walidacyjnego 2024)" if mixed else "")
+                        if ep is not None else f"lata analogiczne: te same dni w {len(za_p)} latach archiwum")
+                soil_zones = f14.soil_zones_block(date, zs["d0"], awc, frac, fc, fc_plan, psrc, wsrc)
+    for k, d in enumerate(long_plan[:days]):
+        out_days.append({
+            "day": k + 1,
+            "date": (date + dt.timedelta(days=k)).isoformat(),
+            "dose_mm": d["dose_mm"],
+            "irrigation_probability": None if not np.isfinite(prob[k]) else _r(prob[k], 2),
+            "precip_assumed_mm": d["precip_assumed_mm"],
+            "confidence": PLAN_DAY_CONFIDENCE.get(k + 1, "niska"),
+        })
+    return {
+        "days": out_days,
+        "total_plan_mm": float(sum(d["dose_mm"] for d in long_plan[:days])),
+        "water_need_mm": water,
+        "forecast_days_used": n_fc,
+        "probability_source": prob_source,
+        "method": "Plan: ta sama polityka dzien po dniu na pogodzie zakladanej dzis (prognoza, dalej klimatologia). "
+                  + ("Prawdopodobienstwo podlewania i zakres wody: plan powtorzony dla kazdego z czlonkow ensemble ECMWF (14 dni)."
+                     if prob_source == "ecmwf_ens" else
+                     "Prawdopodobienstwo i zakres wody: scenariusze z pogody tych samych dni w innych latach archiwum."),
+        "advice": "Wiazaca jest dawka na dzis; plan aktualizuje sie codziennie wraz z nowa prognoza.",
+        **({"soil_zones": soil_zones} if soil_zones else {}),
+    }
 
 
 # ======================================================================================
@@ -321,15 +491,24 @@ def recommend(
     parcel_id: str | None = None,
     irrigation_history: list[tuple[str, float]] | None = None,
     include_history: bool = False,
+    plan_days: int = 7,
     client: HttpClient | None = None,
     today: dt.date | None = None,
     _prefetched: tuple[int, DailySeries, list[SourceRecord], DailySeries | None] | None = None,
 ) -> dict[str, Any]:
     """7-day irrigation recommendation for a point (or parcel) in Poland on ``date``.
 
+    ``plan_days`` = 8..14 adds ``recommendation.plan_14d``: the daily plan continued to ``plan_days``
+    days, the probability of an irrigation day and the range of the water need from the plan repeated
+    on the 51 ECMWF ensemble members (E9; analog years when no ensemble is available), the confidence
+    of every plan day and ``soil_zones``: the three-zone soil-water forecast (0-28 / 28-100 /
+    100-200 cm) with water classes and their probabilities, the root-zone P10-P90 range and the
+    probability of crop stress without irrigation and with the plan.
+
     ``_prefetched = (iung_code, observed_weather, sources, forecast_series)`` lets the main
     backend pass data it already fetched (same pattern as ``compare_strategies``): no second
-    request to IUNG / Open-Meteo, identical weather in steps 1 and 4.
+    request to IUNG / Open-Meteo, identical weather in steps 1 and 4. The sources of the 14-day
+    forecast (SoilGrids, ECMWF ensemble) are still fetched here when ``plan_days`` > 7.
     """
     t_start = time.perf_counter()
     client = client or get_client()
@@ -350,8 +529,9 @@ def recommend(
         out["timing_s"] = round(time.perf_counter() - t_start, 3)
         return out
 
-    if crop not in crops:
-        return finish("invalid_input", f"Nieznana uprawa '{crop}'. Dostepne: {', '.join(crops)}")
+    crop_key = resolve_crop(crop)
+    if crop_key is None:
+        return finish("invalid_input", f"Nieznana uprawa '{crop}'. Dostepne: {', '.join(accepted_crop_codes())}")
     if date > today or date < ARCHIVE_START:
         return finish("invalid_input", f"Data analizy musi byc z zakresu {ARCHIVE_START} - {today}.")
     if budget_mm < 0 or budget_used_mm < 0:
@@ -369,15 +549,18 @@ def recommend(
     if not _in_poland(lat, lon):
         return finish("outside_poland", "Punkt lezy poza Polska - modul dziala tylko dla Polski.")
 
-    c = crops[crop]
+    c = crops[crop_key]
     season_start, season_end = c.season_start(date.year), c.season_end(date.year)
     in_season = season_start <= date <= season_end
+    want_14 = int(plan_days) > 7 and in_season
+    zones_for = date if want_14 else None
     if _prefetched is not None:
         code, obs, pre_sources, fc_series = _prefetched
         sources.extend(pre_sources)
+        common = _fetch_common(client, lat, lon, today, False, zones_for=zones_for, core=False) if zones_for else {}
     else:
         need_live = date >= today - dt.timedelta(days=60)
-        common = _fetch_common(client, lat, lon, today, need_live)
+        common = _fetch_common(client, lat, lon, today, need_live, zones_for=zones_for)
         soil_res = common["soil"]
         if isinstance(soil_res, Exception):
             return finish("no_data", f"Brak odpowiedzi warstwy glebowej IUNG-PIB: {soil_res}")
@@ -416,9 +599,13 @@ def recommend(
     budget_left = max(0.0, budget_mm - budget_used_mm)
     spec = _season_spec(c, date.year, taw, budget_mm, obs, issued_p, issued_e, date)
     batch = build_batch([spec])
+    # day-of-year climatology of the other archive years (the season spec holds one year only)
+    clim_days = np.datetime64(season_start, "D") + np.arange(batch.clim_p.shape[1])
+    batch.clim_p[0], batch.clim_e[0] = _weather_climatology(obs, clim_days, date.year)
     t_date = (date - season_start).days
     rng = np.random.default_rng(abs(hash((round(lat, 3), round(lon, 3), date.year))) % 2**32)
-    _forecast_rows(batch, t_date, issued_p, rng)
+    plan_days = int(min(max(plan_days, 7), 14))
+    _forecast_rows(batch, t_date, issued_p, rng, plan_days)
     history = None
     if irrigation_history:
         history = {}
@@ -426,7 +613,9 @@ def recommend(
             k = (dt.date.fromisoformat(d_s) - season_start).days
             if 0 <= k < t_date:
                 history[k] = history.get(k, 0.0) + float(mm)
-    run = _run_plan(batch, pol, t_date, budget_used_mm, budget_left, history)
+    run = _run_plan(batch, pol, t_date, budget_used_mm, budget_left, history, days=plan_days)
+    long_plan = run["plan"]
+    run = {**run, "plan": long_plan[:7]}
 
     # scenarios (uncertainty of the forecast): no rain / forecast / 1.5 x forecast
     scen = {}
@@ -503,6 +692,11 @@ def recommend(
     if pname == "rl" and rl_status != "domyslny":
         limitations.insert(0, "Uzyto agenta RL oznaczonego jako eksperymentalny - na tescie nie spelnil kryterium gotowosci.")
 
+    plan_14d = None
+    if plan_days > 7:
+        plan_14d = _long_plan(batch, pol, run["state0"], t_date, date, long_plan, issued_p, fmode, obs, plan_days,
+                              crop=c, taw=taw, common=common, sources=sources, past_doses=run["past_doses"])
+
     result = finish(
         "ok",
         text,
@@ -517,6 +711,7 @@ def recommend(
             "window": [d["date"] for d in plan if d["dose_mm"] > 0],
             "scenarios_7d_mm": scen,
             "alternative": alt,
+            **({"plan_14d": plan_14d} if plan_14d else {}),
         },
         rationale={
             "soil_water_storage_pct_taw": _r(storage_pct),
@@ -571,15 +766,16 @@ def compare_strategies(
     crops = load_crops()
     out: dict[str, Any] = {"module": "kowr_rl", "version": __version__, "input": {"lat": lat, "lon": lon, "parcel_id": parcel_id, "crop": crop, "budget_mm": budget_mm}}
     sources: list[SourceRecord] = []
-    if crop not in crops:
-        return {**out, "status": "invalid_input", "message": f"Nieznana uprawa '{crop}'"}
+    crop_key = resolve_crop(crop)
+    if crop_key is None:
+        return {**out, "status": "invalid_input", "message": f"Nieznana uprawa '{crop}'. Dostepne: {', '.join(accepted_crop_codes())}"}
     if parcel_id:
         parcel, psrc = fetch_parcel(client, parcel_id)
         sources.append(psrc)
         lat, lon = parcel.centroid_lat, parcel.centroid_lon
     if lat is None or lon is None or not _in_poland(lat, lon):
         return {**out, "status": "outside_poland", "message": "Podaj punkt w Polsce."}
-    c = crops[crop]
+    c = crops[crop_key]
     if _prefetched is not None:
         code, obs, sources = _prefetched[0], _prefetched[1], list(_prefetched[2])
     else:
