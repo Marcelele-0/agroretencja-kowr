@@ -42,13 +42,8 @@ risk_from_score:
   umiarkowane: 45.0   # 45 <= score < 65
   wysokie: 0.0        # score < 45
 
-# Water state -5 (drought) .. 0 (optimum) .. +5 (excess water) shown in the UI.
-# Physical axis (hydro_core.scoring.physical_water_state), NOT derived from WaterScore:
-# dry side from the FAO-56 root-zone depletion Dr, wet side from the 60-day KBW.
+# Water state -5..+5 shown in the UI: (score - 50) / 10, capped by the risk level
 water_state:
-  optimum_dr_fraction_of_raw: 0.5      # Dr <= 0.5 RAW -> optimum (0); Dr = RAW -> -1; Dr = TAW -> -5
-  wet_kbw60_steps_mm: [40, 80, 130, 200, 280]   # KBW 60 d above each step = +1 (frontend stageFromKbw)
-  # A drought veto caps the state on the analysis date (only vetoes about lack of water)
   cap_by_risk:
     krytyczne: -3.0
     wysokie: -1.0

@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig, type Connect, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { tileCachePlugin } from "./tileCachePlugin.mjs";
 
 const ULDK_UPSTREAM = "https://uldk.gugik.gov.pl/";
 
@@ -85,13 +86,31 @@ const OM_FORECAST_UPSTREAM = "https://api.open-meteo.com/v1/forecast";
 const OM_ARCHIVE_TTL_MS = 24 * 3600_000;
 const OM_FORECAST_TTL_MS = 30 * 60_000;
 const OM_CACHE_MAX = 1500;
+/** Backend route with the same daily JSON shape (its own cache, NASA POWER fallback). */
+const OM_BACKEND_FALLBACK = "http://127.0.0.1:8000/api/weather/daily";
+const HOUR_MS = 3600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** Open-Meteo 429 bodies name the exhausted quota; returns when that quota resets, or null for an unnamed 429. */
+function omLimitResetAt(body: string, now: number): { kind: "minutely" | "hourly" | "daily"; until: number } | null {
+  const b = body.toLowerCase();
+  if (b.includes("minutely")) return { kind: "minutely", until: now + 60_000 };
+  if (b.includes("hourly")) return { kind: "hourly", until: Math.min(Math.floor(now / HOUR_MS + 1) * HOUR_MS, now + HOUR_MS) };
+  if (b.includes("daily")) return { kind: "daily", until: Math.floor(now / DAY_MS + 1) * DAY_MS };
+  return null;
+}
+
+interface OmOut { status: number; body: string; source: string; retryAfterS?: number }
 
 /**
- * Caching + coalescing Open-Meteo proxy with clock-skew date clamping and retry on 429/5xx.
+ * Caching + coalescing Open-Meteo proxy with clock-skew date clamping.
+ * A 429 that names a quota opens a circuit until the quota resets: requests then skip upstream.
+ * Archive requests fall back to the backend weather route; the forecast fails fast instead.
+ * Only 5xx and network errors get the short retry.
  */
 function openMeteoProxyPlugin(): Plugin {
-  const cache = new Map<string, { status: number; body: string; exp: number }>();
-  const inflight = new Map<string, Promise<{ status: number; body: string }>>();
+  const cache = new Map<string, { status: number; body: string; exp: number; source: string }>();
+  const inflight = new Map<string, Promise<OmOut>>();
 
   const serverToday = () => new Date().toISOString().slice(0, 10);
 
@@ -106,15 +125,96 @@ function openMeteoProxyPlugin(): Plugin {
     return `${kind}:${new URLSearchParams(entries).toString()}`;
   };
 
-  const setCache = (key: string, status: number, body: string, ttlMs: number) => {
+  const setCache = (key: string, status: number, body: string, ttlMs: number, source: string) => {
     if (cache.size >= OM_CACHE_MAX) {
       const oldest = cache.keys().next().value;
       if (oldest) cache.delete(oldest);
     }
-    cache.set(key, { status, body, exp: Date.now() + ttlMs });
+    cache.set(key, { status, body, exp: Date.now() + ttlMs, source });
+  };
+
+  /** Same daily series from the backend; null when the request has no explicit range or the backend fails. */
+  const fromBackend = async (params: URLSearchParams): Promise<OmOut | null> => {
+    const lat = params.get("latitude");
+    const lon = params.get("longitude");
+    const start = params.get("start_date");
+    const end = params.get("end_date");
+    if (!lat || !lon || !start || !end) return null;
+    try {
+      const qs = new URLSearchParams({ lat, lon, start, end });
+      const r = await fetch(`${OM_BACKEND_FALLBACK}?${qs.toString()}`, { signal: AbortSignal.timeout(20000) });
+      const body = await r.text();
+      if (r.status === 200 && body.includes('"daily"')) return { status: 200, body, source: r.headers.get("x-om-source") ?? "backend" };
+      console.warn(`[om] backend fallback http_${r.status} ${body.slice(0, 120)}`);
+    } catch (err) {
+      console.warn(`[om] backend fallback error=${err instanceof Error ? err.message : String(err)}`);
+    }
+    return null;
   };
 
   const mount = (middlewares: Connect.Server, prefix: string, upstreamBase: string, ttlMs: number, clampArchiveDate: boolean) => {
+    let circuit: { kind: string; until: number } | null = null;
+
+    const limitedReply = (until: number, kind: string): OmOut => {
+      const at = new Date(until).toISOString().slice(11, 16);
+      return {
+        status: 429,
+        body: JSON.stringify({ error: true, reason: `Open-Meteo: wyczerpany limit zapytań (${kind}), ponowna próba po ${at} UTC.` }),
+        source: "circuit-open",
+        retryAfterS: Math.max(1, Math.ceil((until - Date.now()) / 1000)),
+      };
+    };
+
+    /** Backend data when possible, else the given failure; fallback answers are cached like upstream hits. */
+    const fallback = async (key: string, params: URLSearchParams, failure: OmOut): Promise<OmOut> => {
+      const fb = clampArchiveDate ? await fromBackend(params) : null;
+      if (!fb) return failure;
+      setCache(key, fb.status, fb.body, ttlMs, fb.source);
+      return fb;
+    };
+
+    const upstreamJob = async (key: string, params: URLSearchParams): Promise<OmOut> => {
+      const t0 = Date.now();
+      if (circuit && circuit.until > t0) return fallback(key, params, limitedReply(circuit.until, circuit.kind));
+      const target = `${upstreamBase}?${params.toString()}`;
+      const pauses = [500, 2000];
+      let last: OmOut = { status: 502, body: JSON.stringify({ error: true, reason: "Open-Meteo upstream error" }), source: "open-meteo" };
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const upstream = await fetch(target, {
+            headers: { "User-Agent": "AgroRetencja-KOWR/1.0" },
+            signal: AbortSignal.timeout(15000),
+          });
+          const body = await upstream.text();
+          last = { status: upstream.status, body, source: "open-meteo" };
+          if (upstream.status === 429) {
+            const limit = omLimitResetAt(body, Date.now());
+            if (limit) {
+              if (!circuit || circuit.until <= Date.now()) {
+                console.warn(`[om] circuit open ${prefix}: ${limit.kind} limit, upstream skipped until ${new Date(limit.until).toISOString()}`);
+              }
+              circuit = limit;
+              last = limitedReply(limit.until, limit.kind);
+            }
+            break;
+          }
+          if (upstream.status < 500) {
+            if (upstream.status === 200 && body.includes('"daily"')) setCache(key, 200, body, ttlMs, "open-meteo");
+            console.info(`[om] ${prefix} ${upstream.status} attempt=${attempt + 1} (${Date.now() - t0}ms) ${key}`);
+            return last;
+          }
+          console.warn(`[om] retry ${attempt + 1}/3: ${prefix} http_${upstream.status} ${key}`);
+        } catch (err) {
+          last = { status: 504, body: JSON.stringify({ error: true, reason: err instanceof Error ? err.message : String(err) }), source: "open-meteo" };
+          console.warn(`[om] retry ${attempt + 1}/3: ${prefix} error=${last.body} ${key}`);
+        }
+        if (attempt < pauses.length) await new Promise((r) => setTimeout(r, pauses[attempt]!));
+      }
+      const out = await fallback(key, params, last);
+      if (out === last) console.error(`[om] failed ${prefix} status=${last.status} (${Date.now() - t0}ms) ${key}`);
+      return out;
+    };
+
     middlewares.use(prefix, (req, res) => {
       const { url, method } = req as { url?: string; method?: string };
       void (async () => {
@@ -140,6 +240,7 @@ function openMeteoProxyPlugin(): Plugin {
             "Content-Type": "application/json; charset=utf-8",
             "Access-Control-Allow-Origin": "*",
             "X-OM-Cache": "hit",
+            "X-OM-Source": hit.source,
           });
           res.end(hit.body);
           return;
@@ -147,47 +248,20 @@ function openMeteoProxyPlugin(): Plugin {
 
         let job = inflight.get(key);
         if (!job) {
-          const target = `${upstreamBase}?${params.toString()}`;
-          const t0 = Date.now();
-          job = (async () => {
-            const pauses = [500, 2000];
-            let lastStatus = 502;
-            let lastBody = JSON.stringify({ error: true, reason: "Open-Meteo upstream error" });
-            for (let attempt = 0; attempt < 3; attempt++) {
-              try {
-                const upstream = await fetch(target, {
-                  headers: { "User-Agent": "AgroRetencja-KOWR/1.0" },
-                  signal: AbortSignal.timeout(15000),
-                });
-                lastStatus = upstream.status;
-                lastBody = await upstream.text();
-                if (upstream.status !== 429 && upstream.status < 500) {
-                  if (upstream.status === 200 && lastBody.includes('"daily"')) {
-                    setCache(key, 200, lastBody, ttlMs);
-                  }
-                  console.info(`[om] ${prefix} ${upstream.status} attempt=${attempt + 1} (${Date.now() - t0}ms) ${key}`);
-                  return { status: upstream.status, body: lastBody };
-                }
-                console.warn(`[om] retry ${attempt + 1}/3: ${prefix} http_${upstream.status} ${key}`);
-              } catch (err) {
-                lastStatus = 504;
-                lastBody = JSON.stringify({ error: true, reason: err instanceof Error ? err.message : String(err) });
-                console.warn(`[om] retry ${attempt + 1}/3: ${prefix} error=${lastBody} ${key}`);
-              }
-              if (attempt < pauses.length) await new Promise((r) => setTimeout(r, pauses[attempt]!));
-            }
-            console.error(`[om] failed ${prefix} status=${lastStatus} (${Date.now() - t0}ms) ${key}`);
-            return { status: lastStatus, body: lastBody };
-          })().finally(() => inflight.delete(key));
+          job = upstreamJob(key, params).finally(() => inflight.delete(key));
           inflight.set(key, job);
         }
 
         const out = await job;
-        res.writeHead(out.status, {
+        const headers: Record<string, string> = {
           "Content-Type": "application/json; charset=utf-8",
           "Access-Control-Allow-Origin": "*",
+          "Access-Control-Expose-Headers": "X-OM-Source, X-OM-Cache",
           "X-OM-Cache": "miss",
-        });
+          "X-OM-Source": out.source,
+        };
+        if (out.retryAfterS) headers["Retry-After"] = String(out.retryAfterS);
+        res.writeHead(out.status, headers);
         res.end(out.body);
       })();
     });
@@ -214,7 +288,7 @@ const proxy = {
 };
 
 export default defineConfig({
-  plugins: [react(), uldkProxyPlugin(), openMeteoProxyPlugin()],
+  plugins: [react(), uldkProxyPlugin(), openMeteoProxyPlugin(), tileCachePlugin()],
   server: { port: 5173, host: true, proxy },
   preview: { port: 4173, host: true, proxy },
   build: {

@@ -215,3 +215,71 @@ def twi_relative(analysis: TerrainAnalysis) -> np.ndarray:
     std = float(vals.std()) or 1.0
     z = (analysis.twi - float(vals.mean())) / std
     return np.where(analysis.mask, np.clip(z, -2.0, 2.0), np.nan)
+
+
+def _gaussian_smooth_2d(arr: np.ndarray, sigma_cells: float) -> np.ndarray:
+    """Separable 2D Gaussian smoother ignoring NaNs and padding edges cleanly."""
+    rad = max(1, math.ceil(3.0 * sigma_cells))
+    x = np.arange(-rad, rad + 1, dtype=np.float64)
+    kernel = np.exp(-0.5 * (x / sigma_cells) ** 2)
+    kernel /= kernel.sum()
+    valid = np.isfinite(arr).astype(np.float64)
+    vals = np.where(np.isfinite(arr), arr, 0.0)
+
+    def _conv1d(grid: np.ndarray, axis: int) -> np.ndarray:
+        pad_w = [(0, 0), (0, 0)]
+        pad_w[axis] = (rad, rad)
+        padded = np.pad(grid, pad_w, mode="edge")
+        out = np.zeros_like(grid, dtype=np.float64)
+        length = grid.shape[axis]
+        for idx, weight in enumerate(kernel):
+            sl: list[slice] = [slice(None), slice(None)]
+            sl[axis] = slice(idx, idx + length)
+            out += float(weight) * padded[tuple(sl)]
+        return out
+
+    num = _conv1d(_conv1d(vals, 1), 0)
+    den = _conv1d(_conv1d(valid, 1), 0)
+    return np.where(den > 1e-9, num / np.maximum(den, 1e-12), np.nan)
+
+
+def terrain_wetness_offset(
+    analysis: TerrainAnalysis,
+    *,
+    local_sigma_m: float = 20.0,
+    macro_sigma_m: float = 120.0,
+    scale_m: float = 1.2,
+    max_abs: float = 2.0,
+) -> np.ndarray:
+    """Shift-invariant Topographic Position Index (TPI) wetness offset on the full DEM grid."""
+    return tpi_wetness_offset(
+        analysis.elevation,
+        analysis.resolution_m,
+        local_sigma_m=local_sigma_m,
+        macro_sigma_m=macro_sigma_m,
+        scale_m=scale_m,
+        max_abs=max_abs,
+    )
+
+
+def gaussian_smooth(arr: np.ndarray, sigma_cells: float) -> np.ndarray:
+    """NaN-aware 2D Gaussian smoothing (normalised convolution); NaN where no valid cell is near."""
+    return _gaussian_smooth_2d(arr, sigma_cells)
+
+
+def tpi_wetness_offset(
+    elevation: np.ndarray,
+    resolution_m: float,
+    *,
+    local_sigma_m: float = 20.0,
+    macro_sigma_m: float = 120.0,
+    scale_m: float = 1.2,
+    max_abs: float = 2.0,
+) -> np.ndarray:
+    """TPI wetness offset of any elevation grid (NaN = nodata); used for multi-parcel DEM mosaics."""
+    elev = np.asarray(elevation, dtype=np.float64)
+    res = max(float(resolution_m), 1.0)
+    el_local = _gaussian_smooth_2d(elev, local_sigma_m / res)
+    el_macro = _gaussian_smooth_2d(elev, macro_sigma_m / res)
+    tpi = el_local - el_macro
+    return np.clip(-tpi / scale_m, -max_abs, max_abs)

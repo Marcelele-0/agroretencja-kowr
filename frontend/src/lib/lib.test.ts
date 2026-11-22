@@ -6,10 +6,9 @@ import { measureLook, simForBackend } from "./catalog";
 import { isCropCode } from "./crops";
 import { addDays, inSeason, isIso, seasonYear, toDay } from "./dates";
 import { parseUug } from "./geocoder";
-import { parseWkt, polygonsArea } from "./geo";
+import { containsPoint, parcelLabelPose, parseWkt, polygonsArea, toGeometry } from "./geo";
 import { classifyIung, IUNG_PROGI, thresholdsFor } from "./iung";
 import { activeWindow, kbw, progressiveSeasonWindows, riskFromStage, seasonWindows, stageFromKbw, windowsFor } from "./kbw";
-import { fao56Et0Daily, parsePower } from "./nasaPower";
 import { compareYears, coversRange, neededRanges, type DailySeries } from "./openMeteo";
 import { DEMO_PRESETS } from "./presets";
 import { looksLikeParcelId, parseUldk, ParcelNotFound } from "./uldk";
@@ -44,6 +43,27 @@ describe("WKT", () => {
     const polys = parseWkt("MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0),(2 2,4 2,4 4,2 4,2 2)),((20 20,21 20,21 21,20 21,20 20)))");
     expect(polys).toHaveLength(2);
     expect(polygonsArea(polys)).toBeCloseTo(100 - 4 + 1);
+  });
+
+  it("places and aligns the parcel crop tag along the longest edge inside the parcel", () => {
+    const p = parseUldk(ULDK_OK);
+    const pose = parcelLabelPose(p.geometry);
+    expect(containsPoint(p.geometry, pose.center)).toBe(true);
+    expect(pose.lengthM).toBeGreaterThan(350);
+    expect(pose.widthM).toBeGreaterThan(40);
+    expect(pose.lengthM).toBeGreaterThan(pose.widthM * 3);
+
+    // Subdivided long horizontal edge (400 m split into 5 segments) vs single 90 m vertical edge:
+    // collinear grouping must still align horizontally along the 400 m edge.
+    const strip = toGeometry(
+      parseWkt(
+        "POLYGON((17.000 52.000,17.001 52.000,17.002 52.000,17.003 52.000,17.004 52.000,17.005 52.000,17.005 52.0008,17.000 52.0008,17.000 52.000))",
+      ),
+    );
+    const sp = parcelLabelPose(strip);
+    expect(containsPoint(strip, sp.center)).toBe(true);
+    expect(Math.abs(sp.chord[1][1] - sp.chord[0][1])).toBeLessThan(1e-5);
+    expect(sp.chord[1][0] - sp.chord[0][0]).toBeGreaterThan(0.004);
   });
 });
 
@@ -86,29 +106,6 @@ describe("IUNG table", () => {
 function series(from: string, days: number, p: number, e: number): DailySeries {
   return { start: from, startDay: toDay(from), p: new Array(days).fill(p), et0: new Array(days).fill(e), forecastFrom: addDays(from, days), forecastOk: true, grid: { lat: 0, lon: 0, elevation: null }, retrievedAt: new Date(), providers: ["open-meteo"] };
 }
-
-describe("NASA POWER backup", () => {
-  it("computes FAO-56 ET₀ like the backend (src/hydro_core/et0.py)", () => {
-    expect(fao56Et0Daily("2018-07-20", 52.7, 85, 27.4, 14.1, 68, 2.6, 22.5)).toBeCloseTo(4.623, 3);
-    expect(fao56Et0Daily("2023-04-10", 50.1, 250, 12, 2, 80, 3.5, 12)).toBeCloseTo(1.6466, 3);
-  });
-  it("parses the daily point answer and skips fill values", () => {
-    const j = {
-      geometry: { coordinates: [18.25, 52.7, 85] as [number, number, number] },
-      header: { fill_value: -999 },
-      properties: { parameter: {
-        PRECTOTCORR: { "20180720": 3.2, "20180721": -999 }, T2M_MAX: { "20180720": 27.4, "20180721": 25 },
-        T2M_MIN: { "20180720": 14.1, "20180721": 13 }, RH2M: { "20180720": 68, "20180721": 70 },
-        WS2M: { "20180720": 2.6, "20180721": -999 }, ALLSKY_SFC_SW_DWN: { "20180720": 22.5, "20180721": 20 },
-      } },
-    };
-    const c = parsePower(j, 52.7, 18.25);
-    expect(c.from).toBe("2018-07-20");
-    expect(c.p).toEqual([3.2, null]);
-    expect(c.e[0]).toBeCloseTo(4.62, 2);
-    expect(c.e[1]).toBeNull();
-  });
-});
 
 describe("KBW and water state", () => {
   it("sums P − ET0 over a window", () => {

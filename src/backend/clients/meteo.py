@@ -6,10 +6,14 @@ and calendar year: past years never expire, the current year expires after 6 hou
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date, timedelta
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import httpx
+import numpy as np
 from pydantic import BaseModel
 
 from backend.clients.base import (
@@ -18,6 +22,7 @@ from backend.clients.base import (
     SourceDescriptor,
     SourceUnavailableError,
 )
+from backend.clients.geo import haversine_km
 from hydro_core.et0 import fao56_et0_daily
 from hydro_core.schemas import DataMode
 
@@ -130,6 +135,70 @@ def power_to_block(payload: dict[str, Any], lat: float) -> tuple[dict[str, list[
     return block, elevation
 
 
+@lru_cache(maxsize=2)
+def _load_local_meteo_grid(path_str: str, mtime_ns: int) -> dict[str, Any]:
+    """Load pre-fetched national daily weather NPZ grid keyed by path and mtime."""
+    _ = mtime_ns
+    with np.load(path_str, allow_pickle=False) as z:
+        dates = [str(d) for d in z["dates"].tolist()]
+        year_slices: dict[int, slice] = {}
+        start = 0
+        for idx, d in enumerate(dates):
+            yr = int(d[:4])
+            if idx == 0:
+                cur_yr = yr
+            elif yr != cur_yr:
+                year_slices[cur_yr] = slice(start, idx)
+                start = idx
+                cur_yr = yr
+        if dates:
+            year_slices[int(dates[-1][:4])] = slice(start, len(dates))
+        return {
+            "lats": np.asarray(z["lats"], dtype=np.float64),
+            "lons": np.asarray(z["lons"], dtype=np.float64),
+            "elevations": np.asarray(z["elevations"], dtype=np.float64),
+            "dates": dates,
+            "year_slices": year_slices,
+            "precip": np.asarray(z["precip"], dtype=np.float32),
+            "et0": np.asarray(z["et0"], dtype=np.float32),
+            "tmean": np.asarray(z["tmean"], dtype=np.float32),
+            "tmax": np.asarray(z["tmax"], dtype=np.float32),
+            "tmin": np.asarray(z["tmin"], dtype=np.float32),
+        }
+
+
+def _arr_to_list(arr: np.ndarray) -> list[float | None]:
+    return [round(float(v), 2) if np.isfinite(v) else None for v in arr]
+
+
+def lookup_local_meteo_year(
+    path: Path, lat: float, lon: float, year: int, max_dist_km: float = 35.0
+) -> dict[str, Any] | None:
+    """Return one calendar year from the local national grid when within ``max_dist_km``."""
+    if not path.exists():
+        return None
+    grid = _load_local_meteo_grid(str(path), path.stat().st_mtime_ns)
+    sl = grid["year_slices"].get(year)
+    if sl is None:
+        return None
+    lats, lons = grid["lats"], grid["lons"]
+    # Fast Euclidean proxy in degrees to select top candidates, then exact haversine check
+    idx = int(np.argmin(((lats - lat) * 111.0) ** 2 + ((lons - lon) * 70.0) ** 2))
+    if haversine_km(lat, lon, float(lats[idx]), float(lons[idx])) > max_dist_km:
+        return None
+    elev_raw = grid["elevations"][idx]
+    return {
+        "time": grid["dates"][sl],
+        "precipitation_sum": _arr_to_list(grid["precip"][idx, sl]),
+        "et0_fao_evapotranspiration": _arr_to_list(grid["et0"][idx, sl]),
+        "temperature_2m_mean": _arr_to_list(grid["tmean"][idx, sl]),
+        "temperature_2m_max": _arr_to_list(grid["tmax"][idx, sl]),
+        "temperature_2m_min": _arr_to_list(grid["tmin"][idx, sl]),
+        "provider": OPEN_METEO,
+        "elevation": float(elev_raw) if np.isfinite(elev_raw) else None,
+    }
+
+
 class WeatherHistoryClient(BaseSourceClient[DailyWeatherSeries]):
     """10 full seasons + current year up to the analysis date."""
 
@@ -142,6 +211,11 @@ class WeatherHistoryClient(BaseSourceClient[DailyWeatherSeries]):
         license="CC BY 4.0; darmowe API do użytku niekomercyjnego (limit 10 000 zapytań/dobę)",
         attribution="Weather data by Open-Meteo.com (CC BY 4.0)",
     )
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        # One upstream fetch per grid cell at a time: concurrent requests then read the cache.
+        self._cell_locks: dict[str, asyncio.Lock] = {}
 
     @property
     def timeout_s(self) -> float:
@@ -219,41 +293,8 @@ class WeatherHistoryClient(BaseSourceClient[DailyWeatherSeries]):
         if analysis_date > today:
             raise SourceUnavailableError("Data analizy jest z przyszłości.")
 
-        cell = grid_cell_key(lat, lon)
         years = list(range(analysis_date.year - 10, analysis_date.year + 1))
-        blocks: dict[int, dict[str, Any]] = {}
-        for year in years:
-            cached = await self.cache.get(f"meteo:{cell}:{year}")
-            if cached:
-                blocks[year] = cached
-
-        missing = [y for y in years if y not in blocks]
-        message: str | None = None
-        if missing:
-            start = date(min(missing), 1, 1)
-            end = min(date(max(missing), 12, 31), today)
-            provider = OPEN_METEO
-            try:
-                block, elevation = await self._open_meteo_range(lat, lon, start, end)
-            except (RateLimitedError, httpx.HTTPError) as exc:
-                provider = NASA_POWER
-                reason = "limit zapytań" if isinstance(exc, RateLimitedError) else "brak odpowiedzi"
-                message = (
-                    f"Open-Meteo: {reason} – historię pogody pobrano z NASA POWER "
-                    "(siatka 0,5°, ET₀ policzone wzorem FAO-56)."
-                )
-                block, elevation = await self._nasa_power_range(lat, lon, start, end)
-
-            for year, year_block in split_by_year(block).items():
-                if year not in missing:
-                    continue
-                complete_year = year < today.year
-                ttl = None if (complete_year and provider == OPEN_METEO) else (
-                    _FALLBACK_TTL_S if provider == NASA_POWER else _CURRENT_YEAR_TTL_S
-                )
-                stored = {**year_block, "provider": provider, "elevation": elevation}
-                await self.cache.set(f"meteo:{cell}:{year}", stored, ttl)
-                blocks[year] = stored
+        blocks, missing, message = await self._year_blocks(lat, lon, years, today)
 
         series = self._assemble(blocks, years, analysis_date)
         if not series.dates:
@@ -277,6 +318,96 @@ class WeatherHistoryClient(BaseSourceClient[DailyWeatherSeries]):
             message=message,
             **outcome_kwargs,
         )
+
+    async def _year_blocks(
+        self, lat: float, lon: float, years: list[int], today: date, warm_years: range | None = None
+    ) -> tuple[dict[int, dict[str, Any]], list[int], str | None]:
+        """Per-year blocks: cache, local grid, then Open-Meteo with NASA POWER as fallback.
+
+        Returns the blocks, the years fetched from upstream and the fallback message (if any).
+        """
+        cell = grid_cell_key(lat, lon)
+        lock = self._cell_locks.setdefault(cell, asyncio.Lock())
+        async with lock:
+            blocks: dict[int, dict[str, Any]] = {}
+            for year in years:
+                cached = await self.cache.get(f"meteo:{cell}:{year}")
+                if cached:
+                    blocks[year] = cached
+
+            missing = [y for y in years if y not in blocks]
+            if missing and warm_years:
+                # One upstream call also fills the other years the caller is about to ask for.
+                for year in sorted(set(warm_years) - set(years)):
+                    cached = await self.cache.get(f"meteo:{cell}:{year}")
+                    if cached:
+                        blocks[year] = cached
+                    else:
+                        missing.append(year)
+                missing.sort()
+            if missing and self.settings.meteo_grid_path.exists():
+                still_missing: list[int] = []
+                for year in missing:
+                    local_block = lookup_local_meteo_year(self.settings.meteo_grid_path, lat, lon, year)
+                    if local_block is not None:
+                        blocks[year] = local_block
+                    else:
+                        still_missing.append(year)
+                missing = still_missing
+
+            message: str | None = None
+            if missing:
+                start = date(min(missing), 1, 1)
+                end = min(date(max(missing), 12, 31), today)
+                provider = OPEN_METEO
+                try:
+                    block, elevation = await self._open_meteo_range(lat, lon, start, end)
+                except (RateLimitedError, httpx.HTTPError) as exc:
+                    provider = NASA_POWER
+                    reason = "limit zapytań" if isinstance(exc, RateLimitedError) else "brak odpowiedzi"
+                    message = (
+                        f"Open-Meteo: {reason} – historię pogody pobrano z NASA POWER "
+                        "(siatka 0,5°, ET₀ policzone wzorem FAO-56)."
+                    )
+                    block, elevation = await self._nasa_power_range(lat, lon, start, end)
+
+                for year, year_block in split_by_year(block).items():
+                    if year not in missing:
+                        continue
+                    complete_year = year < today.year
+                    ttl = None if (complete_year and provider == OPEN_METEO) else (
+                        _FALLBACK_TTL_S if provider == NASA_POWER else _CURRENT_YEAR_TTL_S
+                    )
+                    stored = {**year_block, "provider": provider, "elevation": elevation}
+                    await self.cache.set(f"meteo:{cell}:{year}", stored, ttl)
+                    blocks[year] = stored
+        return blocks, missing, message
+
+    async def daily_range(self, lat: float, lon: float, start: date, end: date) -> DailyWeatherSeries:
+        """Daily series for [start, end] with the same cache and NASA POWER fallback as ``_fetch``."""
+        today = date.today()
+        end = min(end, today)
+        if start > end:
+            raise SourceUnavailableError("Pusty zakres dat.")
+        years = list(range(start.year, end.year + 1))
+        # The frontend asks for the season plus the last 10 years, one range at a time.
+        blocks, _, _ = await self._year_blocks(
+            lat, lon, years, today, warm_years=range(today.year - 10, today.year + 1)
+        )
+        series = self._assemble(blocks, years, end)
+        first = next((i for i, d in enumerate(series.dates) if d >= start), len(series.dates))
+        if first:
+            series = series.model_copy(update={
+                "dates": series.dates[first:],
+                "precipitation_mm": series.precipitation_mm[first:],
+                "et0_mm": series.et0_mm[first:],
+                "tmean_c": series.tmean_c[first:],
+                "tmax_c": series.tmax_c[first:],
+                "tmin_c": series.tmin_c[first:],
+            })
+        if not series.dates:
+            raise SourceUnavailableError("Brak danych pogodowych dla tej lokalizacji.")
+        return series
 
     @staticmethod
     def _assemble(

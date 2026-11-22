@@ -40,7 +40,7 @@ Wszystkie usługi wysyłają `Access-Control-Allow-Origin: *`:
 | IUNG-PIB `Susza:katgl_landuse2024` | kategoria gleby I–IV, wykrycie lasu, wody i zabudowy |
 | IUNG-PIB progi SMSR | krytyczne KBW: 14 upraw × 4 kategorie gleby × 14 okien (`src/data/iung-progi.json`) |
 | Open-Meteo (archiwum ERA5 i prognoza) | dzienny opad i ET₀: sezon daty analizy, 105 dni przed nią, 60 dni przed tą samą datą w 10 latach, prognoza 15 dni. Około 11 małych zapytań, archiwum w cache `localStorage` |
-| NASA POWER (zapas) | gdy archiwum Open-Meteo odrzuci zapytania (limit) albo nie odpowie: te same dni z NASA POWER, ET₀ liczone wzorem FAO-56 (`src/lib/nasaPower.ts`, ten sam wzór co backend). Tabela źródeł pokazuje, że użyto zapasu |
+| NASA POWER (zapas, przez backend) | gdy Open-Meteo odrzuci zapytania (limit) albo nie odpowie, pośrednik `/om` bierze te same dni z backendu (`/api/weather/daily`), który ma zapas NASA POWER (ET₀ wzorem FAO-56). Tabela źródeł pokazuje, że użyto zapasu |
 
 `src/analysis/local.ts` liczy z tych danych:
 - KBW w 14 oknach IUNG i werdykt suszy dla uprawy i gleby;
@@ -52,7 +52,7 @@ Wszystkie usługi wysyłają `Access-Control-Allow-Origin: *`:
 - listę działań posortowaną według zysku wody i symulację wybranych działań;
 - prognozę opadu na 7 dni i poradę o nawadnianiu dla bieżącej daty.
 
-To ocena uproszczona, używana tylko gdy backend nie odpowiada. Z backendem stan wody liczy serwer na tej samej osi (−5 susza … 0 optimum … +5 nadmiar): strona sucha z zapasu wody w strefie korzeniowej (bilans FAO-56), strona mokra z KBW 60 dni.
+To ocena uproszczona, używana tylko gdy backend nie odpowiada. Z backendem stan wody liczy serwer na tej samej osi (−5 susza … 0 optimum … +5 nadmiar): strona sucha z zapasu wody w strefie korzeniowej (bilans FAO-56), strona mokra z przesiąku, spływu i KBW 60 dni (`hydro_core.scoring.physical_water_state`).
 
 ## Podpięcia backendu
 
@@ -87,7 +87,6 @@ W trybie deweloperskim `&fixtures` w adresie analizy wczytuje próbkę odpowiedz
 - sezon i 14 okien IUNG;
 - tabelę progów;
 - KBW i skalę stanu wody;
-- zakresy pobierania pogody;
-- ET₀ zapasu NASA POWER (zgodność z backendem) i parser odpowiedzi NASA POWER.
+- zakresy pobierania pogody.
 
 `pnpm test:live` przechodzi prawdziwą działkę od numeru do wyniku. Pomiar z 21.11.2026: ok. 0,8 s.

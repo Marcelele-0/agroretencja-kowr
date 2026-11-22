@@ -56,6 +56,12 @@ __all__ = [
 ]
 
 LAPSE_RATE_C_PER_M = 0.0065
+DEFERRED_MESSAGE = (
+    "Nie czekano na to źródło: wynik analizy od niego nie zależy (np. kategorię gleby dała mapa IUNG-PIB). "
+    "Pobieranie trwa w tle – kolejna analiza użyje bufora."
+)
+# Deferred fetches keep running after the response; strong references stop them being collected.
+_DEFERRED_TASKS: set[asyncio.Task[Any]] = set()
 
 
 class ParcelNotFoundError(Exception):
@@ -185,14 +191,34 @@ class ParcelDataCollector:
             if kwargs is not None:
                 jobs[key] = kwargs
         tasks = {key: asyncio.create_task(self.clients[key].run(**kw)) for key, kw in jobs.items()}
-        remaining = max(0.5, deadline - perf_counter())
-        if tasks:
-            await asyncio.wait(tasks.values(), timeout=remaining)
+        wait_until = perf_counter() + max(0.5, deadline - perf_counter())
+        finished: dict[str, SourceResult[Any]] = {}
+        pending = set(tasks.values())
+        deferred: set[str] = set()
+        while pending:
+            done, pending = await asyncio.wait(
+                pending, timeout=max(0.0, wait_until - perf_counter()), return_when=asyncio.FIRST_COMPLETED
+            )
+            if not done:
+                break  # global deadline
+            for key, task in tasks.items():
+                if task in done and not task.cancelled():
+                    finished[key] = task.result()
+            waiting = [key for key, task in tasks.items() if task in pending]
+            if waiting and all(
+                (spec := SOURCES.get(key)).defer_if is not None and spec.defer_if(finished) for key in waiting
+            ):
+                deferred = set(waiting)
+                break
 
         results: dict[str, SourceResult[Any]] = {}
         for key, task in tasks.items():
             if task.done() and not task.cancelled():
                 results[key] = task.result()
+            elif key in deferred:
+                _DEFERRED_TASKS.add(task)
+                task.add_done_callback(_DEFERRED_TASKS.discard)
+                results[key] = self.clients[key].missing(DEFERRED_MESSAGE, perf_counter() - started)
             else:
                 task.cancel()
                 results[key] = self.clients[key].missing(

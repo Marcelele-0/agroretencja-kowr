@@ -38,8 +38,14 @@ export interface IrrigationStrategySummary { strategy_name: string; avg_yield_lo
 /** rl_recommendation = the /rl/recommend answer computed from the step-1 soil water (same numbers as the assessment). */
 export interface IrrigationAdvice { action_now: string; recommended_mm: number; rationale: string; forecast_mode: string; strategies_10y: IrrigationStrategySummary[]; rl_recommendation?: RlRecommendResponse | null }
 export interface SourceAuditEntry { category: string; source_name: string; endpoint_or_ref: string; mode: "live" | "pre_fetched" | "fallback" | "brak_danych"; retrieved_at: string; observation_date: string; spatial_resolution: string; license: string }
-/** Map layers from the NMT 1 m pipeline: zones carry a water-state value −5…+5. */
-export interface MapLayers { zones?: { type: "FeatureCollection"; features: { type: "Feature"; properties: { value: number; label?: string }; geometry: unknown }[] }; flows?: unknown }
+/** Map layers from the NMT pipeline: zones carry a water-state value −5…+5 clipped to the parcel. */
+export interface MapLayers { zones?: { type: "FeatureCollection"; features: { type: "Feature"; properties: { value: number; label?: string; area_pct?: number; area_ha?: number }; geometry: unknown }[] }; flows?: unknown }
+
+/** POST /api/zones: zones of 1–12 parcels on one shared grid and joint DEM; base states blend across shared borders. */
+/** `crop` = frontend crop code: the backend blends states only between neighbours with the same crop; different crops keep a hard border. */
+export interface ZonesParcel { parcel_id: string; water_state: number; crop?: string }
+export interface ZonesRequest { parcels: ZonesParcel[] }
+export interface ZonesResponse { zones: Record<string, NonNullable<MapLayers["zones"]>>; errors?: Record<string, string>; grid_m?: number; dem_source?: string; elapsed_s?: number }
 
 export interface AnalysisRequest { parcel_id: string; crop: string; analysis_date: string }
 export interface WhatIfRequest { parcel_id: string; crop: string; analysis_date: string; enabled_measures: string[] }

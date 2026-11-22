@@ -156,3 +156,65 @@ def test_dem_cache_roundtrip(tmp_path) -> None:
     assert loaded.elevation.shape == (3, 4)
     assert loaded.transform == dem.transform
     assert loaded.mean_elevation_m == 5.5
+
+def test_inmemory_georef_filter_is_narrow() -> None:
+    """The filter hides the rasterio in-memory race only; a real source without a geotransform still warns."""
+    import warnings
+
+    from rasterio.errors import NotGeoreferencedWarning
+
+    from backend.clients import silence_inmemory_georef_race
+
+    msg = "Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned."
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", NotGeoreferencedWarning)
+        silence_inmemory_georef_race()
+        for module in ("rasterio.features", "rasterio.warp"):
+            warnings.warn_explicit(msg, NotGeoreferencedWarning, f"{module}.py", 382, module=module)
+        with pytest.raises(NotGeoreferencedWarning):
+            warnings.warn_explicit(msg, NotGeoreferencedWarning, "nmt.py", 97, module="backend.clients.nmt")
+
+
+def test_parcel_mask_is_georeferenced_under_threads() -> None:
+    """Concurrent geometry_mask calls (S2 SCL pool) select the parcel pixels in map coordinates, no warning."""
+    import math
+    import warnings
+    from concurrent.futures import ThreadPoolExecutor
+
+    import numpy as np
+    from rasterio.errors import NotGeoreferencedWarning
+    from rasterio.features import geometry_mask
+    from rasterio.transform import from_origin
+    from shapely.geometry import mapping
+
+    from backend.clients import silence_inmemory_georef_race
+    from backend.clients.geo import parcel_shape
+
+    _, rows = parse_uldk_response(ULDK_OK)
+    parcel_2180 = to_puwg92(parcel_shape(build_parcel(rows[0]).geojson))
+    res = 10.0
+    minx, miny, maxx, maxy = parcel_2180.bounds
+    left, top = math.floor(minx / res) * res - res, math.ceil(maxy / res) * res + res
+    width = math.ceil((maxx - left) / res) + 1
+    height = math.ceil((top - miny) / res) + 1
+    transform = from_origin(left, top, res, res)
+    geom = mapping(parcel_2180)
+
+    rows_idx, cols_idx = np.mgrid[0:height, 0:width]
+    xs, ys = left + (cols_idx + 0.5) * res, top - (rows_idx + 0.5) * res
+    expected = np.array(
+        [[parcel_2180.contains(Point(x, y)) for x, y in zip(rx, ry, strict=True)] for rx, ry in zip(xs, ys, strict=True)]
+    )
+    assert expected.sum() > 10
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", NotGeoreferencedWarning)
+        silence_inmemory_georef_race()
+        with ThreadPoolExecutor(32) as pool:
+            masks = list(
+                pool.map(
+                    lambda _: geometry_mask([geom], out_shape=(height, width), transform=transform, invert=True),
+                    range(8000),
+                )
+            )
+    assert all((m == expected).all() for m in masks)

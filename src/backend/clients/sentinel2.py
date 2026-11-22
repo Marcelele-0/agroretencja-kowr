@@ -5,7 +5,11 @@ Reflectance = DN * scale + offset, with scale/offset read from each scene's meta
 (``raster:bands``), as required for processing baseline >= 04.00 (BOA_ADD_OFFSET = -1000).
 
 Speed rules (COGs are hosted in AWS us-west-2):
-- the cloud mask (SCL) is read first; spectral bands only for the chosen scene, in parallel,
+- the cloud mask (SCL) decides the scene; the bands of the most likely scene (first candidate)
+  are read speculatively in parallel with the masks on the grid derived from STAC metadata and
+  used only when that scene wins and its SCL grid is identical (otherwise a normal read follows),
+- reads run in a dedicated thread pool; the current window has its own concurrency limit, so the
+  nine history windows never queue in front of it,
 - past years use NDMI only (2 bands), the current scene also NDVI (4 bands),
 - per-scene parcel statistics are cached forever (a scene never changes),
 - years that do not finish before the source deadline are reported, the rest is kept.
@@ -14,8 +18,11 @@ Speed rules (COGs are hosted in AWS us-west-2):
 from __future__ import annotations
 
 import asyncio
+import contextvars
+import functools
 import logging
 import math
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date, timedelta
 from time import perf_counter
@@ -25,11 +32,13 @@ import numpy as np
 import rasterio
 from affine import Affine
 from pydantic import BaseModel, ConfigDict
+from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from rasterio.features import geometry_mask
 from rasterio.transform import array_bounds
 from rasterio.warp import transform_geom
 from rasterio.windows import Window, from_bounds
+from rasterio.windows import transform as window_transform
 from shapely.geometry import shape
 
 from backend.clients.base import (
@@ -50,12 +59,15 @@ _GDAL_ENV = {
     "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
     "AWS_NO_SIGN_REQUEST": "YES",
     "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif,.TIF,.tiff",
-    "GDAL_INGESTED_BYTES_AT_OPEN": "65536",
+    "GDAL_INGESTED_BYTES_AT_OPEN": "32768",  # COG headers fit; one round trip less on a cold connection
     "GDAL_HTTP_MERGE_CONSECUTIVE_RANGES": "YES",
     "GDAL_HTTP_TIMEOUT": "8",
     "GDAL_HTTP_MAX_RETRY": "1",
     "VSI_CACHE": "TRUE",
 }
+# GDAL range reads release the GIL; a dedicated pool keeps them from starving the default executor
+# (SQLite cache, terrain, compute) when several analyses run at once.
+_READ_POOL = ThreadPoolExecutor(max_workers=96, thread_name_prefix="s2-read")
 
 
 class S2SceneStats(BaseModel):
@@ -113,17 +125,43 @@ def _band_scaling(asset: dict[str, Any]) -> tuple[float, float]:
     return float(bands[0].get("scale", 1.0)), float(bands[0].get("offset", 0.0))
 
 
+def _parcel_window(crs: Any, transform: Affine, geom_wgs84: dict[str, Any]) -> tuple[dict[str, Any], Window]:
+    """Parcel geometry in the raster CRS and the pixel-aligned window (1-pixel margin) around it."""
+    geom = transform_geom("EPSG:4326", crs, geom_wgs84)
+    minx, miny, maxx, maxy = shape(geom).bounds
+    res = abs(transform.a)
+    win = from_bounds(minx - res, miny - res, maxx + res, maxy + res, transform=transform)
+    col0, row0 = math.floor(win.col_off), math.floor(win.row_off)
+    width = max(1, math.ceil(win.col_off + win.width) - col0)
+    height = max(1, math.ceil(win.row_off + win.height) - row0)
+    return geom, Window(col0, row0, width, height)
+
+
+def _grid_from_stac(item: dict[str, Any], geom_wgs84: dict[str, Any]) -> _Grid | None:
+    """Analysis grid predicted from STAC metadata (proj:epsg + SCL proj:transform), no download."""
+    try:
+        epsg = int(item["properties"]["proj:epsg"])
+        transform = Affine(*item["assets"]["scl"]["proj:transform"][:6])
+        crs = CRS.from_epsg(epsg)
+        _, window = _parcel_window(crs, transform, geom_wgs84)
+    except Exception:  # noqa: BLE001 - metadata missing or odd: no speculation, normal path
+        return None
+    return _Grid(crs, window_transform(window, transform), int(window.height), int(window.width), np.zeros((0, 0), bool))
+
+
+def _same_grid(a: _Grid, b: _Grid) -> bool:
+    return (
+        (a.height, a.width) == (b.height, b.width)
+        and tuple(a.transform) == tuple(b.transform)
+        and a.crs == b.crs
+    )
+
+
 def _read_scl(item: dict[str, Any], geom_wgs84: dict[str, Any]) -> _SclResult:
     """Open SCL (20 m), define the analysis grid around the parcel, compute the clear-sky mask."""
     with rasterio.Env(**_GDAL_ENV), rasterio.open(item["assets"]["scl"]["href"]) as src:
-        geom = transform_geom("EPSG:4326", src.crs, geom_wgs84)
-        minx, miny, maxx, maxy = shape(geom).bounds
-        res = abs(src.transform.a)
-        win = from_bounds(minx - res, miny - res, maxx + res, maxy + res, transform=src.transform)
-        col0, row0 = math.floor(win.col_off), math.floor(win.row_off)
-        width = max(1, math.ceil(win.col_off + win.width) - col0)
-        height = max(1, math.ceil(win.row_off + win.height) - row0)
-        window = Window(col0, row0, width, height)
+        geom, window = _parcel_window(src.crs, src.transform, geom_wgs84)
+        width, height = int(window.width), int(window.height)
         scl = src.read(1, window=window, boundless=True, fill_value=0)
         transform = src.window_transform(window)
         crs = src.crs
@@ -201,7 +239,9 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
             "datetime": f"{start.isoformat()}T00:00:00Z/{end.isoformat()}T23:59:59Z",
             "limit": 60,
             "query": {"eo:cloud_cover": {"lt": self.settings.s2_max_scene_cloud_pct}},
-            "fields": {"include": ["id", "properties.datetime", "properties.eo:cloud_cover", "assets"]},
+            "fields": {
+                "include": ["id", "properties.datetime", "properties.eo:cloud_cover", "properties.proj:epsg", "assets"]
+            },
         }
         resp = await self.http.post(self.settings.s2_stac_search_url, json=body, timeout=8.0)
         resp.raise_for_status()
@@ -215,7 +255,15 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
 
     async def _in_thread(self, sem: asyncio.Semaphore, func: Any, *args: Any) -> Any:
         async with sem:
-            return await asyncio.to_thread(func, *args)
+            call = functools.partial(contextvars.copy_context().run, func, *args)
+            return await asyncio.get_running_loop().run_in_executor(_READ_POOL, call)
+
+    async def _read_bands(
+        self, sem: asyncio.Semaphore, assets: dict[str, Any], names: tuple[str, ...], grid: _Grid
+    ) -> list[np.ndarray]:
+        return await asyncio.gather(
+            *(self._in_thread(sem, _read_on_grid, assets[n]["href"], grid, *_band_scaling(assets[n])) for n in names)
+        )
 
     async def _evaluate(
         self,
@@ -239,20 +287,42 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
                 logger.warning("Sentinel-2 SCL %s skipped", item.get("id"), exc_info=True)
                 return None
 
-        scls = await asyncio.gather(*(safe_scl(c) for c in candidates))
-        usable = [s for s in scls if s is not None and s.clear_fraction >= self.settings.s2_min_parcel_clear_fraction]
-        if not usable:
-            return None, None, None
-
-        chosen = usable[0]
         names = BANDS_CURRENT if current else BANDS_HISTORY
-        assets = chosen.item["assets"]
-        arrays = await asyncio.gather(
-            *(
-                self._in_thread(sem, _read_on_grid, assets[n]["href"], chosen.grid, *_band_scaling(assets[n]))
-                for n in names
-            )
-        )
+        # SCL reads are queued first, so they get the semaphore before the speculative band reads.
+        scl_tasks = [asyncio.create_task(safe_scl(c)) for c in candidates]
+        # Speculation: the current window (critical path) reads the bands of every candidate,
+        # a history window only those of its first (least cloudy) candidate.
+        speculative: dict[int, tuple[_Grid, asyncio.Task[list[np.ndarray]]]] = {}
+        for i, item in enumerate(candidates if current else candidates[:1]):
+            grid = _grid_from_stac(item, geom)
+            if grid is not None:
+                speculative[i] = (grid, asyncio.create_task(self._read_bands(sem, item["assets"], names, grid)))
+        all_tasks: list[asyncio.Task[Any]] = [*scl_tasks, *(t for _, t in speculative.values())]
+        for task in all_tasks:  # a discarded speculative read must not log "exception never retrieved"
+            task.add_done_callback(lambda t: t.cancelled() or t.exception())
+        try:
+            # First usable candidate in the given order (same pick as evaluating all masks first).
+            chosen: _SclResult | None = None
+            chosen_idx = -1
+            for i, task in enumerate(scl_tasks):
+                res = await task
+                if res is not None and res.clear_fraction >= self.settings.s2_min_parcel_clear_fraction:
+                    chosen, chosen_idx = res, i
+                    break
+            if chosen is None:
+                return None, None, None
+            spec = speculative.pop(chosen_idx, None)
+            for _, task in speculative.values():
+                task.cancel()  # frees semaphore slots of scenes that were not chosen
+            if spec is not None and _same_grid(spec[0], chosen.grid):
+                arrays = await spec[1]
+            else:
+                if spec is not None:
+                    spec[1].cancel()
+                arrays = await self._read_bands(sem, chosen.item["assets"], names, chosen.grid)
+        finally:
+            for task in all_tasks:
+                task.cancel()
         bands = dict(zip(names, arrays, strict=True))
         stats = _base_stats(chosen)
         ndmi = _normalized_difference(bands["nir08"], bands["swir16"])
@@ -279,7 +349,8 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
         analysis_date: date = kwargs["analysis_date"]
         parcel_key: str = kwargs.get("parcel_id") or ",".join(f"{v:.5f}" for v in bbox)
         s = self.settings
-        sem = asyncio.Semaphore(s.s2_max_concurrent_reads)
+        sem = asyncio.Semaphore(s.s2_max_concurrent_reads)  # history windows
+        sem_current = asyncio.Semaphore(s.s2_max_concurrent_reads)  # current window (critical path)
 
         history_years = [analysis_date.year - k for k in range(s.s2_history_years, 0, -1)]
         windows = [(analysis_date - timedelta(days=s.s2_current_window_days), analysis_date)] + [
@@ -296,7 +367,7 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
                 ordered = sorted(items, key=lambda it: it["properties"]["datetime"], reverse=True)[:3]
             else:
                 ordered = sorted(items, key=lambda it: it["properties"].get("eo:cloud_cover", 100.0))[:2]
-            return await self._evaluate(ordered, geom, parcel_key, sem, current=(idx == 0))
+            return await self._evaluate(ordered, geom, parcel_key, sem_current if idx == 0 else sem, current=(idx == 0))
 
         previous_window = (
             analysis_date - timedelta(days=s.s2_previous_window_days),

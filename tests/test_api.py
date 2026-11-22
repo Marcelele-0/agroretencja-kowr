@@ -62,6 +62,15 @@ def test_analyze_returns_all_kowr_steps(client_factory) -> None:
     assert d["irrigation"]["strategies_10y"]
     assert d["advice"]
     assert {"parcel", "zones", "flows"} <= set(d["map_layers"])
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+
+    parcel_geom = shape(d["parcel"]["geojson"])
+    z_feats = d["map_layers"]["zones"]["features"]
+    assert z_feats
+    assert 99.0 <= sum(f["properties"]["area_pct"] for f in z_feats) <= 101.0
+    z_union = unary_union([shape(f["geometry"]) for f in z_feats])
+    assert 100.0 * z_union.difference(parcel_geom).area / max(z_union.area, 1e-12) < 0.5
     hf_label = d["audit"]["model_versions"]["hydrofusion"]
     assert hf_label.startswith(("brak wag", "HydroFusion-PL"))
     # the synthetic bundle has no Sentinel-2 at all -> nothing to reconstruct from, no fake value

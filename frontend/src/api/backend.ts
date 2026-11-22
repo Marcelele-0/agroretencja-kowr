@@ -1,11 +1,11 @@
 import { request } from "../lib/http";
-import type { AnalysisRequest, AnalysisResponse, RlCompareResponse, RlRecommendRequest, RlRecommendResponse, WhatIfRequest, WhatIfScenarioResult } from "./contract";
+import type { AnalysisRequest, AnalysisResponse, RlCompareResponse, RlRecommendRequest, RlRecommendResponse, WhatIfRequest, WhatIfScenarioResult, ZonesRequest, ZonesResponse } from "./contract";
 
 /**
  * Hooks to the FastAPI backend. VITE_API_URL not set = "/" (same-origin proxy of `pnpm dev` / `pnpm preview` to
  * 127.0.0.1:8000), so the documented start gives the full analysis. Explicitly empty VITE_API_URL= = hooks off:
  * the UI shows the browser-only IUNG estimate and hides the steps that need the server.
- * Endpoints: POST /api/analyze, POST /api/what-if, GET /api/report.pdf, POST /rl/recommend, POST /rl/compare.
+ * Endpoints: POST /api/analyze, POST /api/zones, POST /api/what-if, GET /api/report.pdf, POST /rl/recommend, POST /rl/compare.
  */
 const RAW_API_URL: string = (import.meta.env.VITE_API_URL ?? "/").trim();
 export const backendEnabled = RAW_API_URL !== "";
@@ -53,6 +53,10 @@ async function post<T>(path: string, body: unknown, ms: number, signal?: AbortSi
 
 export function postAnalyze(req: AnalysisRequest, signal?: AbortSignal): Promise<AnalysisResponse> {
   return post<AnalysisResponse>("/api/analyze", req, 45000, signal);
+}
+/** Joint intra-parcel zones for several parcels on one grid. The UI shares one request per key through zonesCache. */
+export function postZones(req: ZonesRequest, signal?: AbortSignal): Promise<ZonesResponse> {
+  return post<ZonesResponse>("/api/zones", req, 30000, signal);
 }
 export function postWhatIf(req: WhatIfRequest, signal?: AbortSignal): Promise<WhatIfScenarioResult> {
   return post<WhatIfScenarioResult>("/api/what-if", req, 25000, signal);

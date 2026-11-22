@@ -314,10 +314,47 @@ def _om_source(name: str, res: HttpResult, detail: str) -> SourceRecord:
     )
 
 
+def _local_grid_archive(lat: float, lon: float, start: dt.date, end: dt.date) -> tuple[DailySeries, SourceRecord] | None:
+    """Read daily P and ET0 from the national pre-fetched weather grid when within 35 km."""
+    grid_path = Path(__file__).resolve().parents[3] / "data" / "cache" / "meteo" / "poland_grid_2016_2025.npz"
+    if not grid_path.exists():
+        return None
+    try:
+        with np.load(grid_path, allow_pickle=False) as z:
+            lats = np.asarray(z["lats"], dtype=np.float64)
+            lons = np.asarray(z["lons"], dtype=np.float64)
+            if lats.size == 0:
+                return None
+            idx = int(np.argmin(((lats - lat) * 111.0) ** 2 + ((lons - lon) * 70.0) ** 2))
+            dist_km = float(np.hypot((lats[idx] - lat) * 111.0, (lons[idx] - lon) * 70.0))
+            if dist_km > 38.0:
+                return None
+            dates = np.asarray(z["dates"], dtype="datetime64[D]")
+            precip = np.asarray(z["precip"][idx], dtype=np.float64)
+            et0 = np.asarray(z["et0"][idx], dtype=np.float64)
+            series = DailySeries(dates, precip, et0).window(start, end)
+            if len(series) == 0:
+                return None
+            rec = SourceRecord(
+                name="Lokalna siatka meteorologiczna Polski (Open-Meteo / NASA POWER)",
+                url=str(grid_path),
+                retrieved_at=_utcnow_iso(),
+                mode="cache",
+                license=LICENSES["open-meteo"],
+                detail=f"P i ET0 (FAO-56) {start}..{end}; punkt siatki {lats[idx]:.2f}N {lons[idx]:.2f}E",
+            )
+            return series, rec
+    except Exception:
+        return None
+
+
 def fetch_archive(
     client: HttpClient, lat: float, lon: float, start: dt.date, end: dt.date
 ) -> tuple[DailySeries, SourceRecord]:
-    """Daily P and ET0 from the Open-Meteo archive (reanalysis, ~9-25 km grid)."""
+    """Daily P and ET0 from the local national grid or Open-Meteo archive (reanalysis, ~9-25 km grid)."""
+    local = _local_grid_archive(lat, lon, start, end)
+    if local is not None:
+        return local
     params = {
         "latitude": round(lat, 4),
         "longitude": round(lon, 4),

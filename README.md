@@ -70,7 +70,7 @@ Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty pod API FastAPI (`POST /rl/r
    - Działkę dodajesz kliknięciem, numerem TERYT albo nazwą obrębu i numerem. Możesz wybrać kilka i dla każdej ustawić uprawę.
    - Dla działki nierolniczej (las, woda, zabudowa wg mapy IUNG-PIB) serwis pokazuje komunikat zamiast analizy.
 2. **Ocena sytuacji wodnej** dla wybranej daty (dziś albo dowolny dzień od 1.01.2016):
-   - stan wody słownie i na skali od −5 (susza skrajna) przez 0 (optimum) do +5 (zalanie). Strona sucha wynika z zapasu wody w strefie korzeniowej (bilans FAO-56), strona mokra z bilansu opad − parowanie z 60 dni;
+   - stan wody słownie i na skali od −5 (susza skrajna) przez 0 (optimum) do +5 (zalanie). Strona sucha wynika z zapasu wody w strefie korzeniowej (bilans FAO-56), poprawionego o bardzo niski bilans opad − parowanie z 60 dni i spadek wilgotności łanu z satelity; strona mokra z przesiąku i spływu z ostatnich 14–30 dni oraz dodatniego bilansu z 60 dni. Ryzyko nie jest niższe, niż wskazuje stan wody;
    - ryzyko (z wetem: susza wg progów IUNG-PIB, głęboki niedobór w fazie wrażliwej) i pewność danych;
    - ogólna ocena warunków wodnych 0–100 (WaterScore: zapas wody, KBW, satelita NDMI, pojemność gleby, teren);
    - wykres stanu dzień po dniu z prognozą na kolejne dni;
@@ -90,7 +90,7 @@ Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty pod API FastAPI (`POST /rl/r
 
 ```text
 Przeglądarka (frontend/, React + MapLibre)
-  ├─ ULDK, KIEG, ortofotomapa GUGiK, IUNG WMS, Open-Meteo (pośrednik /om), NASA POWER (zapas)
+  ├─ ULDK, KIEG, ortofotomapa GUGiK, IUNG WMS, Open-Meteo (pośrednik /om; przy limicie dane z backendu: /api/weather/daily z zapasem NASA POWER)
   ├─ src/analysis/local.ts: KBW w oknach IUNG (ocena uproszczona, gdy serwer nie odpowiada)
   └─ src/api/: podpięcia do backendu (domyślnie ten sam adres, pośrednik Vite)
 Backend (src/backend, FastAPI)        → POST /api/analyze, POST /api/what-if, GET /api/report.pdf, GET /api/registries
@@ -116,7 +116,7 @@ Architekturę backendu (rejestry rozszerzeń, jedna oś czasu historii i prognoz
 | Glebowo-rolnicze | IUNG-PIB WMS `Susza:katgl_landuse2024` | kategoria gleby I–IV, użytkowanie (odmowa dla lasu, wody, zabudowy) | frontend, backend, RL |
 | Glebowo-rolnicze | IUNG-PIB progi SMSR (Rozp. MRiRW z 11.04.2019) | krytyczne KBW: 14 upraw × 4 gleby × 14 okien | frontend, backend |
 | Meteorologiczne | Open-Meteo (ERA5 / ERA5-Land, ECMWF IFS, ECMWF ENS) | dzienny opad, ET₀ (FAO-56), Tmax; 10 lat, prognoza 16 dni, prognoza zespołowa | frontend, backend, RL |
-| Meteorologiczne | NASA POWER (zapas za Open-Meteo) | dzienny opad, temperatura, wilgotność, wiatr, promieniowanie → ET₀ FAO-56 | frontend, backend |
+| Meteorologiczne | NASA POWER (zapas za Open-Meteo) | dzienny opad, temperatura, wilgotność, wiatr, promieniowanie → ET₀ FAO-56 | backend (frontend przez pośrednika /om) |
 | Meteorologiczne | IMGW-PIB (API danych publicznych) | najbliższa stacja: temperatura, odległość, różnica wysokości | backend (data bieżąca) |
 | Satelitarne | Copernicus Sentinel-2 L2A Collection 1 (Earth Search STAC) | NDVI, NDMI działki, anomalia względem tego samego okresu w latach poprzednich | backend |
 | Ukształtowanie terenu | GUGiK NMT 1 m (WCS), Copernicus DEM GLO-30 (zapas) | spadek, spływ, TWI, zagłębienia | backend |
@@ -194,7 +194,7 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
 - **Bilans wody:** jednowarstwowy model FAO-56 („wiadro”) ze spływem SCS-CN. Nie uwzględnia wód gruntowych, podsiąku ani drenażu rurkowego.
 - **Ewapotranspiracja:** IUNG liczy ją metodą Penmana, a Open-Meteo metodą FAO-56 Penman-Monteith. Wyniki mogą różnić się o kilka procent.
 - **Satelita:** NDMI porównujemy z tym samym okresem na tej samej działce w poprzednich latach, a nie z wartością typową dla uprawy (w poprzednich latach na działce mogła rosnąć inna roślina). HydroFusion-PL odtwarza NDMI pod chmurami z R² 0,62, poniżej celu 0,78.
-- **Model terenu:** usługa NMT 1 m (WCS GUGiK) nie odpowiadała w testach 22.11.2026 nawet w 120 s. Analiza czeka na nią 4 s, potem używa Copernicus DEM 30 m (spadki przybliżone). Pobieranie 1 m trwa dalej w tle; gdy się uda, kolejna analiza działki użyje NMT 1 m.
+- **Model terenu:** usługa NMT 1 m (WCS GUGiK) nie odpowiadała w testach 22.11.2026 nawet w 120 s. Analiza czeka na nią ok. 4,5 s, potem używa Copernicus DEM 30 m (spadki przybliżone). Pobieranie 1 m trwa dalej w tle; gdy się uda, kolejna analiza działki użyje NMT 1 m.
 - **ULDK:** przy przeciążeniu GUGiK przekierowuje zapytania na stronę zastępczą. Pośrednik frontendu ponawia zapytanie do 5 razy, backend buforuje granice działek.
 - **Zgody wodnoprawne:** każda zmiana urządzeń wodnych (zastawka, piętrzenie, zbiornik) wymaga zgody Wód Polskich.
 - **Parametry upraw** (Kc, p, Ky, terminy) są z FAO-56/33 i wymagają weryfikacji z ekspertem dla warunków Polski.
@@ -209,13 +209,13 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
 
 ## 9. Sposób weryfikacji wyników i metryki walidacji
 
-1. **Testy jednostkowe frontendu** (`pnpm test`, 21 testów) sprawdzają:
+1. **Testy jednostkowe frontendu** (`pnpm test`, 38 testów) sprawdzają:
    - parsery ULDK i WKT oraz powierzchnię działki;
    - 14 okien IUNG i zgodność tabeli progów z publikacją IUNG;
    - KBW i skalę stanu wody;
    - zakresy pobierania pogody;
-   - ET₀ zapasu NASA POWER zgodne z backendem.
-2. **Testy backendu i modułu RL bez sieci** (`uv run pytest`, 131 testów): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, stan wody na osi susza–nadmiar, WaterScore i weta, przyczyny (bez procentów przy braku niedoboru), ranking retencji, pełna analiza dla każdej z 15 upraw, porady, API kroków 1–5, odmowa dla działki nierolniczej, HydroFusion-PL, środowisko i polityka RL.
+   - bufor analiz i strefy łączone kilku działek.
+2. **Testy backendu i modułu RL bez sieci** (`uv run pytest`, 148 testów): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, stan wody na osi susza–nadmiar, WaterScore i weta, przyczyny (bez procentów przy braku niedoboru), ranking retencji, pełna analiza dla każdej z 15 upraw, porady, API kroków 1–5, odmowa dla działki nierolniczej, HydroFusion-PL, środowisko i polityka RL.
 3. **Test na prawdziwych usługach** (`pnpm test:live`) przechodzi działkę 040706_5.0050.78/2 od numeru do wyniku.
 4. **Test end-to-end backendu** (22.11.2026, prawdziwe usługi): działki z 6 województw, daty 2018–2026, 15 upraw. Analiza trwa 5–16 s; las i zabudowa dostają odmowę; ocena i nawadnianie pokazują ten sam zapas wody. Przykładowe raporty: [reports/](reports/).
 5. **Walidacja z IUNG (plan):** werdykt suszy dla działki porównany z wykazem gminnym SMSR z lat 2020–2025.

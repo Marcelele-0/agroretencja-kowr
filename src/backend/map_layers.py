@@ -10,18 +10,25 @@ Three views of the UI (blueprint 4.3):
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 from affine import Affine
-from rasterio.features import shapes
-from rasterio.warp import transform_geom
+from rasterio.enums import Resampling
+from rasterio.features import rasterize, shapes
+from rasterio.transform import from_origin
+from rasterio.warp import reproject, transform_geom
+from shapely.geometry import mapping, shape
+from shapely.geometry.base import BaseGeometry
+from shapely.ops import unary_union
 
+from backend.clients.geo import parcel_shape, to_puwg92, to_wgs84
 from hydro_core.registry import Registry
 from hydro_core.schemas import RetentionRecommendation
-from hydro_core.topography import TerrainAnalysis, twi_relative
+from hydro_core.topography import TerrainAnalysis, terrain_wetness_offset
 
 logger = logging.getLogger(__name__)
 
@@ -66,22 +73,209 @@ def _parcel(ctx: MapContext) -> dict[str, Any]:
     return _fc([{"type": "Feature", "properties": {"label": "Granica działki (ULDK)"}, "geometry": ctx.parcel_geojson}])
 
 
+MIN_ZONE_SHARE = 0.008
+
+
+def _extract_polygonal(geom: BaseGeometry) -> BaseGeometry | None:
+    if geom.is_empty:
+        return None
+    if not geom.is_valid:
+        geom = geom.buffer(0)
+    if geom.is_empty:
+        return None
+    if geom.geom_type in ("Polygon", "MultiPolygon"):
+        return geom if geom.area > 1e-6 else None
+    if geom.geom_type == "GeometryCollection":
+        parts = [g for g in geom.geoms if g.geom_type in ("Polygon", "MultiPolygon") and g.area > 1e-6]
+        if not parts:
+            return None
+        merged = unary_union(parts)
+        return merged if merged.area > 1e-6 else None
+    return None
+
+
+def zone_base_step(water_state: float) -> int:
+    """Zone class of the parcel's own water state (used for gaps and as merge target)."""
+    return int(np.clip(np.rint(water_state), -5, 5))
+
+
+def zone_label(value: int, water_state: float) -> str:
+    """Zone label relative to the parcel's own water state."""
+    if value > water_state + 0.5:
+        return "strefa wilgotna (zbiera wodę)"
+    if value < water_state - 0.5:
+        return "strefa sucha (woda ucieka)"
+    return "typowa dla działki"
+
+
+def parcel_cells(parcel_2180: BaseGeometry, out_shape: tuple[int, int], transform: Affine) -> np.ndarray:
+    """Cells of a grid inside the parcel (cell-centre rule; all-touched for parcels thinner than a cell)."""
+    inside = rasterize([(parcel_2180, 1)], out_shape=out_shape, transform=transform, fill=0, dtype="uint8")
+    if not inside.any():
+        inside = rasterize(
+            [(parcel_2180, 1)], out_shape=out_shape, transform=transform, fill=0, dtype="uint8", all_touched=True
+        )
+    return inside.astype(bool)
+
+
+def centred_offset(offset: np.ndarray, inside: np.ndarray) -> np.ndarray:
+    """Terrain offset minus its mean over the parcel cells (zero mean inside the parcel).
+
+    Zones redistribute the parcel's water state inside the parcel; they must not move it. A raw
+    TPI offset is positive over a whole parcel lying in a broad hollow, which would shift every zone
+    one class wetter than the parcel's own state.
+    """
+    vals = offset[inside & np.isfinite(offset)]
+    return offset - float(vals.mean()) if vals.size else offset
+
+
+def class_polygons(
+    classes: np.ndarray, valid: np.ndarray, transform: Affine
+) -> list[tuple[BaseGeometry, int]]:
+    """Polygonize an integer class grid (EPSG:2180) into (polygon, class) pairs."""
+    out: list[tuple[BaseGeometry, int]] = []
+    if not valid.any():
+        return out
+    for raw_geom, raw_val in shapes(classes.astype(np.int16), mask=valid, transform=transform):
+        poly = _extract_polygonal(shape(raw_geom))
+        if poly is not None:
+            out.append((poly, int(raw_val)))
+    return out
+
+
+def group_zone_polygons(
+    polygons: list[tuple[BaseGeometry, int]], parcel_2180: BaseGeometry
+) -> dict[int, BaseGeometry]:
+    """Clip class polygons to the parcel and merge them per class value."""
+    by_val: dict[int, list[BaseGeometry]] = {}
+    for poly, val in polygons:
+        clipped = _extract_polygonal(poly.intersection(parcel_2180))
+        if clipped is not None:
+            by_val.setdefault(val, []).append(clipped)
+    return {
+        v: merged
+        for v, geoms in by_val.items()
+        if (merged := _extract_polygonal(unary_union(geoms))) is not None
+    }
+
+
+def zone_collection(
+    grouped: dict[int, BaseGeometry],
+    parcel_2180: BaseGeometry,
+    water_state: float,
+    fill_value: int | None = None,
+) -> dict[str, Any]:
+    """Zones FeatureCollection of one parcel: fill uncovered area, merge tiny zones, label.
+
+    Shared by the per-parcel map layer and the joint multi-parcel endpoint (``backend.zones``).
+    ``fill_value``: class of uncovered area (default: the parcel's own state class).
+    """
+    grouped = dict(grouped)
+    parcel_area = max(float(parcel_2180.area), 1e-6)
+    base_step = zone_base_step(water_state) if fill_value is None else int(np.clip(fill_value, -5, 5))
+
+    if grouped:
+        covered = unary_union(list(grouped.values()))
+        missing = _extract_polygonal(parcel_2180.difference(covered))
+        if missing is not None and missing.area > 1.0:
+            if base_step in grouped:
+                merged_missing = _extract_polygonal(unary_union([grouped[base_step], missing]))
+                if merged_missing is not None:
+                    grouped[base_step] = merged_missing
+            else:
+                grouped[base_step] = missing
+    else:
+        grouped = {base_step: parcel_2180}
+
+    if len(grouped) > 1:
+        small_vals = [v for v, g in grouped.items() if g.area < MIN_ZONE_SHARE * parcel_area]
+        if small_vals and len(small_vals) < len(grouped):
+            major_vals = [v for v in grouped if v not in small_vals]
+            target_v = base_step if base_step in major_vals else max(major_vals, key=lambda v: grouped[v].area)
+            merged_small = _extract_polygonal(unary_union([grouped[target_v], *(grouped.pop(v) for v in small_vals)]))
+            if merged_small is not None:
+                grouped[target_v] = merged_small
+
+    features: list[dict[str, Any]] = []
+    for v in sorted(grouped):
+        geom_2180 = grouped[v]
+        geom_wgs = _extract_polygonal(to_wgs84(geom_2180)) or to_wgs84(geom_2180)
+        features.append({
+            "type": "Feature",
+            "properties": {
+                "value": v,
+                "label": zone_label(v, water_state),
+                "area_pct": round(100.0 * geom_2180.area / parcel_area, 1),
+                "area_ha": round(geom_2180.area / 10_000.0, 2),
+            },
+            "geometry": mapping(geom_wgs),
+        })
+    return _fc(features)
+
+
 @MAP_LAYERS.register("zones")
 def _zones(ctx: MapContext) -> dict[str, Any] | None:
+    parcel_2180 = to_puwg92(parcel_shape(ctx.parcel_geojson))
+    if not parcel_2180.is_valid:
+        parcel_2180 = parcel_2180.buffer(0)
+    parcel_area = max(float(parcel_2180.area), 1e-6)
+    base_step = zone_base_step(ctx.water_state)
+
     t = ctx.terrain
-    if t is None:
-        return None
-    z = twi_relative(t)
-    state = np.clip(np.rint(ctx.water_state + TWI_TO_STATE * z), -5, 5)
-    valid = t.mask & np.isfinite(state)
+    if t is None or int(t.mask.sum()) < 2:
+        return _fc([{
+            "type": "Feature",
+            "properties": {
+                "value": base_step,
+                "label": zone_label(base_step, ctx.water_state),
+                "area_pct": 100.0,
+                "area_ha": round(parcel_area / 10_000.0, 2),
+            },
+            "geometry": ctx.parcel_geojson,
+        }])
 
-    def prop(v: int) -> dict[str, Any]:
-        label = "strefa wilgotna (zbiera wodę)" if v > ctx.water_state + 0.5 else (
-            "strefa sucha (woda ucieka)" if v < ctx.water_state - 0.5 else "typowa dla działki"
+    offset = terrain_wetness_offset(t)
+    off = np.where(np.isfinite(offset), offset, 0.0)
+    aff = t.transform[:6]
+
+    if t.resolution_m > 10.0:
+        minx, miny, maxx, maxy = parcel_2180.bounds
+        span = max(maxx - minx, maxy - miny)
+        fine_res = 10.0 if span <= 2500.0 else 20.0
+        left = math.floor(minx / fine_res) * fine_res - fine_res
+        bottom = math.floor(miny / fine_res) * fine_res - fine_res
+        right = math.ceil(maxx / fine_res) * fine_res + fine_res
+        top = math.ceil(maxy / fine_res) * fine_res + fine_res
+        width = max(2, round((right - left) / fine_res))
+        height = max(2, round((top - bottom) / fine_res))
+        dst_aff = from_origin(left, top, fine_res, fine_res)
+        dst = np.full((height, width), np.nan, dtype=np.float32)
+        # Bilinear resampling is linear: resample the offset, then add the (constant) parcel level.
+        reproject(
+            source=off.astype(np.float32),
+            destination=dst,
+            src_transform=Affine(*aff),
+            src_crs=PUWG1992,
+            dst_transform=dst_aff,
+            dst_crs=PUWG1992,
+            resampling=Resampling.bilinear,
+            dst_nodata=np.nan,
+            ERROR_THRESHOLD=0,
         )
-        return {"value": v, "label": label}
+        off_fine = dst.astype(np.float64)
+        aff_fine = dst_aff
+    else:
+        off_fine = off
+        aff_fine = Affine(*aff)
 
-    return _fc(_polygonize(np.nan_to_num(state).astype(int), valid, t.transform, PUWG1992, prop))
+    # Zero-mean offset over the classified parcel cells: the parcel mean stays its water state.
+    off_fine = centred_offset(off_fine, parcel_cells(parcel_2180, off_fine.shape, aff_fine))
+    cont_fine = np.clip(ctx.water_state + off_fine, -5.0, 5.0)
+    valid_fine = np.isfinite(cont_fine)
+
+    classes = np.clip(np.rint(np.nan_to_num(cont_fine, nan=float(ctx.water_state))), -5, 5).astype(np.int16)
+    grouped = group_zone_polygons(class_polygons(classes, valid_fine, aff_fine), parcel_2180)
+    return zone_collection(grouped, parcel_2180, ctx.water_state)
 
 
 @MAP_LAYERS.register("flows")

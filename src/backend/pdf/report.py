@@ -29,7 +29,7 @@ from hydro_core.crops import crop_params
 from hydro_core.registry import Registry
 from hydro_core.schemas import AnalysisResponse
 from hydro_core.text import days, state_label
-from hydro_core.topography import TerrainAnalysis, twi_relative
+from hydro_core.topography import TerrainAnalysis, terrain_wetness_offset
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +90,8 @@ def history_chart(r: AnalysisResponse) -> plt.Figure:
 def terrain_map(terrain: TerrainAnalysis | None, water_state: float) -> plt.Figure | None:
     if terrain is None:
         return None
-    z = twi_relative(terrain)
-    state = np.clip(water_state + 1.5 * z, -5, 5)
+    offset = terrain_wetness_offset(terrain)
+    state = np.clip(water_state + offset, -5, 5)
     fig, ax = plt.subplots(figsize=(3.4, 3.4))
     ax.imshow(np.where(terrain.mask, state, np.nan), cmap="RdYlBu", vmin=-5, vmax=5)
     ax.contour(terrain.elevation, levels=8, colors="#555", linewidths=0.3)

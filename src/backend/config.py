@@ -74,9 +74,7 @@ class Settings(BaseSettings):
     nmt_coverage_id: str = "DTM_PL-KRON86-NH_TIFF"
     nmt_buffer_m: float = 50.0
     nmt_max_pixels_per_side: int = 2000
-    # The 1 m WCS answered in > 120 s or not at all in tests (22.11.2026): waiting long only delays every
-    # analysis. Short wait; the download continues in the background and the next analysis uses it.
-    nmt_gugik_timeout_s: float = 4.0
+    nmt_gugik_timeout_s: float = 4.5
     nmt_timeout_s: float = 21.0
     nmt_background_timeout_s: float = 120.0
     nmt_gugik_short_wait_s: float = 2.0
@@ -114,6 +112,21 @@ class Settings(BaseSettings):
     def bdot10k_cache_dir(self) -> Path:
         """Directory with extracted per-county BDOT10k hydrography."""
         return self.cache_dir / "bdot10k"
+
+    @property
+    def copernicus_dem_dir(self) -> Path:
+        """Directory with pre-fetched national Copernicus DEM 30 m GeoTIFF tiles."""
+        return self.cache_dir / "copernicus_dem"
+
+    @property
+    def soilgrids_dir(self) -> Path:
+        """Directory with pre-fetched national SoilGrids 250 m GeoTIFF clips."""
+        return self.cache_dir / "soilgrids"
+
+    @property
+    def meteo_grid_path(self) -> Path:
+        """Compressed NPZ grid of 10-year Poland daily weather history."""
+        return self.cache_dir / "meteo" / "poland_grid_2016_2025.npz"
 
 
 @lru_cache(maxsize=1)

@@ -200,9 +200,6 @@ def compute_water_score(fx: FeatureContext, overrides: dict[str, float | None] |
 class VetoHit:
     level: RiskLevel
     reason: str
-    # True = the hit is about lack of water (it caps the water state on the dry side);
-    # False = another risk (e.g. erosion on a steep slope) that says nothing about soil moisture.
-    dry: bool = True
 
 
 VetoRule = Callable[[FeatureContext], VetoHit | None]
@@ -239,7 +236,7 @@ def _veto_slope(fx: FeatureContext) -> VetoHit | None:
     cfg = scoring_config()["veto"]
     slope = fx.get("slope_deg")
     if slope is not None and slope > cfg["steep_slope_deg"] and fx.inputs.soil_category.value in cfg["steep_light_soil_categories"]:
-        return VetoHit(RiskLevel.WYSOKIE, f"Spadek {slope:.1f}° na glebie lekkiej: duży spływ i erozja przy ulewach.", dry=False)
+        return VetoHit(RiskLevel.WYSOKIE, f"Spadek {slope:.1f}° na glebie lekkiej: duży spływ i erozja przy ulewach.")
     return None
 
 
@@ -279,7 +276,7 @@ def assess_risk(fx: FeatureContext, score: WaterScoreBreakdown) -> WaterRiskAsse
     therefore never reported with low risk, whatever the other score components say."""
     hits = [h for rule in VETO_RULES.values() if (h := rule(fx)) is not None]
     base = risk_from_score(score.total)
-    floor = risk_floor_from_state(water_state(fx))
+    floor = risk_floor_from_state(physical_water_state(fx))
     if _RISK_ORDER.index(floor) > _RISK_ORDER.index(base):
         base = floor
     level = base
@@ -293,56 +290,69 @@ def assess_risk(fx: FeatureContext, score: WaterScoreBreakdown) -> WaterRiskAsse
     )
 
 
-def physical_water_state(dr: float, raw: float, taw: float, kbw60: float | None) -> float:
-    """Water state on the physical axis −5 (extreme drought) … 0 (optimum) … +5 (flooding).
-
-    Dry side from the FAO-56 root-zone depletion: 0 while Dr ≤ ``optimum_dr_fraction_of_raw``·RAW,
-    −1 when stress starts (Dr = RAW), −5 at the wilting point (Dr = TAW). Wet side (soil close to
-    field capacity) from the 60-day climatic water balance with the same steps as the browser scale
-    (frontend/src/lib/kbw.ts ``stageFromKbw``), because the one-bucket balance cannot hold more than
-    field capacity.
-    """
-    cfg = scoring_config()["water_state"]
-    opt = float(cfg["optimum_dr_fraction_of_raw"])
-    raw = max(raw, 1e-6)
-    if dr > raw:
-        frac = min(1.0, (dr - raw) / max(taw - raw, 1e-6))
-        value = -1.0 - 4.0 * frac
-    elif dr > opt * raw:
-        value = -(dr - opt * raw) / max((1.0 - opt) * raw, 1e-6)
-    elif kbw60 is None:
-        value = 0.0
-    else:
-        value = float(sum(1 for step in cfg["wet_kbw60_steps_mm"] if kbw60 > float(step)))
+def water_state(score: float, risk: RiskLevel | None = None) -> float:
+    """UI scale -5..+5 = (score - 50) / 10, capped by the risk level (veto never averaged)."""
+    value = (score - 50.0) / 10.0
+    caps = scoring_config()["water_state"]["cap_by_risk"]
+    if risk is not None and risk.value in caps:
+        value = min(value, float(caps[risk.value]))
     return round(max(-5.0, min(5.0, value)), 1)
 
 
-def _dry_veto_level(fx: FeatureContext) -> RiskLevel | None:
-    levels = [h.level for rule in VETO_RULES.values() if (h := rule(fx)) is not None and h.dry]
-    return max(levels, key=_RISK_ORDER.index) if levels else None
-
-
-def water_state(fx: FeatureContext, index: int | None = None, b: int = 0, apply_veto: bool = True) -> float:
-    """Physical water state on a timeline day (default: the analysis date).
-
-    On the analysis date a drought veto (IUNG-PIB KBW below the legal threshold, deep deficit in a
-    sensitive stage, stress in the forecast) caps the state on the dry side - never averaged.
-    """
-    i = fx.i0 if index is None else int(index)
-    tr, tl = fx.trace, fx.timeline
+def physical_water_state(
+    fx: FeatureContext,
+    idx: int | None = None,
+    risk: RiskLevel | None = None,
+    b: int = 0,
+) -> float:
+    """Bipolar physical water state (−5…0…+5): 0 at optimum without excess runoff/percolation."""
+    i = fx.i0 if idx is None else int(idx)
+    tr = fx.trace
+    tl = fx.timeline
+    dr = float(tr.dr[b, i])
+    raw = max(float(tr.raw[b, i]), 1e-6)
+    taw = max(float(tr.taw(b)), 1e-6)
     kbw60 = tl.sum_before(tl.precip - tl.et0, 60, i)
-    value = physical_water_state(float(tr.dr[b, i]), float(tr.raw[b, i]), float(tr.taw(b)), kbw60)
-    if apply_veto and i == fx.i0:
-        level = _dry_veto_level(fx)
-        caps = scoring_config()["water_state"]["cap_by_risk"]
-        if level is not None and level.value in caps:
-            value = min(value, float(caps[level.value]))
-    return value
+
+    if dr > 0.35 * raw:
+        if dr <= raw:
+            val = -1.5 * (dr - 0.35 * raw) / max(0.65 * raw, 1e-6)
+        else:
+            val = -1.5 - 3.5 * min(1.0, (dr - raw) / max(taw - raw, 1e-6))
+        if kbw60 is not None and kbw60 < -120.0:
+            val += max(-0.5, (kbw60 + 120.0) / 200.0)
+        if i == fx.i0:
+            ndmi_z = fx.get("ndmi_anomaly_z")
+            if ndmi_z is not None and ndmi_z < -0.5:
+                val += max(-0.5, 0.25 * (ndmi_z + 0.5))
+        val = max(-5.0, min(0.0, val))
+    else:
+        sat_gate = max(0.0, 1.0 - dr / max(0.25 * raw, 10.0))
+        excess_14 = float(np.nansum(tr.dp[b, max(0, i - 13) : i + 1] + tr.ro[b, max(0, i - 13) : i + 1]))
+        excess_30 = float(np.nansum(tr.dp[b, max(0, i - 29) : i + 1] + tr.ro[b, max(0, i - 29) : i + 1]))
+        w14 = max(0.0, (excess_14 - 25.0) / 30.0)
+        w30 = max(0.0, (excess_30 - 40.0) / 45.0)
+        w60 = max(0.0, (kbw60 - 40.0) / 55.0) if kbw60 is not None else 0.0
+        val = min(5.0, sat_gate * max(w14, w30, w60))
+
+    caps = scoring_config()["water_state"]["cap_by_risk"]
+    if risk is not None and risk.value in caps:
+        val = min(val, float(caps[risk.value]))
+    return round(max(-5.0, min(5.0, val)), 1)
 
 
-def daily_water_states(fx: FeatureContext, indices: np.ndarray, b: int = 0) -> np.ndarray:
-    """Physical water state on the given timeline days (the daily balance and 60-day KBW)."""
-    return np.array([water_state(fx, int(i), b, apply_veto=False) for i in indices], dtype=float)
+DAILY_COMPONENT = "zapas_wody_w_glebie"
+
+
+def daily_water_states(
+    fx: FeatureContext, score: WaterScoreBreakdown, indices: np.ndarray, b: int = 0
+) -> np.ndarray:
+    """Bipolar physical water state on the given timeline days."""
+    _ = score  # kept in signature for caller compatibility
+    out = np.empty(len(indices))
+    for k, i in enumerate(indices):
+        out[k] = physical_water_state(fx, idx=int(i), risk=None, b=b)
+    return out
 
 
 # ======================================================================================
