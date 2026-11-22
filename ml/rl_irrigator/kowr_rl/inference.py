@@ -481,6 +481,144 @@ def _long_plan(batch: SeasonBatch, pol: Any, state0: SimState, t_date: int, date
     }
 
 
+#: Off-season dates that still get the 14-day soil-water forecast: today and 1 day before.
+OFFSEASON_FORECAST_MAX_AGE_DAYS = 1
+OFFSEASON_ACTION = "Nie podlewaj teraz"
+MONTHS_GEN_PL = ("stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września",
+                 "października", "listopada", "grudnia")
+
+
+def _day_month_pl(d: dt.date) -> str:
+    return f"{d.day} {MONTHS_GEN_PL[d.month - 1]}"
+
+
+def _offseason_plan(client: HttpClient, lat: float, lon: float, date: dt.date, today: dt.date, crop: CropParams, taw: float,
+                    obs: DailySeries, fc_series: DailySeries | None, common: dict[str, Any], sources: list[SourceRecord],
+                    days: int) -> dict[str, Any]:
+    """Hold-off recommendation outside the crop season: zero doses and the 14-day soil-water forecast.
+
+    No policy runs (there is no irrigation outside the season). The three-zone model (``soil3``)
+    starts from ``offseason_zone_state`` and runs ``days`` days on the 51 ECMWF ensemble members
+    (analog years when no ensemble is available) with the off-season surface of
+    ``forecast14_runtime.offseason_surface``: Kc = the crop's FAO-56 Tab. 12 Kc_ini (bare soil /
+    stubble / dormant winter crop), f_T = 0.1, roots at the crop's maximum depth. Returns the same
+    ``recommendation`` keys as the in-season path, with ``plan_14d`` in the in-season shape."""
+    from . import forecast14_runtime as f14
+    from .forecast14 import N_DAYS, EnsCalibration
+    from .soil3 import zone_awc_from_profile
+
+    issued_p, issued_e, fmode, fsrc = _issued_forecast(client, lat, lon, date, today, obs, fc_series, max(days, 7))
+    sources.extend(fsrc)
+    n_fc = {"live_ecmwf": 14, "archived_ecmwf": N_LEADS}.get(fmode, 0)
+    surf = f14.offseason_surface(crop)
+    H = min(days, N_DAYS)
+
+    ens = common.get("ensemble")
+    ens = None if ens is None or isinstance(ens, Exception) else ens
+    ens_p = ens_e = None
+    if ens is not None:
+        ens_p, ens_e = f14.ens_weather(ens, EnsCalibration.load(), min(N_DAYS, ens["precip"].shape[1]))
+        sources.append(SourceRecord(name=ens["name"], url=ens["url"], retrieved_at=ens["retrieved_at"] or "",
+                                    mode="cache" if ens.get("from_cache") else "live", license=f14.ENS_LICENSE,
+                                    detail=f"{ens_p.shape[0]} czlonkow: opad, temperatura 2 m, promieniowanie; {ens_p.shape[1]} dni"))
+        H = min(H, ens_p.shape[1])
+    prof_res = common.get("soilgrids")
+    profile, psrc = None, "rownomierny rozklad wody z glebokoscia (profil SoilGrids niedostepny)"
+    if prof_res is not None and not isinstance(prof_res, Exception):
+        profile, pres = prof_res
+        sources.append(SourceRecord(name="ISRIC SoilGrids 2.0 (wv0033, wv1500)", url=pres.url, retrieved_at=pres.retrieved_at,
+                                    mode="cache" if pres.from_cache else "live", license=f14.SOILGRIDS_LICENSE,
+                                    detail="woda przy pojemnosci polowej i punkcie trwalego wiedniecia, 6 warstw 0-200 cm"))
+        psrc = "SoilGrids 2.0 (250 m), skalowane do TAW kategorii IUNG-PIB"
+    awc = zone_awc_from_profile(profile, taw)
+    d0 = f14.offseason_zone_state(obs.dates, obs.precip, obs.et0, crop, date, awc)
+    frac = np.repeat(surf["frac"][None], H, axis=0)
+    kc, ft = np.full(H, surf["kc"]), np.full(H, surf["f_t"])
+    za_p, za_e = _analog_arrays(obs, date, H, date.year)
+    za_p, za_e = (za_p[:, 0], za_e[:, 0]) if len(za_p) else (np.zeros((0, H)), np.zeros((0, H)))
+    post = f14.load_postproc()
+    ep = None if ens_p is None else ens_p[:, :H]
+    ee = None if ens_e is None else ens_e[:, :H]
+    fc = f14.zone_forecast(d0, awc, frac, kc, ft, crop.p, ep, ee, za_p, za_e, post)
+    soil_zones = None
+    if fc:
+        w_ens = np.asarray((post or {}).get("w_ens", [1.0] * N_DAYS)[:H])
+        mixed = [i + 1 for i, w in enumerate(w_ens) if w < 1.0]
+        wsrc = (f"ECMWF ENS ({ep.shape[0]} czlonkow)" + (f", od dnia {mixed[0]} laczony z latami analogicznymi (wagi z roku walidacyjnego 2024)" if mixed else "")
+                if ep is not None else f"lata analogiczne: te same dni w {len(za_p)} latach archiwum")
+        soil_zones = f14.soil_zones_block(date, d0, awc, frac, fc, None, psrc, wsrc)
+        soil_zones["method"] = (
+            f"Poza sezonem: trzy strefy gleby (0-28, 28-100, 100-200 cm) z powierzchnią gołej gleby, ścierniska lub uprawy ozimej "
+            f"w spoczynku: Kc = {surf['kc']:.2f} (Kc_ini uprawy, FAO-56 tab. 12), parowanie głównie z wierzchniej strefy, "
+            f"strefa korzeni do {surf['root_m']:.1f} m. Stan na dziś z bilansu od 1 sierpnia poprzedniego roku"
+            + (" (sezon bez nawadniania, potem dni po zbiorze)" if date > crop.season_end(date.year) else "")
+            + "; kolejne dni dla każdego scenariusza pogody.")
+    prob_source = "ecmwf_ens" if ep is not None else ("analog_years" if len(za_p) else None)
+
+    # root-zone water at the start of each day: today's state, then the median at the end of the previous day
+    root_start = None
+    if soil_zones:
+        root_start = [soil_zones["today"]["root_zone_water_pct"]] + [float(round(100 * float(x))) for x in fc["root_median"]]
+    stress = fc["stress_probability"] if fc else None
+    plan_7d = []
+    for k in range(min(7, H)):
+        plan_7d.append({
+            "day": k,
+            "dose_mm": 0.0,
+            "precip_assumed_mm": _r(issued_p[k]),
+            "et0_assumed_mm": _r(issued_e[k]),
+            "storage_pct_taw_start": None if root_start is None else root_start[k],
+            "stress_expected": bool(stress is not None and stress[k] >= 0.5),
+            "date": (date + dt.timedelta(days=k)).isoformat(),
+        })
+    plan_days = [{
+        "day": k + 1,
+        "date": (date + dt.timedelta(days=k)).isoformat(),
+        "dose_mm": 0.0,
+        "irrigation_probability": 0.0,
+        "precip_assumed_mm": _r(issued_p[k]),
+        "confidence": PLAN_DAY_CONFIDENCE.get(k + 1, "niska"),
+    } for k in range(H)]
+    plan_14d = {
+        "days": plan_days,
+        "total_plan_mm": 0.0,
+        # no irrigation water need outside the season; the crop-water deficit is in soil_zones
+        "water_need_mm": None,
+        "forecast_days_used": n_fc,
+        "probability_source": prob_source,
+        "offseason": True,
+        "offseason_kc": surf["kc"],
+        "offseason_surface": {
+            "kc": surf["kc"],
+            "kc_source": f"FAO-56 tab. 12: Kc_ini uprawy '{crop.label_pl}' (goła gleba, ściernisko lub uprawa ozima w spoczynku)",
+            "f_t": surf["f_t"],
+            "root_depth_m": _r(surf["root_m"], 2),
+        },
+        "method": "Poza sezonem nie ma dawek: każdy dzień ma 0 mm. Prognoza wody w glebie: model trzech stref na pogodzie "
+                  + ("51 członków ensemble ECMWF (14 dni)." if prob_source == "ecmwf_ens" else "tych samych dni w innych latach archiwum."),
+        "advice": "Nie podlewaj poza sezonem; decyzje o dawkach wracają od początku sezonu.",
+        **({"soil_zones": soil_zones} if soil_zones else {}),
+    }
+    return {
+        "recommendation": {
+            "action_now": OFFSEASON_ACTION,
+            "dose_today_mm": 0.0,
+            "total_7d_mm": 0.0,
+            "plan_7d": plan_7d,
+            "window": [],
+            "scenarios_7d_mm": {"bez_opadu": 0.0, "wg_prognozy": 0.0, "opad_x1_5": 0.0},
+            "alternative": None,
+            "plan_14d": plan_14d,
+        },
+        "forecast_mode": fmode,
+        "limitations": [
+            (f"Poza sezonem bilans liczy powierzchnię z Kc = {surf['kc']:.2f} (Kc_ini uprawy, FAO-56 tab. 12); nie uwzględnia "
+             "pokrywy śnieżnej ani zamarzniętej gleby – opad wsiąka od razu."),
+            "Korekty rozrzutu ensemble i przedziału P10–P90 dopasowano na sezonie wegetacyjnym 2024; poza sezonem to przybliżenie.",
+        ],
+    }
+
+
 # ======================================================================================
 # recommend()
 # ======================================================================================
@@ -562,7 +700,10 @@ def recommend(
     c = crops[crop_key]
     season_start, season_end = c.season_start(date.year), c.season_end(date.year)
     in_season = season_start <= date <= season_end
-    want_14 = int(plan_days) > 7 and in_season
+    # off season, "today" (or yesterday, e.g. right after midnight) still gets the 14-day
+    # soil-water forecast with zero doses; older off-season dates keep the history only
+    offseason_14 = not in_season and int(plan_days) > 7 and (today - date).days <= OFFSEASON_FORECAST_MAX_AGE_DAYS
+    want_14 = (int(plan_days) > 7 and in_season) or offseason_14
     zones_for = date if want_14 else None
     if _prefetched is not None:
         code, obs, pre_sources, fc_series = _prefetched
@@ -593,6 +734,23 @@ def recommend(
     if not in_season:
         hist = compare_strategies(lat, lon, crop, budget_mm, client=client, today=today, _prefetched=(code, obs, list(sources)))
         when = "przed sezonem" if date < season_start else "po sezonie"
+        if offseason_14:
+            off = _offseason_plan(client, lat, lon, date, today, c, taw, obs, fc_series, common, sources, int(min(plan_days, 14)))
+            seen = "wodę w glebie" if "soil_zones" in off["recommendation"]["plan_14d"] else "opad"
+            label = c.label_pl[:1].upper() + c.label_pl[1:]
+            result = finish(
+                "out_of_season",
+                f"{label} jest poza sezonem ({_day_month_pl(season_start)} – {_day_month_pl(season_end)}). "
+                f"Prognoza na 14 dni pokazuje {seen}; decyzje o dawkach wracają od początku sezonu.",
+                location=location,
+                crop=crop_info,
+                recommendation=off["recommendation"],
+                forecast_mode=off["forecast_mode"],
+                history=hist.get("strategies"),
+                history_years=hist.get("seasons"),
+            )
+            result["limitations"] = [*off["limitations"], *STATIC_LIMITATIONS]
+            return result
         return finish(
             "out_of_season",
             f"Data {date} jest {when} uprawy '{c.label_pl}' ({season_start} – {season_end}). "

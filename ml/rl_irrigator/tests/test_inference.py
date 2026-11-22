@@ -85,6 +85,8 @@ def mock_client(tmp_path, monkeypatch):
     handler, calls = make_handler(TODAY)
     client = HttpClient(tmp_path / "cache", transport=httpx.MockTransport(handler))
     monkeypatch.setattr(inf, "_CLIENT", client)
+    # hermetic: the national weather grid in data/cache would bypass the mocked archive
+    monkeypatch.setattr("kowr_rl.data._local_grid_archive", lambda *a, **k: None)
     client.calls = calls  # type: ignore[attr-defined]
     return client
 
@@ -324,3 +326,88 @@ def test_prefetched_plan_14_fetches_only_the_zone_sources(mock_client) -> None:
     assert p14["probability_source"] == "ecmwf_ens" and "soil_zones" in p14
     new = {h: n - before.get(h, 0) for h, n in mock_client.calls.items() if n - before.get(h, 0)}
     assert set(new) == {"ensemble-api.open-meteo.com", "rest.isric.org"}, new
+
+
+# --------------------------------------------------------------------------- off season, "today"
+OFF_TODAY = dt.date(2026, 11, 22)  # after the season of every crop
+
+
+@pytest.fixture
+def off_client(tmp_path, monkeypatch):
+    handler, calls = make_handler(OFF_TODAY)
+    client = HttpClient(tmp_path / "cache", transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(inf, "_CLIENT", client)
+    monkeypatch.delenv("KOWR_RL_ENS_ARCHIVE", raising=False)
+    monkeypatch.setattr("kowr_rl.data._local_grid_archive", lambda *a, **k: None)
+    client.calls = calls  # type: ignore[attr-defined]
+    return client
+
+
+def test_offseason_today_gives_hold_off_and_soil_forecast(off_client, monkeypatch) -> None:
+    monkeypatch.setattr(inf, "get_policy", lambda name: pytest.fail("policy must not run off season"))
+    out = inf.recommend(52.1, 18.2, "kukurydza", OFF_TODAY, 150, plan_days=14, client=off_client, today=OFF_TODAY)
+    assert out["status"] == "out_of_season", out.get("message")
+    assert out["message"].startswith("Kukurydza na ziarno jest poza sezonem (25 kwietnia – 11 października).")
+    assert "decyzje o dawkach wracają od początku sezonu" in out["message"]
+    assert out["history"] and {s["strategy"] for s in out["history"]} >= {"none", "fao_rule"}
+    r = out["recommendation"]
+    assert r["action_now"] == "Nie podlewaj teraz"
+    assert r["dose_today_mm"] == 0 and r["total_7d_mm"] == 0 and r["window"] == []
+    assert len(r["plan_7d"]) == 7 and all(d["dose_mm"] == 0 for d in r["plan_7d"])
+    assert r["plan_7d"][0]["date"] == OFF_TODAY.isoformat()
+    p14 = r["plan_14d"]
+    assert len(p14["days"]) == 14
+    assert all(d["dose_mm"] == 0 and d["irrigation_probability"] == 0 for d in p14["days"])
+    assert p14["total_plan_mm"] == 0 and p14["water_need_mm"] is None
+    assert p14["probability_source"] == "ecmwf_ens" and p14["offseason"] is True
+    assert p14["offseason_kc"] == inf.load_crops()["kukurydza"].kc_ini == p14["offseason_surface"]["kc"]
+    _check_zones(p14, 14)
+    z = p14["soil_zones"]
+    assert 0 <= z["today"]["root_zone_water_pct"] <= 100 and "ECMWF ENS" in z["weather_source"]
+    assert all("stress_probability_with_plan" not in d for d in z["days"])
+    assert off_client.calls.get("ensemble-api.open-meteo.com") == 1
+    assert any("Kc_ini" in x for x in out["limitations"])
+    json.dumps(out)
+
+
+def test_offseason_yesterday_and_winter_crop(off_client) -> None:
+    out = inf.recommend(52.1, 18.2, "zboza_ozime", OFF_TODAY - dt.timedelta(days=1), 150, plan_days=14, client=off_client, today=OFF_TODAY)
+    assert out["status"] == "out_of_season"
+    p14 = out["recommendation"]["plan_14d"]
+    assert p14["probability_source"] == "analog_years"  # no live ensemble for yesterday, archive disabled
+    assert p14["offseason_kc"] == 0.4 and all(d["dose_mm"] == 0 for d in p14["days"])
+    _check_zones(p14, 14)
+
+
+def test_offseason_historical_or_short_plan_has_no_plan(off_client) -> None:
+    out = inf.recommend(52.1, 18.2, "kukurydza", "2026-11-10", 150, plan_days=14, client=off_client, today=OFF_TODAY)
+    assert out["status"] == "out_of_season"
+    assert out["message"].startswith("Data 2026-11-10 jest po sezonie") and "recommendation" not in out
+    out = inf.recommend(52.1, 18.2, "kukurydza", OFF_TODAY, 150, plan_days=7, client=off_client, today=OFF_TODAY)
+    assert out["status"] == "out_of_season" and "recommendation" not in out
+    assert "rest.isric.org" not in off_client.calls and "ensemble-api.open-meteo.com" not in off_client.calls
+
+
+def test_in_season_plan_has_no_offseason_fields(mock_client) -> None:
+    out = inf.recommend(52.1, 18.2, "kukurydza", TODAY, 150, 0, plan_days=14, client=mock_client, today=TODAY)
+    assert out["status"] == "ok"
+    p14 = out["recommendation"]["plan_14d"]
+    assert "offseason" not in p14 and "offseason_kc" not in p14
+    assert out["recommendation"]["action_now"] != inf.OFFSEASON_ACTION
+
+
+def test_offseason_zone_state_joins_the_season(off_client) -> None:
+    from kowr_rl import forecast14_runtime as f14
+
+    obs = inf.fetch_archive(off_client, 52.1, 18.2, inf.ARCHIVE_START, OFF_TODAY - dt.timedelta(days=1))[0]
+    c = inf.load_crops()["kukurydza"]
+    awc = np.array([40.0, 100.0, 120.0])
+    with pytest.raises(ValueError):
+        f14.offseason_zone_state(obs.dates, obs.precip, obs.et0, c, dt.date(2025, 7, 1), awc)
+    # before sowing: the pre-sowing spin-up of zone_state, inside the zone capacities
+    d_pre = f14.offseason_zone_state(obs.dates, obs.precip, obs.et0, c, c.season_start(2025) - dt.timedelta(days=1), awc)
+    assert np.all((d_pre >= 0) & (d_pre <= awc))
+    # the day after harvest equals zone_state at the end of the season (no off-season day run yet)
+    after = c.season_end(2025) + dt.timedelta(days=1)
+    d_after = f14.offseason_zone_state(obs.dates, obs.precip, obs.et0, c, after, awc)
+    assert np.allclose(d_after, f14.zone_state(obs.dates, obs.precip, obs.et0, c, after, awc)["d0"])

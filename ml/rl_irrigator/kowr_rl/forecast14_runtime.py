@@ -27,6 +27,7 @@ from .soil3 import (
     WATER_CLASS_PL,
     ZONE_BOUNDS_M,
     canopy_share,
+    max_root_depth,
     relative_water,
     root_depth_curve,
     root_fractions,
@@ -191,6 +192,63 @@ def zone_state(dates: np.ndarray, precip: np.ndarray, et0: np.ndarray, crop: Cro
         irr = np.array([0.0 if past_doses is None or t >= len(past_doses) else float(past_doses[t])])
         d = step3(d[None], awc[None], fr[t][None], sp[t : t + 1], irr, se[t : t + 1], kc[t : t + 1], ft[t : t + 1], np.array([crop.p])).d[0]
     return {"d0": d, "kc": kc, "f_t": ft, "frac": fr, "t_date": np.array(t_date)}
+
+
+# --------------------------------------------------------------------------- off-season surface
+#: Canopy share f_T of the off-season surface: the value ``canopy_share`` gives at Kc = Kc_ini.
+OFFSEASON_F_T = 0.1
+
+
+def offseason_surface(crop: CropParams) -> dict[str, Any]:
+    """Water-balance parameters of the field outside the crop season.
+
+    Kc = the crop's FAO-56 Tab. 12 Kc_ini (``crops.yaml``). Kc_ini describes a nearly bare soil
+    surface with little cover: stubble after harvest of a spring crop, or a dormant winter crop
+    (for winter wheat the table value 0.4 is the one for frozen soils). Evaporation dominates:
+    f_T = 0.1, as ``canopy_share`` at Kc_ini. The root zone is the crop's maximum root depth
+    (roots of the dormant winter crop, or the profile the next crop uses), so the reported
+    root-zone water matches the in-season definition at full root depth."""
+    root_m = max_root_depth(crop)
+    return {"kc": float(crop.kc_ini), "f_t": OFFSEASON_F_T, "root_m": root_m, "frac": root_fractions(np.array(root_m))}
+
+
+def offseason_zone_state(dates: np.ndarray, precip: np.ndarray, et0: np.ndarray, crop: CropParams, date: dt.date,
+                         awc: np.ndarray) -> np.ndarray:
+    """(3,) depletion of the zones on the morning of an off-season ``date`` (no irrigation).
+
+    Before the season start of ``date.year``: the pre-sowing spin-up of ``zone_state`` (from
+    1 August of the previous year), so the state joins the in-season path at sowing. After the
+    season end: ``zone_state`` up to the day after harvest (crop Kc, roots and canopy), then the
+    days after harvest with the off-season surface (``offseason_surface``)."""
+    dates = np.asarray(dates, dtype="datetime64[D]")
+    s, e = crop.season_start(date.year), crop.season_end(date.year)
+    if s <= date <= e:
+        raise ValueError(f"{date} is inside the season {s} - {e}")
+
+    def window(a: dt.date, n: int) -> tuple[np.ndarray, np.ndarray]:
+        want = np.datetime64(a, "D") + np.arange(n)
+        idx = np.clip(np.searchsorted(dates, want), 0, max(len(dates) - 1, 0))
+        hit = dates[idx] == want
+        p, ev = np.full(n, np.nan), np.full(n, np.nan)
+        p[hit], ev[hit] = np.asarray(precip)[idx[hit]], np.asarray(et0)[idx[hit]]
+        return p, ev
+
+    if date < s:
+        pre0 = dt.date(date.year - 1, 8, 1)
+        pp, pe = window(pre0, (date - pre0).days)
+        return spin_up3(pp[None], pe[None], awc[None])[0]
+    after = e + dt.timedelta(days=1)
+    d = zone_state(dates, precip, et0, crop, after, awc)["d0"]
+    surf = offseason_surface(crop)
+    n = (date - after).days
+    sp, se = window(after, n)
+    zero = np.zeros(1)
+    for t in range(n):
+        if not (np.isfinite(sp[t]) and np.isfinite(se[t])):
+            continue
+        d = step3(d[None], awc[None], surf["frac"][None], sp[t : t + 1], zero, se[t : t + 1], np.array([surf["kc"]]),
+                  np.array([surf["f_t"]]), np.array([crop.p])).d[0]
+    return d
 
 
 # --------------------------------------------------------------------------- forecast distribution
