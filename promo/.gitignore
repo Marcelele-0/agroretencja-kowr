@@ -1,0 +1,7 @@
+node_modules/
+out/
+public/rec/*.mp4
+public/rec/*.png
+public/rec/*.raw/
+capture/.profile/
+src/assets.generated.json

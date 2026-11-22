@@ -1,0 +1,212 @@
+{
+  "fps": 30,
+  "clips": {
+    "map_search": {
+      "file": "rec/map_search.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationInFrames": 428,
+      "marks": {
+        "searchSubmit": 94,
+        "parcelSelected": 180,
+        "listReady": 392
+      },
+      "boxes": {
+        "searchInput": {
+          "frame": 42,
+          "x": 0,
+          "y": 64,
+          "w": 399,
+          "h": 61
+        },
+        "list": {
+          "frame": 392,
+          "x": 0,
+          "y": 197,
+          "w": 399,
+          "h": 683
+        }
+      }
+    },
+    "analysis_load": {
+      "file": "rec/analysis_load.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationInFrames": 265,
+      "marks": {
+        "analyzeClick": 85,
+        "cardsReady": 94,
+        "zonesVisible": 95
+      },
+      "boxes": {
+        "map": {
+          "frame": 109,
+          "x": 620,
+          "y": 61,
+          "w": 1300,
+          "h": 1019
+        },
+        "cards": {
+          "frame": 109,
+          "x": 20,
+          "y": 246,
+          "w": 579,
+          "h": 713
+        },
+        "firstHistogram": {
+          "frame": 109,
+          "x": 22,
+          "y": 365,
+          "w": 575,
+          "h": 55
+        },
+        "detail": {
+          "frame": 109,
+          "x": 20,
+          "y": 979,
+          "w": 579,
+          "h": 101
+        }
+      }
+    },
+    "detail_scroll": {
+      "file": "rec/detail_scroll.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationInFrames": 445,
+      "marks": {
+        "cardClick": 42,
+        "measuresVisible": 242
+      },
+      "boxes": {
+        "activeCard": {
+          "frame": 47,
+          "x": 20,
+          "y": 784,
+          "w": 579,
+          "h": 175
+        },
+        "measures": {
+          "frame": 242,
+          "x": 36,
+          "y": 77,
+          "w": 547,
+          "h": 1003
+        }
+      }
+    },
+    "replay": {
+      "file": "rec/replay.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationInFrames": 362,
+      "marks": {
+        "start": 43
+      },
+      "boxes": {}
+    },
+    "mobile": {
+      "file": "rec/mobile.mp4",
+      "width": 780,
+      "height": 1688,
+      "durationInFrames": 451,
+      "marks": {
+        "cardTap": 127
+      },
+      "boxes": {}
+    },
+    "ortho_zoom": {
+      "file": "rec/ortho_zoom.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationInFrames": 235,
+      "marks": {
+        "end": 209
+      },
+      "boxes": {}
+    },
+    "irrigation": {
+      "file": "rec/irrigation.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationInFrames": 370,
+      "marks": {
+        "decision": 79,
+        "plan": 209
+      },
+      "boxes": {
+        "decision": {
+          "frame": 79,
+          "x": 36,
+          "y": 77,
+          "w": 547,
+          "h": 1003
+        },
+        "plan": {
+          "frame": 209,
+          "x": 36,
+          "y": 77,
+          "w": 547,
+          "h": 752
+        }
+      }
+    },
+    "today": {
+      "file": "rec/today.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationInFrames": 355,
+      "marks": {
+        "decision": 74,
+        "plan": 203
+      },
+      "boxes": {
+        "decision": {
+          "frame": 74,
+          "x": 36,
+          "y": 77,
+          "w": 547,
+          "h": 1003
+        }
+      }
+    },
+    "crops": {
+      "file": "rec/crops.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationInFrames": 564,
+      "marks": {
+        "crops": 107,
+        "shift": 486
+      },
+      "boxes": {
+        "crops": {
+          "frame": 107,
+          "x": 36,
+          "y": 85,
+          "w": 547,
+          "h": 628
+        },
+        "shift": {
+          "frame": 486,
+          "x": 55,
+          "y": 421,
+          "w": 509,
+          "h": 131
+        }
+      }
+    }
+  },
+  "stills": {
+    "still_analysis": {
+      "file": "rec/still_analysis@2x.png",
+      "width": 3840,
+      "height": 2160
+    },
+    "still_measures": {
+      "file": "rec/still_measures@2x.png",
+      "width": 1126,
+      "height": 2024
+    }
+  }
+}

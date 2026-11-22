@@ -1,0 +1,28 @@
+{
+  "name": "rusalka-promo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Rusałka: film promocyjny (Remotion) z prawdziwych nagrań aplikacji.",
+  "scripts": {
+    "scan": "node capture/scan.mjs",
+    "studio": "node capture/scan.mjs && remotion studio src/index.ts",
+    "capture": "node capture/record.mjs",
+    "render": "node capture/scan.mjs && remotion render src/index.ts Promo out/rusalka-promo.mp4 --codec h264 --crf 18",
+    "still": "node capture/scan.mjs && remotion still src/index.ts Promo",
+    "typecheck": "node capture/scan.mjs && tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.541",
+    "@remotion/google-fonts": "4.0.541",
+    "@remotion/transitions": "4.0.541",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.541"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "playwright-core": "1.65.0",
+    "typescript": "5.6.3"
+  }
+}
