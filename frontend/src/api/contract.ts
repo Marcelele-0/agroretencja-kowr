@@ -2,7 +2,8 @@
  * Backend contracts used by the frontend. Mirrors src/hydro_core/schemas.py (AnalysisResponse) and
  * ml/rl_irrigator/kowr_rl/api.py (POST /rl/recommend, /rl/compare). Only the fields the UI reads.
  */
-export interface CauseAttribution { climate_pct: number; soil_pct: number; runoff_pct: number; crop_pct: number; method: string; explanations: Record<string, string> }
+/** has_deficit = false: no significant water deficit, the shares are not computed (all 0). */
+export interface CauseAttribution { climate_pct: number; soil_pct: number; runoff_pct: number; crop_pct: number; method: string; explanations: Record<string, string>; has_deficit?: boolean }
 export interface RetentionRecommendation {
   id: string;
   category: string;
@@ -34,7 +35,8 @@ export interface WhatIfScenarioResult {
 }
 export interface RetentionPlan { recommendations: RetentionRecommendation[]; what_if_default: WhatIfScenarioResult }
 export interface IrrigationStrategySummary { strategy_name: string; avg_yield_loss_pct: number; avg_water_mm: number; avg_deep_percolation_mm: number; water_use_efficiency: number }
-export interface IrrigationAdvice { action_now: string; recommended_mm: number; rationale: string; forecast_mode: string; strategies_10y: IrrigationStrategySummary[] }
+/** rl_recommendation = the /rl/recommend answer computed from the step-1 soil water (same numbers as the assessment). */
+export interface IrrigationAdvice { action_now: string; recommended_mm: number; rationale: string; forecast_mode: string; strategies_10y: IrrigationStrategySummary[]; rl_recommendation?: RlRecommendResponse | null }
 export interface SourceAuditEntry { category: string; source_name: string; endpoint_or_ref: string; mode: "live" | "pre_fetched" | "fallback" | "brak_danych"; retrieved_at: string; observation_date: string; spatial_resolution: string; license: string }
 /** Map layers from the NMT 1 m pipeline: zones carry a water-state value −5…+5. */
 export interface MapLayers { zones?: { type: "FeatureCollection"; features: { type: "Feature"; properties: { value: number; label?: string }; geometry: unknown }[] }; flows?: unknown }
@@ -45,7 +47,7 @@ export interface AnalysisResponse {
   assessment?: {
     water_risk?: { level: string; veto_triggered: boolean; veto_reasons: string[] };
     summary_text?: string;
-    /** Final water state −5…+5 from the backend formula (FAO-56 balance, satellite/ML, soil, terrain). Replaces the browser estimate. */
+    /** Physical water state −5 (drought) … 0 (optimum) … +5 (excess) from the FAO-56 root-zone balance and the 60-day KBW. Replaces the browser estimate. */
     water_state?: number;
     /** Daily water state around the analysis date; `forecast` = after today. */
     water_state_timeline?: { date: string; value: number; forecast: boolean }[];

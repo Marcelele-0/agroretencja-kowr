@@ -5,7 +5,8 @@ import { backendCrop, type CropCode } from "../lib/crops";
 import { inSeason, todayIso, type Iso } from "../lib/dates";
 import { isAbort, SourceError } from "../lib/http";
 import { classifyIung, IUNG_PROGI, IUNG_WMS, landUseAt, type LandUse } from "../lib/iung";
-import { ARCHIVE_URL, cachedWeatherFor, weatherFor, type DailySeries } from "../lib/openMeteo";
+import { POWER_URL } from "../lib/nasaPower";
+import { ARCHIVE_URL, cachedWeatherFor, NASA_POWER, OPEN_METEO, weatherFor, type DailySeries } from "../lib/openMeteo";
 import { STATIC_SOURCES, type SourceEntry } from "../lib/sources";
 import { parcelById, ParcelNotFound, ULDK_URL, type Parcel } from "../lib/uldk";
 import { computeLocal, type LocalResult } from "./local";
@@ -159,13 +160,19 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
       { name: "GUGiK, Usługa Lokalizacji Działek Katastralnych", what: "granica, gmina, obręb, powierzchnia z granic", url: ULDK_URL, retrievedAt: p.retrievedAt, resolution: "działka ewidencyjna", license: "otwarte dane PZGiK" },
       { name: "IUNG-PIB, warstwa Susza:katgl_landuse2024 (WMS)", what: "kategoria gleby I–IV i użytkowanie", url: IUNG_WMS, retrievedAt: landAt, resolution: "punkt w środku działki", license: "publiczna usługa IUNG-PIB" },
       { name: "IUNG-PIB, progi suszy SMSR", what: "krytyczne KBW dla uprawy, gleby i okna", url: IUNG_PROGI.source, retrievedAt: new Date(`${IUNG_PROGI.retrieved}T12:00:00`), resolution: "cała Polska, jeden próg", license: "Rozporządzenie MRiRW z 11.04.2019" },
-      { name: "Open-Meteo, archiwum ERA5 i prognoza", what: "dzienny opad i ewapotranspiracja ET₀ (FAO-56)", url: ARCHIVE_URL, retrievedAt: wd.retrievedAt, resolution: `siatka ok. 9 km (${wd.grid.lat.toFixed(2)}° N, ${wd.grid.lon.toFixed(2)}° E)`, license: "CC BY 4.0" },
+      ...(wd.providers.includes(OPEN_METEO) ? [{ name: "Open-Meteo, archiwum ERA5 i prognoza", what: "dzienny opad i ewapotranspiracja ET₀ (FAO-56)", url: ARCHIVE_URL, retrievedAt: wd.retrievedAt, resolution: `siatka ok. 9 km (${wd.grid.lat.toFixed(2)}° N, ${wd.grid.lon.toFixed(2)}° E)`, license: "CC BY 4.0" }] : []),
+      ...(wd.providers.includes(NASA_POWER) ? [{ name: "NASA POWER (zapas: Open-Meteo odrzuciło zapytania)", what: "dzienny opad; ET₀ policzone wzorem FAO-56 z temperatury, wilgotności, wiatru i promieniowania", url: POWER_URL, retrievedAt: wd.retrievedAt, resolution: "siatka 0,5° × 0,625° (ok. 50 km) – mniej dokładnie niż Open-Meteo", license: "dane publiczne NASA (bez ograniczeń, z podaniem źródła)" }] : []),
       { ...STATIC_SOURCES.ortho, retrievedAt: null },
       { ...STATIC_SOURCES.kieg, retrievedAt: null },
     ];
   }, [p, activeWeather, w.status, landAt]);
 
-  return { parcel, land, weather: w, local, updating, backend, rl, rlCompare, sources, elapsedMs };
+  // Once the full analysis is in, its irrigation answer (started from the step-1 soil water) replaces the
+  // separate /rl/recommend call, so the assessment and the irrigation card show one storage and one threshold.
+  const fromAnalysis = backend.status === "ready" ? backend.data.irrigation?.rl_recommendation : null;
+  const rlShown: Res<RlRecommendResponse> = fromAnalysis && fromAnalysis.status === "ok" ? { status: "ready", data: fromAnalysis } : rl;
+
+  return { parcel, land, weather: w, local, updating, backend, rl: rlShown, rlCompare, sources, elapsedMs };
 }
 
 interface PortfolioStateRow { parcel: Res<Parcel>; land: LandUse | null; weather: DailySeries | null; weatherDate: Iso | null; error: string | null }

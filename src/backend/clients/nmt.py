@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import math
 import os
 import re
@@ -34,6 +35,8 @@ from backend.clients.base import (
 )
 from backend.clients.geo import PUWG1992, parcel_shape, to_puwg92
 from hydro_core.schemas import DataMode
+
+logger = logging.getLogger(__name__)
 
 _GDAL_ENV = {
     "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
@@ -189,8 +192,17 @@ def _start_background(key: str, coro: Any) -> asyncio.Task[Any]:
     _BACKGROUND_TASKS.add(task)
     task.add_done_callback(_BACKGROUND_TASKS.discard)
     task.add_done_callback(lambda t: _INFLIGHT.pop(key, None) if _INFLIGHT.get(key) is t else None)
-    task.add_done_callback(lambda t: t.cancelled() or t.exception())
+    task.add_done_callback(_log_background_result)
     return task
+
+
+def _log_background_result(task: asyncio.Task[Any]) -> None:
+    """Background NMT downloads are not awaited by the request: report their failures in the log."""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.warning("NMT GUGiK 1 m: pobieranie w tle nie powiodło się (%s: %s)", type(exc).__name__, exc)
 
 
 def _gugik_wait_s(normal_s: float, short_s: float) -> float:
@@ -301,7 +313,7 @@ class NmtClient(BaseSourceClient[DemRaster]):
             except TimeoutError:
                 _mark_gugik_slow(s.nmt_gugik_cooldown_s)
                 gugik_problem = (
-                    f"nie odpowiedziała w {gugik_wait:.0f} s (pobieranie trwa w tle; "
+                    f"nie odpowiedziała w {gugik_wait:.0f} s (pobieranie trwa w tle; jeśli się powiedzie, "
                     "kolejna analiza tej działki użyje NMT 1 m)"
                 )
             except Exception as exc:  # noqa: BLE001 - any failure switches to the fallback model

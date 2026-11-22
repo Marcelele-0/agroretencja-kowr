@@ -48,7 +48,7 @@ def build_history(fx: FeatureContext, score: WaterScoreBreakdown) -> list[Yearly
         idx = tl.index_of(same_day(ad, year))
         state = storage = None
         if idx is not None:
-            state = float(daily_water_states(fx, score, np.array([idx]))[0])
+            state = float(daily_water_states(fx, np.array([idx]))[0])
             storage = round(float(fx.trace.storage_pct(0)[idx]), 1)
         if s is None and idx is None:
             continue

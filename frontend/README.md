@@ -40,6 +40,7 @@ Wszystkie usługi wysyłają `Access-Control-Allow-Origin: *`:
 | IUNG-PIB `Susza:katgl_landuse2024` | kategoria gleby I–IV, wykrycie lasu, wody i zabudowy |
 | IUNG-PIB progi SMSR | krytyczne KBW: 14 upraw × 4 kategorie gleby × 14 okien (`src/data/iung-progi.json`) |
 | Open-Meteo (archiwum ERA5 i prognoza) | dzienny opad i ET₀: sezon daty analizy, 105 dni przed nią, 60 dni przed tą samą datą w 10 latach, prognoza 15 dni. Około 11 małych zapytań, archiwum w cache `localStorage` |
+| NASA POWER (zapas) | gdy archiwum Open-Meteo odrzuci zapytania (limit) albo nie odpowie: te same dni z NASA POWER, ET₀ liczone wzorem FAO-56 (`src/lib/nasaPower.ts`, ten sam wzór co backend). Tabela źródeł pokazuje, że użyto zapasu |
 
 `src/analysis/local.ts` liczy z tych danych:
 - KBW w 14 oknach IUNG i werdykt suszy dla uprawy i gleby;
@@ -51,11 +52,11 @@ Wszystkie usługi wysyłają `Access-Control-Allow-Origin: *`:
 - listę działań posortowaną według zysku wody i symulację wybranych działań;
 - prognozę opadu na 7 dni i poradę o nawadnianiu dla bieżącej daty.
 
-Ta skala jest tymczasowa. Docelowo stan wody liczy backend ze wzoru (bilans FAO-56, Sentinel-2/ML, gleba, teren). Frontend pokazuje wtedy wynik backendu.
+To ocena uproszczona, używana tylko gdy backend nie odpowiada. Z backendem stan wody liczy serwer na tej samej osi (−5 susza … 0 optimum … +5 nadmiar): strona sucha z zapasu wody w strefie korzeniowej (bilans FAO-56), strona mokra z KBW 60 dni.
 
 ## Podpięcia backendu
 
-`VITE_API_URL` (wzór w `.env.example`) włącza podpięcia. Kontrakty są w `src/api/contract.ts`.
+Domyślnie (bez `VITE_API_URL`) frontend pyta backend pod tym samym adresem: `pnpm dev` i `pnpm preview` przekazują `/api` i `/rl` do `127.0.0.1:8000`. Inny serwer: `VITE_API_URL=https://…` (wzór w `.env.example`). `VITE_API_URL=` (puste) wyłącza podpięcia. Kontrakty są w `src/api/contract.ts`.
 
 | Endpoint | Gdzie w interfejsie | Bez backendu |
 | --- | --- | --- |
@@ -64,7 +65,7 @@ Ta skala jest tymczasowa. Docelowo stan wody liczy backend ze wzoru (bilans FAO-
 | `POST /rl/compare` (`ml/rl_irrigator`) | strategie nawadniania z 10 sezonów: strata plonu, woda, przesiąk, dni stresu | brak tabeli |
 | `GET /api/report.pdf` | przycisk „Pobierz raport PDF” | druk strony do PDF |
 
-Moduł RL obsługuje wszystkie 15 upraw z listy; frontend wysyła mu własny kod uprawy.
+Backend (`/api/analyze`) i moduł RL obsługują wszystkie 15 upraw z listy. Gdy przyjdzie pełna analiza, karta nawadniania pokazuje jej odpowiedź RL (`irrigation.rl_recommendation`), liczoną od zapasu wody z oceny, zamiast osobnego wywołania `/rl/recommend`. Dzięki temu ocena i nawadnianie pokazują tę samą liczbę.
 
 W trybie deweloperskim `&fixtures` w adresie analizy wczytuje próbkę odpowiedzi backendu (`src/api/fixtures.ts`). Build produkcyjny jej nie zawiera.
 
@@ -86,6 +87,7 @@ W trybie deweloperskim `&fixtures` w adresie analizy wczytuje próbkę odpowiedz
 - sezon i 14 okien IUNG;
 - tabelę progów;
 - KBW i skalę stanu wody;
-- zakresy pobierania pogody.
+- zakresy pobierania pogody;
+- ET₀ zapasu NASA POWER (zgodność z backendem) i parser odpowiedzi NASA POWER.
 
 `pnpm test:live` przechodzi prawdziwą działkę od numeru do wyniku. Pomiar z 21.11.2026: ok. 0,8 s.

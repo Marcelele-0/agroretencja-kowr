@@ -55,7 +55,7 @@ from hydro_core.scoring import (
     daily_water_states,
     water_state,
 )
-from hydro_core.text import days, num
+from hydro_core.text import days, num, state_label
 from hydro_core.timeline import build_timeline, kind_is_forecast
 from hydro_core.topography import analyse_terrain
 
@@ -167,7 +167,12 @@ def _hydro(bundle: ParcelDataBundle) -> HydroContext:
 def _summary_text(fx: FeatureContext, total: float, state: float, risk: RiskLevel, in_season: bool, kbw_drought: bool | None) -> str:
     storage = fx.get("storage_pct")
     dts = fx.get("days_to_stress")
-    parts = [f"Stan wody {num(state, 1, sign=True)} w skali −5…+5 (WaterScore {num(total)}/100), ryzyko {_RISK_PL[risk]}."]
+    parts = [
+        (
+            f"Stan wody: {state_label(state)} ({num(state, 1, sign=True)} w skali od −5 susza do +5 nadmiar wody), "
+            f"ryzyko {_RISK_PL[risk]}. Ogólna ocena warunków wodnych działki (WaterScore): {num(total)}/100."
+        )
+    ]
     if storage is not None:
         parts.append(f"Zapas wody w strefie korzeniowej {num(storage)}% pojemności.")
     if kbw_drought is True:
@@ -298,11 +303,12 @@ class AnalysisService:
             confidence.missing_factors.append(
                 "Warunki działki wykraczają poza dane treningowe HydroFusion-PL (AoA) – wilgotności pod chmurami nie odtworzono."
             )
-        state_value = water_state(score.total, risk.level)
+        # Physical axis (drought ... optimum ... excess), independent of the WaterScore "how good" scale
+        state_value = water_state(fx)
 
         i0 = tl.analysis_index
         idx = np.arange(max(0, i0 - TIMELINE_DAYS_BEFORE), len(tl))
-        daily = daily_water_states(fx, score, idx)
+        daily = daily_water_states(fx, idx)
         storage = trace.storage_pct(0)
         points = []
         for k, i in enumerate(idx):

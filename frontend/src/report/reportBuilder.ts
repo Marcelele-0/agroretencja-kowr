@@ -171,13 +171,15 @@ function buildCauses(local: LocalResult | null, backend?: AnalysisResponse | nul
   const c = backend?.causes;
   if (c) {
     const e = c.explanations;
+    // No deficit: shares are not computed, so the report shows the factors without percentages.
+    const pct = (v: number) => (c.has_deficit === false ? null : Math.round(v));
     return {
       method: c.method,
       rows: [
-        { key: "klimat", label: "Klimat", pct: Math.round(c.climate_pct), note: e.klimat ?? e.climate ?? "" },
-        { key: "gleba", label: "Gleba", pct: Math.round(c.soil_pct), note: e.gleba ?? e.soil ?? "" },
-        { key: "splyw", label: "Spływ", pct: Math.round(c.runoff_pct), note: e.splyw ?? e.runoff ?? "" },
-        { key: "uprawa", label: "Uprawa", pct: Math.round(c.crop_pct), note: e.uprawa ?? e.crop ?? "" },
+        { key: "klimat", label: "Klimat", pct: pct(c.climate_pct), note: e.klimat ?? e.climate ?? "" },
+        { key: "gleba", label: "Gleba", pct: pct(c.soil_pct), note: e.gleba ?? e.soil ?? "" },
+        { key: "splyw", label: "Spływ", pct: pct(c.runoff_pct), note: e.splyw ?? e.runoff ?? "" },
+        { key: "uprawa", label: "Uprawa", pct: pct(c.crop_pct), note: e.uprawa ?? e.crop ?? "" },
       ],
     };
   }

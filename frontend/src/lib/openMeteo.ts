@@ -1,5 +1,10 @@
 import { addDays, fromDay, isoOf, lastDayOfMonth, minIso, parts, seasonYear, toDay, todayIso, inSeason, type Iso } from "./dates";
 import { request, sourceFailure } from "./http";
+import { powerChunk } from "./nasaPower";
+
+/** Provider codes of a weather series ("nasa-power" = backup for the Open-Meteo archive). */
+export const OPEN_METEO = "open-meteo";
+export const NASA_POWER = "nasa-power";
 
 /** Open-Meteo: ERA5 reanalysis archive + forecast. Daily precipitation and FAO-56 reference evapotranspiration. CORS: *. */
 export const ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive";
@@ -19,9 +24,11 @@ export interface DailySeries {
   forecastOk: boolean;
   grid: { lat: number; lon: number; elevation: number | null };
   retrievedAt: Date;
+  /** Which providers the days come from (OPEN_METEO, NASA_POWER). */
+  providers: string[];
 }
 
-interface Chunk { from: Iso; p: (number | null)[]; e: (number | null)[]; lat?: number; lon?: number; elevation?: number }
+interface Chunk { from: Iso; p: (number | null)[]; e: (number | null)[]; lat?: number; lon?: number; elevation?: number | null; provider?: string }
 interface OmDaily { daily?: { time: string[]; precipitation_sum: (number | null)[]; et0_fao_evapotranspiration: (number | null)[] }; latitude?: number; longitude?: number; elevation?: number; reason?: string }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -50,6 +57,8 @@ async function getJson(url: string): Promise<OmDaily> {
       continue;
     }
     if (res.status !== 429 && res.status < 500) break;
+    // hourly or daily quota: waiting seconds does not help, go to the backup source at once
+    if (res.status === 429 && /hourly|daily/i.test(res.text)) break;
   }
   if (!res || !res.ok) throw sourceFailure("Open-Meteo", null, res?.status ?? 0);
   const json = JSON.parse(res.text) as OmDaily;
@@ -58,7 +67,7 @@ async function getJson(url: string): Promise<OmDaily> {
 }
 function toChunk(j: OmDaily): Chunk {
   const d = j.daily!;
-  return { from: d.time[0]!, p: d.precipitation_sum, e: d.et0_fao_evapotranspiration, lat: j.latitude, lon: j.longitude, elevation: j.elevation };
+  return { from: d.time[0]!, p: d.precipitation_sum, e: d.et0_fao_evapotranspiration, lat: j.latitude, lon: j.longitude, elevation: j.elevation, provider: OPEN_METEO };
 }
 
 /** The 10 years the "same term" comparison shows: ending this year if the day has passed, else last year. */
@@ -112,9 +121,16 @@ function archiveChunk(lat: number, lon: number, from: Iso, to: Iso): Promise<Chu
   } catch {
     try { localStorage.removeItem(LS + key); } catch { /* storage blocked: fetch instead */ }
   }
-  const p = getJson(`${ARCHIVE_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&daily=${DAILY}&timezone=Europe%2FWarsaw&start_date=${from}&end_date=${to}`).then(toChunk);
+  const p = getJson(`${ARCHIVE_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&daily=${DAILY}&timezone=Europe%2FWarsaw&start_date=${from}&end_date=${to}`)
+    .then(toChunk)
+    // Open-Meteo refused or failed: the same days from NASA POWER (ET₀ by FAO-56, as in the backend)
+    .catch((omErr: unknown) => powerChunk(lat, lon, from, to).then((c): Chunk => ({ ...c, provider: NASA_POWER }), () => { throw omErr; }));
   mem.set(key, p);
-  p.then((c) => { try { localStorage.setItem(LS + key, JSON.stringify(c)); } catch { /* quota: memory only */ } }, () => mem.delete(key));
+  // only Open-Meteo answers are stored for later visits; a backup chunk is fetched again next time
+  p.then((c) => {
+    if (c.provider !== OPEN_METEO) return;
+    try { localStorage.setItem(LS + key, JSON.stringify(c)); } catch { /* quota: memory only */ }
+  }, () => mem.delete(key));
   return p;
 }
 const fcMem = new Map<string, Promise<Chunk>>();
@@ -197,7 +213,12 @@ async function load(lat: number, lon: number, date: Iso, today: Iso): Promise<Da
   return {
     start: from, startDay, p, et0, forecastFrom: addDays(today, 1), forecastOk: !!fc || !needForecast,
     grid: { lat: g?.lat ?? lat, lon: g?.lon ?? lon, elevation: g?.elevation ?? null }, retrievedAt: new Date(),
+    providers: providersOf([...archive, fc]),
   };
+}
+
+function providersOf(chunks: (Chunk | null)[]): string[] {
+  return [...new Set(chunks.filter((c): c is Chunk => c !== null).map((c) => c.provider ?? OPEN_METEO))];
 }
 
 export function dayIndex(s: DailySeries, iso: Iso): number {
@@ -267,5 +288,6 @@ async function loadSeason(lat: number, lon: number, year: number, today: Iso): P
   return {
     start: from, startDay, p, et0, forecastFrom: addDays(today, 1), forecastOk: !!fc || !needForecast,
     grid: { lat: g?.lat ?? lat, lon: g?.lon ?? lon, elevation: g?.elevation ?? null }, retrievedAt: new Date(),
+    providers: providersOf([archive, fc]),
   };
 }

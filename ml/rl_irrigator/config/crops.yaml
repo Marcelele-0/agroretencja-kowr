@@ -40,7 +40,7 @@ crops:
       p: "FAO-56 Tab. 22: 0.55"
       ky: "FAO-56 Tab. 24 (FAO-33): 1.25"
   ziemniak:
-    label_pl: "Ziemniak (sredniopozny)"
+    label_pl: "Ziemniak (średniopóźny)"
     kc_ini: 0.50
     kc_mid: 1.15
     kc_end: 0.75
@@ -98,7 +98,7 @@ crops:
   # Same sources as above; rows marked "assumption" have no direct FAO-56/33 value and need the
   # mentor's check. Seasons stay within 15 III - 31 X (window of the archived ECMWF forecasts).
   zboza_jare:
-    label_pl: "Zboza jare (jeczmien, pszenica jara)"
+    label_pl: "Zboża jare (jęczmień, pszenica jara)"
     kc_ini: 0.30
     kc_mid: 1.15
     kc_end: 0.25
@@ -114,7 +114,7 @@ crops:
       p: "FAO-56 Tab. 22: 0.55"
       ky: "FAO-56 Tab. 24 (FAO-33): spring wheat 1.15"
   kukurydza_kiszonka:
-    label_pl: "Kukurydza na kiszonke"
+    label_pl: "Kukurydza na kiszonkę"
     kc_ini: 0.30
     kc_mid: 1.20
     kc_end: 0.60
@@ -144,7 +144,7 @@ crops:
       p: "FAO-56 Tab. 22, Canola: 0.60"
       ky: "No FAO-33 value for rapeseed; assumption 1.0"
   straczkowe:
-    label_pl: "Rosliny straczkowe (groch, bobik na nasiona)"
+    label_pl: "Rośliny strączkowe (groch, bobik na nasiona)"
     kc_ini: 0.40
     kc_mid: 1.15
     kc_end: 0.30
@@ -189,7 +189,7 @@ crops:
       p: "FAO-56 Tab. 22, Hops: 0.50"
       ky: "No FAO-33 value for hops; assumption 1.0"
   tyton:
-    label_pl: "Tyton"
+    label_pl: "Tytoń"
     kc_ini: 0.35
     kc_mid: 1.10
     kc_end: 0.80
@@ -204,7 +204,7 @@ crops:
       p: "Assumption 0.50 (no FAO-56 Tab. 22 row)"
       ky: "FAO-56 Tab. 24 (FAO-33): tobacco 0.90"
   drzewa_owocowe:
-    label_pl: "Drzewa owocowe (sad jabloniowy)"
+    label_pl: "Drzewa owocowe (sad jabłoniowy)"
     kc_ini: 0.50
     kc_mid: 1.20
     kc_end: 0.95
@@ -249,7 +249,7 @@ crops:
       p: "FAO-56 Tab. 22, Strawberries: 0.20 (shallow roots)"
       ky: "No FAO-33 value; assumption 1.0"
   uzytki_zielone:
-    label_pl: "Laki i pastwiska"
+    label_pl: "Łąki i pastwiska"
     kc_ini: 0.40
     kc_mid: 0.95
     kc_end: 0.85

@@ -54,6 +54,7 @@ class IrrigationRequest:
     iung_code: int
     today: dt.date
     budget_mm: float = DEFAULT_BUDGET_MM
+    plan_days: int = 14  # same horizon as the frontend irrigation card (plan_14d)
 
 
 class ProviderSkipped(Exception):
@@ -156,9 +157,13 @@ def rl_provider(req: IrrigationRequest) -> IrrigationAdvice:
             policy_used="rl" if load_rl_policy() else "fao_rule", in_season=False, limitations=list(STATIC_LIMITATIONS),
         )
 
+    dr, raw = fx.get("dr_mm"), fx.get("raw_mm")
     rec = recommend(
         req.lat, req.lon, crop_key, ad, req.budget_mm, 0.0,
-        today=req.today, _prefetched=(req.iung_code, obs, [], forecast_series(fx.timeline)),
+        plan_days=req.plan_days, today=req.today,
+        _prefetched=(req.iung_code, obs, [], forecast_series(fx.timeline)),
+        # the agent starts from the soil water of step 1 (same storage and stress threshold in the report)
+        initial_state=(dr, raw) if dr is not None and raw is not None else None,
     )
     if rec.get("status") != "ok":
         raise ProviderSkipped(rec.get("message", "Agent RL nie zwrócił rekomendacji."))
@@ -168,6 +173,7 @@ def rl_provider(req: IrrigationRequest) -> IrrigationAdvice:
         **{**base, "strategies_10y": _strategy_rows(strategies)},
         policy_used=(rec.get("policy") or {}).get("used"),
         plan_7d=_plan(recd.get("plan_7d") or [], ad),
+        rl_recommendation=rec,
         in_season=True,
         limitations=rec.get("limitations") or [],
     )

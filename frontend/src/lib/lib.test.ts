@@ -9,6 +9,7 @@ import { parseUug } from "./geocoder";
 import { parseWkt, polygonsArea } from "./geo";
 import { classifyIung, IUNG_PROGI, thresholdsFor } from "./iung";
 import { activeWindow, kbw, progressiveSeasonWindows, riskFromStage, seasonWindows, stageFromKbw, windowsFor } from "./kbw";
+import { fao56Et0Daily, parsePower } from "./nasaPower";
 import { compareYears, coversRange, neededRanges, type DailySeries } from "./openMeteo";
 import { DEMO_PRESETS } from "./presets";
 import { looksLikeParcelId, parseUldk, ParcelNotFound } from "./uldk";
@@ -83,8 +84,31 @@ describe("IUNG table", () => {
 });
 
 function series(from: string, days: number, p: number, e: number): DailySeries {
-  return { start: from, startDay: toDay(from), p: new Array(days).fill(p), et0: new Array(days).fill(e), forecastFrom: addDays(from, days), forecastOk: true, grid: { lat: 0, lon: 0, elevation: null }, retrievedAt: new Date() };
+  return { start: from, startDay: toDay(from), p: new Array(days).fill(p), et0: new Array(days).fill(e), forecastFrom: addDays(from, days), forecastOk: true, grid: { lat: 0, lon: 0, elevation: null }, retrievedAt: new Date(), providers: ["open-meteo"] };
 }
+
+describe("NASA POWER backup", () => {
+  it("computes FAO-56 ET₀ like the backend (src/hydro_core/et0.py)", () => {
+    expect(fao56Et0Daily("2018-07-20", 52.7, 85, 27.4, 14.1, 68, 2.6, 22.5)).toBeCloseTo(4.623, 3);
+    expect(fao56Et0Daily("2023-04-10", 50.1, 250, 12, 2, 80, 3.5, 12)).toBeCloseTo(1.6466, 3);
+  });
+  it("parses the daily point answer and skips fill values", () => {
+    const j = {
+      geometry: { coordinates: [18.25, 52.7, 85] as [number, number, number] },
+      header: { fill_value: -999 },
+      properties: { parameter: {
+        PRECTOTCORR: { "20180720": 3.2, "20180721": -999 }, T2M_MAX: { "20180720": 27.4, "20180721": 25 },
+        T2M_MIN: { "20180720": 14.1, "20180721": 13 }, RH2M: { "20180720": 68, "20180721": 70 },
+        WS2M: { "20180720": 2.6, "20180721": -999 }, ALLSKY_SFC_SW_DWN: { "20180720": 22.5, "20180721": 20 },
+      } },
+    };
+    const c = parsePower(j, 52.7, 18.25);
+    expect(c.from).toBe("2018-07-20");
+    expect(c.p).toEqual([3.2, null]);
+    expect(c.e[0]).toBeCloseTo(4.62, 2);
+    expect(c.e[1]).toBeNull();
+  });
+});
 
 describe("KBW and water state", () => {
   it("sums P − ET0 over a window", () => {
