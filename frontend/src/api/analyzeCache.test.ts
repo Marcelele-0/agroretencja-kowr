@@ -18,6 +18,31 @@ describe("analyzeCache", () => {
     expect(analyzeKey(req("a"))).toBe("a|kukurydza|2019-07-01");
   });
 
+  it("keeps the farmer's data in the key with the date last", () => {
+    expect(analyzeKey({ ...req("a"), tile_drainage: true, gauge_rain_7d_mm: 12.5 })).toBe("a|kukurydza~d1r12.5|2019-07-01");
+    expect(analyzeKey({ ...req("a"), tile_drainage: false })).toBe("a|kukurydza~d0|2019-07-01");
+    expect(analyzeKey({ ...req("a"), gauge_rain_7d_mm: 0 })).toBe("a|kukurydza~r0|2019-07-01");
+  });
+
+  it("drops the settled results of one parcel when its terrain was upgraded", async () => {
+    const { calls, fetcher } = controlledFetcher();
+    const cache = createAnalyzeCache(fetcher);
+    cache.get(req("a"));
+    cache.get({ ...req("a"), tile_drainage: true });
+    cache.get(req("ab"));
+    calls.forEach((c) => c.resolve(resp(c.req.parcel_id)));
+    await tick();
+    cache.get(req("a", "2019-07-02")); // still pending: stays for its callers
+    cache.invalidateParcel("a");
+    expect(cache.peek(req("a"))).toBeUndefined();
+    expect(cache.peek({ ...req("a"), tile_drainage: true })).toBeUndefined();
+    expect(cache.peek(req("ab"))).toEqual(resp("ab"));
+    cache.get(req("a", "2019-07-02"));
+    expect(calls).toHaveLength(4);
+    cache.get(req("a"));
+    expect(calls).toHaveLength(5);
+  });
+
   it("dedupes concurrent callers and keeps the resolved result", async () => {
     const { calls, fetcher } = controlledFetcher();
     const cache = createAnalyzeCache(fetcher);

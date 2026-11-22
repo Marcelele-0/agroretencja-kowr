@@ -141,6 +141,21 @@ class DataConfidence(BaseModel):
     resolution_warnings: list[str] = Field(default_factory=list)
     consistency_warnings: list[str] = Field(default_factory=list)
     missing_factors: list[str] = Field(default_factory=list)
+    terrain_upgrade_pending: bool = Field(
+        default=False,
+        description="The 30 m fallback terrain was used and NMT 1 m is still downloading: "
+        "GET /api/terrain/status tells when a new analysis will use it.",
+    )
+
+
+class RainGaugeCorrection(BaseModel):
+    """The farmer's rain-gauge total that replaced the grid precipitation of the last days."""
+
+    days: int = Field(..., ge=1)
+    start: date
+    end: date
+    gauge_mm: float = Field(..., ge=0.0)
+    grid_mm: float = Field(..., ge=0.0)
 
 
 class ScoreComponentValue(BaseModel):
@@ -256,6 +271,7 @@ class WaterAssessmentSummary(BaseModel):
     crop_stage: str | None = None
     kc_today: float | None = None
     runoff_60d_mm: float | None = Field(default=None, ge=0.0)
+    rain_gauge: RainGaugeCorrection | None = None
 
 
 class RetentionRecommendation(BaseModel):
@@ -379,6 +395,13 @@ class AnalysisRequest(BaseModel):
     lon: float | None = Field(default=None, ge=13.0, le=25.0)
     crop: CropCode
     analysis_date: date
+    tile_drainage: bool | None = Field(
+        default=None, description="Farmer's answer: the parcel has tile drainage (null = not known)."
+    )
+    gauge_rain_7d_mm: float | None = Field(
+        default=None, ge=0.0, le=500.0,
+        description="Rain measured on the parcel in the 7 days ending on the analysis date (replaces the grid).",
+    )
 
     @model_validator(mode="after")
     def validate_location_input(self) -> AnalysisRequest:
@@ -389,6 +412,16 @@ class AnalysisRequest(BaseModel):
             raise ValueError("Provide either parcel_id or both lat and lon.")
         return self
 
+    def farmer_key(self) -> str:
+        """Cache-key part of the farmer's own data ('' when none was given)."""
+        return farmer_key(self.tile_drainage, self.gauge_rain_7d_mm)
+
+
+def farmer_key(tile_drainage: bool | None, gauge_rain_7d_mm: float | None) -> str:
+    drain = "" if tile_drainage is None else ("d1" if tile_drainage else "d0")
+    rain = "" if gauge_rain_7d_mm is None else f"r{gauge_rain_7d_mm:.1f}"
+    return drain + rain
+
 
 class WhatIfRequest(BaseModel):
     """Input payload for interactive What-If retention simulation."""
@@ -397,6 +430,8 @@ class WhatIfRequest(BaseModel):
     crop: CropCode
     analysis_date: date
     enabled_measures: list[str] = Field(default_factory=list)
+    tile_drainage: bool | None = None
+    gauge_rain_7d_mm: float | None = Field(default=None, ge=0.0, le=500.0)
 
 
 class AnalysisResponse(BaseModel):

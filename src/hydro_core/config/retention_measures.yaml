@@ -80,7 +80,7 @@ measures:
     cn_delta: 0.0
     time_to_effect: "od wiosny po zgodzie"
     rationale: "Zamknięcie wylotu drenów po roztopach zatrzymuje wodę zimową w profilu glebowym."
-    applies_if: [ditch_touching]
+    applies_if: [tile_drained]
   zbiornik_w_zaglebieniu:
     title: "Mała retencja w naturalnym zagłębieniu terenu"
     category: "urzadzenie_wodne"

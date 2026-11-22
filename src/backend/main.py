@@ -9,6 +9,7 @@ GET  /api/parcel            fast first step (<= 2 s): parcel geometry and admini
 POST /api/analyze           KOWR steps 1-5 (AnalysisResponse)
 POST /api/what-if           What-If simulator for chosen retention measures
 POST /api/zones             joint wetness zones of 1-12 parcels (fast, no full analysis)
+GET  /api/terrain/status    is the NMT 1 m of a parcel ready (re-run the analysis when it is)
 GET  /api/weather/daily     daily weather in Open-Meteo JSON shape (cache, NASA POWER fallback)
 GET  /api/report.pdf        2-page auditable report (PDF; HTML when no PDF renderer works)
 GET  /api/registries        everything registered in the engine (features, components, rules ...)
@@ -184,6 +185,16 @@ async def analyze(body: AnalysisRequest, request: Request) -> AnalysisResponse:
     return state.response
 
 
+@app.get("/api/terrain/status")
+def terrain_status(request: Request, parcel_id: str = Query(..., min_length=3, max_length=60)) -> dict[str, str]:
+    """NMT 1 m of a parcel: 'ready' (the next analysis uses it), 'downloading' (background) or 'none'.
+
+    The frontend asks while ``assessment.confidence.terrain_upgrade_pending`` is true and analyses
+    the parcel again once the 1 m model is ready.
+    """
+    return {"parcel_id": parcel_id, "nmt_1m": _service(request).nmt_state(parcel_id)}
+
+
 @app.post("/api/zones", response_model=ZonesResponse)
 async def zones(body: ZonesRequest, request: Request) -> ZonesResponse:
     """Joint wetness zones: one DEM mosaic and one class grid, so neighbours meet without jumps."""
@@ -273,8 +284,18 @@ async def _report(request: Request, body: AnalysisRequest) -> Response:
 
 
 @app.get("/api/report.pdf")
-async def report_get(request: Request, parcel_id: str, crop: CropCode, analysis_date: dt.date) -> Response:
-    return await _report(request, AnalysisRequest(parcel_id=parcel_id, crop=crop, analysis_date=analysis_date))
+async def report_get(
+    request: Request,
+    parcel_id: str,
+    crop: CropCode,
+    analysis_date: dt.date,
+    tile_drainage: bool | None = None,
+    gauge_rain_7d_mm: float | None = Query(default=None, ge=0.0, le=500.0),
+) -> Response:
+    return await _report(request, AnalysisRequest(
+        parcel_id=parcel_id, crop=crop, analysis_date=analysis_date,
+        tile_drainage=tile_drainage, gauge_rain_7d_mm=gauge_rain_7d_mm,
+    ))
 
 
 @app.post("/api/report.pdf")

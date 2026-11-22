@@ -45,8 +45,14 @@ export interface ZonesParcel { parcel_id: string; water_state: number; crop?: st
 export interface ZonesRequest { parcels: ZonesParcel[] }
 export interface ZonesResponse { zones: Record<string, NonNullable<MapLayers["zones"]>>; errors?: Record<string, string>; grid_m?: number; dem_source?: string; elapsed_s?: number }
 
-export interface AnalysisRequest { parcel_id: string; crop: string; analysis_date: string }
-export interface WhatIfRequest { parcel_id: string; crop: string; analysis_date: string; enabled_measures: string[] }
+/** The farmer's own data about the parcel (absent = not known): tile drainage, rain gauge total of the 7 days ending on the analysis date. */
+export interface FarmerFields { tile_drainage?: boolean; gauge_rain_7d_mm?: number }
+export interface AnalysisRequest extends FarmerFields { parcel_id: string; crop: string; analysis_date: string }
+export interface WhatIfRequest extends FarmerFields { parcel_id: string; crop: string; analysis_date: string; enabled_measures: string[] }
+/** The gauge total that replaced the grid rain (assessment.rain_gauge). */
+export interface RainGaugeCorrection { days: number; start: string; end: string; gauge_mm: number; grid_mm: number }
+/** GET /api/terrain/status: "ready" = the next analysis uses NMT 1 m. */
+export interface TerrainStatus { parcel_id: string; nmt_1m: "ready" | "downloading" | "none" }
 export interface AnalysisResponse {
   assessment?: {
     water_risk?: { level: string; veto_triggered: boolean; veto_reasons: string[] };
@@ -55,7 +61,9 @@ export interface AnalysisResponse {
     water_state?: number;
     /** Daily water state around the analysis date; `forecast` = after today. */
     water_state_timeline?: { date: string; value: number; forecast: boolean }[];
-    confidence?: { level: "wysoka" | "srednia" | "ograniczona"; resolution_warnings?: string[]; missing_factors?: string[] };
+    /** terrain_upgrade_pending: the 30 m fallback terrain was used while NMT 1 m downloads (ask GET /api/terrain/status). */
+    confidence?: { level: "wysoka" | "srednia" | "ograniczona"; resolution_warnings?: string[]; consistency_warnings?: string[]; missing_factors?: string[]; terrain_upgrade_pending?: boolean };
+    rain_gauge?: RainGaugeCorrection | null;
     /** Components of the backend formula, shown in "Skąd ten wynik": e.g. FAO-56 balance, Sentinel-2 NDMI, soil, terrain. */
     components?: { key: string; label: string; value: string; weight?: number; source?: string; detail?: string }[];
     water_score?: {

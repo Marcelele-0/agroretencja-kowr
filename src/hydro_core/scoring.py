@@ -353,9 +353,15 @@ CONFIDENCE_CHECKS: Registry[ConfidenceCheck] = Registry("kontrole pewności dany
 
 @CONFIDENCE_CHECKS.register("skala_przestrzenna")
 def _cc_scale(fx: FeatureContext) -> list[ConfidenceNote]:
-    notes = [
-        ConfidenceNote("resolution", "Pogoda z siatki modelu ok. 9–11 km, a nie z pomiaru na działce."),
-    ]
+    gauge, grid = fx.inputs.gauge_rain_mm, fx.inputs.gauge_grid_rain_mm
+    if gauge is None:
+        weather = "Pogoda z siatki modelu ok. 9–11 km, a nie z pomiaru na działce."
+    else:
+        weather = (
+            f"Opad ostatnich 7 dni z deszczomierza na działce: {num(gauge, 1)} mm "
+            f"(siatka modelu: {num(grid or 0.0, 1)} mm); starsze dni i parowanie z siatki ok. 9–11 km."
+        )
+    notes = [ConfidenceNote("resolution", weather)]
     if fx.inputs.parcel_area_ha < 0.2:
         notes.append(ConfidenceNote("resolution", f"Działka {fx.inputs.parcel_area_ha:.2f} ha: tylko kilka pikseli Sentinel-2 (10–20 m).", 1))
     if "SoilGrids" in fx.inputs.soil_source:
@@ -414,13 +420,59 @@ def _cc_consistency(fx: FeatureContext) -> list[ConfidenceNote]:
     return []
 
 
+DRAIN_DITCH_NEAR_M = 150.0  # a ditch this close can be the outlet of field drains
+DRAIN_DITCH_DENSE_M = 1500.0  # ditch length in the BDOT10k search radius typical of drained land
+GW_WATER_NEAR_M = 100.0  # stream or water body this close: valley floor, shallow groundwater
+GW_WET_ZONE_SHARE = 0.4  # share of the parcel wetter (TWI) than 80 % of its surroundings
+GW_FLAT_SLOPE_DEG = 2.0
+
+
+def drainage_signals(fx: FeatureContext) -> list[str]:
+    """Reasons to expect tile drainage on the parcel (ditch network from BDOT10k)."""
+    h = fx.inputs.hydro
+    out = []
+    if h.ditches_touching_parcel > 0:
+        out.append("rów melioracyjny przy granicy działki")
+    elif h.nearest_ditch_m is not None and h.nearest_ditch_m <= DRAIN_DITCH_NEAR_M:
+        out.append(f"rów melioracyjny {num(h.nearest_ditch_m)} m od działki")
+    if h.ditch_length_in_radius_m >= DRAIN_DITCH_DENSE_M:
+        out.append(f"gęsta sieć rowów w okolicy ({num(h.ditch_length_in_radius_m / 1000, 1)} km)")
+    return out
+
+
+def groundwater_signals(fx: FeatureContext) -> list[str]:
+    """Reasons to expect shallow groundwater (capillary rise) under the parcel."""
+    out = []
+    if fx.inputs.soil_organic:
+        out.append("gleba organiczna")
+    t = fx.inputs.terrain
+    if t is not None and t.wet_zone_share >= GW_WET_ZONE_SHARE and t.mean_slope_deg < GW_FLAT_SLOPE_DEG:
+        out.append("działka w obniżeniu terenu")
+    h = fx.inputs.hydro
+    near = [d for d in (h.nearest_watercourse_m, h.nearest_water_body_m) if d is not None]
+    if near and min(near) <= GW_WATER_NEAR_M:
+        out.append(f"ciek lub zbiornik {num(min(near))} m od działki")
+    return out
+
+
 @CONFIDENCE_CHECKS.register("brakujace_zrodla")
 def _cc_missing(fx: FeatureContext) -> list[ConfidenceNote]:
     notes = [ConfidenceNote("missing", f"Brak danych: {name}.", 1) for name in fx.inputs.missing_sources]
-    notes += [
-        ConfidenceNote("missing", "Nie uwzględniono drenażu rurkowego (brak danych publicznych)."),
-        ConfidenceNote("missing", "Nie uwzględniono poziomu wód gruntowych i podsiąku kapilarnego."),
-    ]
+    if fx.inputs.tile_drainage is None:
+        if not fx.inputs.hydro.available:
+            notes.append(ConfidenceNote("missing", "Nie uwzględniono drenażu rurkowego (brak danych publicznych)."))
+        elif signals := drainage_signals(fx):
+            notes.append(ConfidenceNote(
+                "missing",
+                f"Możliwy drenaż rurkowy ({', '.join(signals)}), a mapy drenowań nie są publiczne – "
+                "podaj, czy działka jest zdrenowana.",
+            ))
+    if signals := groundwater_signals(fx):
+        notes.append(ConfidenceNote(
+            "missing",
+            f"Możliwy podsiąk z płytkich wód gruntowych ({', '.join(signals)}): bilans go nie liczy, "
+            "więc w suszy zapas wody może być w rzeczywistości większy.",
+        ))
     return notes
 
 

@@ -435,6 +435,14 @@ class NmtClient(BaseSourceClient[DemRaster]):
             "2014-2018 provided under COPERNICUS by the European Union and ESA",
         )
 
+    def download_state(self, parcel_id: str) -> str:
+        """'ready' (NMT 1 m on disk), 'downloading' (background download running) or 'none'."""
+        path = self._cache_path(parcel_id, "gugik1m")
+        if path.exists():
+            return "ready"
+        task = _INFLIGHT.get(str(path))
+        return "downloading" if task is not None and not task.done() else "none"
+
     def group_source(self, parcel_ids: Sequence[str]) -> str:
         """'gugik' when the 1 m model of every parcel is cached, else 'copernicus'."""
         if parcel_ids and all(self._cache_path(pid, "gugik1m").exists() for pid in parcel_ids):

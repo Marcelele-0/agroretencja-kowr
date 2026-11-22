@@ -10,9 +10,11 @@ import { ARCHIVE_URL, cachedWeatherFor, weatherFor, type DailySeries } from "../
 import { STATIC_SOURCES, type SourceEntry } from "../lib/sources";
 import { parcelById, ParcelNotFound, ULDK_URL, type Parcel } from "../lib/uldk";
 import { computeLocal, type LocalResult } from "./local";
+import { farmerFields, useFarmerVersion, withFarmer } from "./farmerData";
 
 export type Res<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string; httpStatus?: number; code?: string } | { status: "off" };
-export interface AnalysisQuery { parcelId: string; crop: CropCode; date: Iso }
+/** `rev` grows when the parcel's terrain was upgraded (NMT 1 m arrived): the backend analysis is fetched again. */
+export interface AnalysisQuery { parcelId: string; crop: CropCode; date: Iso; rev?: number }
 export interface AnalysisState {
   parcel: Res<Parcel>;
   land: Res<LandUse>;
@@ -64,6 +66,7 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
   const [rl, setRl] = useState<Res<RlRecommendResponse>>(LOADING);
   const [rlCompare, setRlCompare] = useState<Res<RlCompareResponse>>(LOADING);
   const prevTarget = useRef<{ parcelId: string; crop: CropCode } | null>(null);
+  const prevRlTarget = useRef<{ parcelId: string; crop: CropCode } | null>(null);
   const t0 = useRef(performance.now());
   const [elapsedMs, setElapsed] = useState<number | null>(null);
 
@@ -123,15 +126,20 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
     return () => ctl.abort();
   }, [p, q.crop]);
 
+  // The farmer's data of this parcel and date is part of the request (and of the cache key).
+  useFarmerVersion(); // re-render on every change of the farmer's data
+  const farmerSig = p ? JSON.stringify(farmerFields(p.id, q.date)) : "";
+
   useEffect(() => {
     if (!p) return;
     const ctl = new AbortController();
     const bc = backendCrop(q.crop);
+    // Same parcel and crop (new farmer data, terrain upgrade): the previous result stays on screen until the new one.
     const sameTarget = prevTarget.current?.parcelId === p.id && prevTarget.current?.crop === q.crop;
     prevTarget.current = { parcelId: p.id, crop: q.crop };
     if (backendEnabled && bc) {
       // Shared cache: a result already fetched for the parcel list shows at once; aborting only detaches this listener.
-      const req = { parcel_id: p.id, crop: bc, analysis_date: q.date };
+      const req = withFarmer({ parcel_id: p.id, crop: bc, analysis_date: q.date });
       const hit = analyzeCache.peek(req);
       if (hit) setBackend({ status: "ready", data: hit });
       else {
@@ -141,6 +149,14 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
     } else if (import.meta.env.DEV && new URLSearchParams(location.search).has("fixtures")) {
       import("../api/fixtures").then((m) => { if (!ctl.signal.aborted) setBackend({ status: "ready", data: m.BACKEND_FIXTURE }); });
     } else setBackend(OFF);
+    return () => ctl.abort();
+  }, [p, q.crop, q.date, q.rev, farmerSig]);
+
+  useEffect(() => {
+    if (!p) return;
+    const ctl = new AbortController();
+    const sameTarget = prevRlTarget.current?.parcelId === p.id && prevRlTarget.current?.crop === q.crop;
+    prevRlTarget.current = { parcelId: p.id, crop: q.crop };
     if (backendEnabled && inSeason(q.date)) {
       if (!sameTarget) setRl(LOADING);
       postRlRecommend({ parcel_id: p.id, crop: q.crop, date: q.date, plan_days: RL_PLAN_DAYS }, ctl.signal).then((data) => setRl({ status: "ready", data }), (e) => !isAbort(e) && setRl(errorRes(e)));

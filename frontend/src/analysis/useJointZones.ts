@@ -18,9 +18,10 @@ export interface JointZones {
  * Fires (debounced) as soon as any row has a base state; re-fires when a row joins or a rounded state changes.
  * Requests are shared through zonesCache and never aborted by re-renders; answers for an older key are cached but not shown.
  */
-export function useJointZones(rows: JointZoneInput[]): JointZones {
+export function useJointZones(rows: JointZoneInput[], rev = 0): JointZones {
   const plan = jointRequestOf(rows);
-  const key = backendEnabled && plan ? plan.key : "";
+  // `rev` grows when a parcel's NMT 1 m arrived: the same states then need zones from the new terrain.
+  const key = backendEnabled && plan ? (rev ? `${plan.key}#${rev}` : plan.key) : "";
   const planRef = useRef(plan);
   planRef.current = plan;
   const latest = useRef(key);

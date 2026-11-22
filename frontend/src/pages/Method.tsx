@@ -29,10 +29,10 @@ export function Method() {
         <section className="ar-card">
           <h2 className="ar-card__title">Ograniczenia</h2>
           <ul className="rs-list">
-            <li>Pogoda pochodzi z siatki ok. 9 km, a nie z pomiaru na działce. Lokalna burza może się różnić.</li>
+            <li>Pogoda pochodzi z siatki ok. 9 km, a nie z pomiaru na działce. Lokalna burza może się różnić, dlatego opad z ostatnich 7 dni możesz wpisać z własnego deszczomierza.</li>
             <li>IUNG liczy ewapotranspirację metodą Penmana, a Open-Meteo metodą FAO-56 Penman-Monteith. Wyniki mogą się różnić o kilka procent.</li>
             <li>Kategoria gleby pochodzi z jednego punktu w środku działki.</li>
-            <li>Rusałka nie zna stanu drenażu, poziomu wód gruntowych ani wykonanych zabiegów.</li>
+            <li>Mapy drenowań nie są publiczne: drenaż ocenia sieć rowów melioracyjnych, a pewną odpowiedź podajesz sam przy ocenie działki. Poziomu wód gruntowych ani wykonanych zabiegów Rusałka nie zna; możliwy podsiąk sygnalizuje przy glebach organicznych, obniżeniach terenu i blisko cieków.</li>
             <li>Każda zmiana urządzeń wodnych, np. zastawki na rowie, wymaga zgody Wód Polskich.</li>
           </ul>
         </section>
