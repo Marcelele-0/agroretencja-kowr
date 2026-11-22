@@ -1,8 +1,8 @@
 import maplibregl, { type GeoJSONSource, type Map as MlMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Button, cx } from "../ds";
-import type { AreaGeometry, BBox, Position } from "../lib/geo";
+import { parcelLabelPose, type AreaGeometry, type BBox, type LabelPose, type Position } from "../lib/geo";
 
 const ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
 const WMS = "SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&STYLES=&CRS=EPSG:3857&BBOX={bbox-epsg-3857}";
@@ -17,8 +17,9 @@ const EMPTY = { type: "FeatureCollection" as const, features: [] };
 
 export interface MapZone { geometry: unknown; value: number; areaPct?: number; areaHa?: number }
 /** A selected parcel. `value` (−5…+5) colours it by water state; without it the parcel is field yellow. `active` gets the hatch and a thicker line. */
-export interface MapParcel { id: string; geometry: AreaGeometry; value?: number | null; active?: boolean; hasZones?: boolean }
+export interface MapParcel { id: string; geometry: AreaGeometry; value?: number | null; active?: boolean; hasZones?: boolean; cropLabel?: string | null }
 interface Pad { top: number; bottom: number; left: number; right: number }
+interface LabeledParcel { id: string; label: string; active: boolean; pose: LabelPose }
 
 function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim() || "#f4d03f";
@@ -41,6 +42,7 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
 }) {
   const box = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
+  const tagRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const mapRef = useRef<MlMap | null>(null);
   const readyRef = useRef(false);
   const pickRef = useRef(onPick);
@@ -48,6 +50,45 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
   const fitted = useRef(false);
   const data = useRef({ parcels, zones });
   data.current = { parcels, zones };
+
+  const labeled = useMemo<LabeledParcel[]>(
+    () =>
+      (parcels ?? []).flatMap((p) => {
+        const lbl = p.cropLabel?.trim();
+        return lbl ? [{ id: p.id, label: lbl, active: !!p.active, pose: parcelLabelPose(p.geometry) }] : [];
+      }),
+    [parcels],
+  );
+  const labeledRef = useRef(labeled);
+  labeledRef.current = labeled;
+
+  const updateTags = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    for (const item of labeledRef.current) {
+      const el = tagRefs.current[item.id];
+      if (!el) continue;
+      const s0 = map.project(item.pose.chord[0]);
+      const s1 = map.project(item.pose.chord[1]);
+      const sc = map.project(item.pose.center);
+      const dx = s1.x - s0.x;
+      const dy = s1.y - s0.y;
+      const lenPx = Math.hypot(dx, dy);
+      const widthPx = lenPx * (item.pose.widthM / Math.max(1, item.pose.lengthM));
+      if (lenPx < 34 || widthPx < 7) {
+        el.style.display = "none";
+        continue;
+      }
+      let angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+      if (angle > 90) angle -= 180;
+      if (angle <= -90) angle += 180;
+      const scale = Math.max(0.74, Math.min(1, Math.min(lenPx / 105, widthPx / 21)));
+      const maxW = Math.max(34, Math.floor((lenPx * 0.9) / scale));
+      el.style.display = "inline-flex";
+      el.style.maxWidth = `${maxW}px`;
+      el.style.transform = `translate(${sc.x.toFixed(1)}px, ${sc.y.toFixed(1)}px) translate(-50%, -50%) rotate(${angle.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+    }
+  };
 
   const sync = () => {
     const map = mapRef.current;
@@ -57,6 +98,7 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
     (map.getSource("zones") as GeoJSONSource).setData({ type: "FeatureCollection", features: (d.zones ?? []).map((z) => ({ type: "Feature", properties: { value: z.value }, geometry: z.geometry as never })) });
     // Feature count of the zones source, for diagnostics and browser tests.
     if (box.current) box.current.dataset.zones = String(d.zones?.length ?? 0);
+    updateTags();
   };
 
   useEffect(() => {
@@ -103,6 +145,8 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
       sync();
     });
     map.on("click", (e) => pickRef.current?.(e.lngLat.lng, e.lngLat.lat));
+    map.on("move", updateTags);
+    map.on("resize", updateTags);
     // Backdrop blur of the glass overlays is expensive while the map moves: switch it off for the duration.
     map.on("movestart", () => document.documentElement.classList.add("rs-moving"));
     map.on("moveend", () => document.documentElement.classList.remove("rs-moving"));
@@ -114,6 +158,8 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
   }, []);
 
   useEffect(sync, [parcels, zones]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { updateTags(); }, [labeled]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -143,6 +189,19 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
   return (
     <div className={cx("rs-map", onPick && "rs-map--pick", className)}>
       <div ref={box} className="rs-map__canvas" role="application" aria-label="Mapa działek na ortofotomapie GUGiK" />
+      {labeled.map((t) => (
+        <div
+          key={t.id}
+          ref={(el) => {
+            if (el) tagRefs.current[t.id] = el;
+            else delete tagRefs.current[t.id];
+          }}
+          className={cx("rs-map__tag", t.active && "is-on")}
+          aria-hidden="true"
+        >
+          <span>{t.label}</span>
+        </div>
+      ))}
       {popover && popoverAt ? <div ref={popRef} className="rs-map__anchor"><div className="rs-map__pop">{popover}</div></div> : null}
       {overlay ? <div className="rs-map__overlay">{overlay}</div> : null}
       {legend ? <div className="rs-map__legend">{legend}</div> : null}

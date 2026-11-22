@@ -87,3 +87,141 @@ export function containsPoint(g: AreaGeometry, [x, y]: Position): boolean {
   }
   return inside;
 }
+
+export interface LabelPose {
+  /** Interior anchor point centered horizontally along the longest-edge chord (lon/lat). */
+  center: Position;
+  /** Endpoints of the interior chord parallel to the longest edge (lon/lat). */
+  chord: [Position, Position];
+  /** Perpendicular interior width at the anchor in metres. */
+  widthM: number;
+  /** Interior chord length along the longest edge in metres. */
+  lengthM: number;
+}
+
+/**
+ * Computes an interior label anchor and fitted chord aligned with the parcel's longest edge.
+ * Collinear boundary segments (within 6 deg) are summed so subdivided strip borders still win.
+ */
+export function parcelLabelPose(g: AreaGeometry): LabelPose {
+  const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+  const rings = [...polys].sort((a, b) => ringArea(b[0] ?? []) - ringArea(a[0] ?? []))[0] ?? [];
+  const outer = rings[0] ?? [];
+  if (outer.length < 3) {
+    const pt: Position = outer[0] ?? [0, 0];
+    return { center: pt, chord: [pt, pt], widthM: 1, lengthM: 1 };
+  }
+
+  const lat0 = outer.reduce((a, p) => a + p[1], 0) / outer.length;
+  const lon0 = outer.reduce((a, p) => a + p[0], 0) / outer.length;
+  const phi = (lat0 * Math.PI) / 180, s2 = Math.sin(phi) ** 2;
+  const N = A / Math.sqrt(1 - E2 * s2), M = (A * (1 - E2)) / (1 - E2 * s2) ** 1.5;
+  const kx = (Math.PI / 180) * N * Math.cos(phi);
+  const ky = (Math.PI / 180) * M;
+  const toM = ([lon, lat]: Position): Position => [(lon - lon0) * kx, (lat - lat0) * ky];
+  const toWgs = ([x, y]: Position): Position => [lon0 + x / kx, lat0 + y / ky];
+
+  const mRings = rings.map((r) => r.map(toM));
+  const mOuter = mRings[0]!;
+
+  interface Seg { ux: number; uy: number; len: number }
+  const segs: Seg[] = [];
+  for (let i = 0; i < mOuter.length; i++) {
+    const p1 = mOuter[i]!, p2 = mOuter[(i + 1) % mOuter.length]!;
+    let dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-3) continue;
+    if (dx < 0 || (dx === 0 && dy < 0)) { dx = -dx; dy = -dy; }
+    segs.push({ ux: dx / len, uy: dy / len, len });
+  }
+
+  let ux = 1, uy = 0;
+  if (segs.length) {
+    const cosTol = Math.cos((6 * Math.PI) / 180);
+    let bestGroupLen = -1, bestSingle = -1;
+    for (const s of segs) {
+      let groupLen = 0, maxSingle = 0, sx = 0, sy = 0;
+      for (const o of segs) {
+        const dot = s.ux * o.ux + s.uy * o.uy;
+        if (Math.abs(dot) >= cosTol) {
+          groupLen += o.len;
+          if (o.len > maxSingle) maxSingle = o.len;
+          const sign = dot >= 0 ? 1 : -1;
+          sx += sign * o.ux * o.len;
+          sy += sign * o.uy * o.len;
+        }
+      }
+      if (groupLen > bestGroupLen + 1e-6 || (Math.abs(groupLen - bestGroupLen) <= 1e-6 && maxSingle > bestSingle)) {
+        bestGroupLen = groupLen;
+        bestSingle = maxSingle;
+        const norm = Math.hypot(sx, sy) || 1;
+        ux = sx / norm;
+        uy = sy / norm;
+        if (ux < 0 || (ux === 0 && uy < 0)) { ux = -ux; uy = -uy; }
+      }
+    }
+  }
+
+  const vx = -uy, vy = ux;
+  const uvRings = mRings.map((r) => r.map(([x, y]): Position => [x * ux + y * uy, x * vx + y * vy]));
+  const uvOuter = uvRings[0]!;
+  let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
+  for (const [u, v] of uvOuter) {
+    if (u < uMin) uMin = u;
+    if (u > uMax) uMax = u;
+    if (v < vMin) vMin = v;
+    if (v > vMax) vMax = v;
+  }
+  const uSpan = Math.max(1, uMax - uMin);
+  const vSpan = Math.max(1, vMax - vMin);
+  const [uCent, vCent] = centroid([[uvOuter]]);
+
+  const intervalsAt = (coordIdx: 0 | 1, level: number): [number, number][] => {
+    const other = (1 - coordIdx) as 0 | 1;
+    const hits: number[] = [];
+    for (const r of uvRings) {
+      for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+        const p1 = r[i]!, p2 = r[j]!;
+        const c1 = p1[coordIdx], c2 = p2[coordIdx];
+        if ((c1 > level) !== (c2 > level)) {
+          hits.push(p1[other] + ((p2[other] - p1[other]) * (level - c1)) / (c2 - c1));
+        }
+      }
+    }
+    hits.sort((a, b) => a - b);
+    const out: [number, number][] = [];
+    for (let k = 0; k + 1 < hits.length; k += 2) {
+      if (hits[k + 1]! > hits[k]!) out.push([hits[k]!, hits[k + 1]!]);
+    }
+    return out;
+  };
+
+  const vLevels: number[] = [];
+  for (let k = 0; k < 15; k++) vLevels.push(vMin + ((k + 0.5) / 15) * vSpan);
+  if (vCent > vMin && vCent < vMax) vLevels.push(vCent);
+
+  let best = { uA: uCent - uSpan * 0.35, uB: uCent + uSpan * 0.35, v: vCent, widthM: vSpan * 0.5, lengthM: uSpan * 0.7, score: -1 };
+  for (const v of vLevels) {
+    for (const [uA, uB] of intervalsAt(1, v)) {
+      const len = uB - uA;
+      if (len < 1) continue;
+      const uMid = (uA + uB) / 2;
+      const vInts = intervalsAt(0, uMid);
+      const hitV = vInts.find(([vLo, vHi]) => vLo <= v + 1e-4 && v <= vHi + 1e-4);
+      const clearance = hitV ? Math.max(1, 2 * Math.min(v - hitV[0], hitV[1] - v)) : vSpan * 0.25;
+      const centrality = 1 - 0.25 * (Math.abs(v - vCent) / vSpan);
+      const widthFactor = Math.min(1, clearance / Math.max(6, 0.28 * vSpan));
+      const score = len * widthFactor * centrality;
+      if (score > best.score) best = { uA, uB, v, widthM: clearance, lengthM: len, score };
+    }
+  }
+
+  const fromUv = (u: number, v: number): Position => toWgs([u * ux + v * vx, u * uy + v * vy]);
+  const uMid = (best.uA + best.uB) / 2;
+  return {
+    center: fromUv(uMid, best.v),
+    chord: [fromUv(best.uA, best.v), fromUv(best.uB, best.v)],
+    widthM: best.widthM,
+    lengthM: best.lengthM,
+  };
+}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "../analysis/useAnalysis";
 import { Button, CropSelect, DateBar, ParcelPopover, ParcelSearch, Wordmark, cx } from "../ds";
-import { DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
+import { DEFAULT_CROP, cropOf, isCropCode, type CropCode } from "../lib/crops";
 import { todayIso, type Iso } from "../lib/dates";
 import type { Position } from "../lib/geo";
 import { searchPlace, type PlaceHit } from "../lib/geocoder";
@@ -174,7 +174,11 @@ export function MapHome() {
   /** Weather is fetched on intent (pointer or focus on the panel), not on every click: Open-Meteo has a daily quota. */
   const prefetch = () => sel.forEach((p) => weatherFor(p.centroid[1], p.centroid[0], date).catch(() => undefined));
 
-  const mapParcels = useMemo<MapParcel[]>(() => sel.map((p) => ({ id: p.id, geometry: p.geometry, active: p.id === focus?.id })), [sel, focus]);
+  const mapParcels = useMemo<MapParcel[]>(
+    () => sel.map((p) => ({ id: p.id, geometry: p.geometry, active: p.id === focus?.id, cropLabel: cropOf(cropOfId(p.id)).label })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel, focus, crops, lastCrop],
+  );
   const bbox = focus && sel.some((p) => p.id === focus.id) ? focus.bbox : focus?.bbox ?? null;
   const fl = focus ? land[focus.id] : undefined;
   const nonAgri = typeof fl === "object" && fl.kind === "nonAgri";

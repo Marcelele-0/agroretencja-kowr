@@ -276,6 +276,7 @@ export function Analysis() {
       value: stageOf(r),
       active: r.id === activeId,
       hasZones: hasZ,
+      cropLabel: cropOf(r.crop).label,
     }];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [portfolio, activeId, local?.stage, backend, rowAnalyses, joint.zones, showZones, replay.active, replay.extra, replayDate, activeLand, st.weather, date]);

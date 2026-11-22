@@ -6,7 +6,7 @@ import { measureLook, simForBackend } from "./catalog";
 import { isCropCode } from "./crops";
 import { addDays, inSeason, isIso, seasonYear, toDay } from "./dates";
 import { parseUug } from "./geocoder";
-import { parseWkt, polygonsArea } from "./geo";
+import { containsPoint, parcelLabelPose, parseWkt, polygonsArea, toGeometry } from "./geo";
 import { classifyIung, IUNG_PROGI, thresholdsFor } from "./iung";
 import { activeWindow, kbw, progressiveSeasonWindows, riskFromStage, seasonWindows, stageFromKbw, windowsFor } from "./kbw";
 import { compareYears, coversRange, neededRanges, type DailySeries } from "./openMeteo";
@@ -43,6 +43,27 @@ describe("WKT", () => {
     const polys = parseWkt("MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0),(2 2,4 2,4 4,2 4,2 2)),((20 20,21 20,21 21,20 21,20 20)))");
     expect(polys).toHaveLength(2);
     expect(polygonsArea(polys)).toBeCloseTo(100 - 4 + 1);
+  });
+
+  it("places and aligns the parcel crop tag along the longest edge inside the parcel", () => {
+    const p = parseUldk(ULDK_OK);
+    const pose = parcelLabelPose(p.geometry);
+    expect(containsPoint(p.geometry, pose.center)).toBe(true);
+    expect(pose.lengthM).toBeGreaterThan(350);
+    expect(pose.widthM).toBeGreaterThan(40);
+    expect(pose.lengthM).toBeGreaterThan(pose.widthM * 3);
+
+    // Subdivided long horizontal edge (400 m split into 5 segments) vs single 90 m vertical edge:
+    // collinear grouping must still align horizontally along the 400 m edge.
+    const strip = toGeometry(
+      parseWkt(
+        "POLYGON((17.000 52.000,17.001 52.000,17.002 52.000,17.003 52.000,17.004 52.000,17.005 52.000,17.005 52.0008,17.000 52.0008,17.000 52.000))",
+      ),
+    );
+    const sp = parcelLabelPose(strip);
+    expect(containsPoint(strip, sp.center)).toBe(true);
+    expect(Math.abs(sp.chord[1][1] - sp.chord[0][1])).toBeLessThan(1e-5);
+    expect(sp.chord[1][0] - sp.chord[0][0]).toBeGreaterThan(0.004);
   });
 });
 
