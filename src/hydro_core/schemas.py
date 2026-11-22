@@ -308,6 +308,8 @@ class RetentionRecommendation(BaseModel):
     effect_yield_pp: float = 0.0
     retained_runoff_mm: float = 0.0
     time_to_effect: str | None = None
+    # Water reserve the measure acts on; measures of one pool are not added up (the strongest counts).
+    pool: str | None = None
 
 
 class WhatIfScenarioResult(BaseModel):
@@ -322,6 +324,10 @@ class WhatIfScenarioResult(BaseModel):
     baseline_stress_days: int = 0
     scenario_stress_days: int = 0
     retained_runoff_mm: float = 0.0
+    # Season runoff without and with the measures, and the combined root-zone gain used (pools, cap).
+    baseline_runoff_mm: float = 0.0
+    scenario_runoff_mm: float = 0.0
+    delta_taw_mm: float = 0.0
 
 
 class RetentionPlan(BaseModel):

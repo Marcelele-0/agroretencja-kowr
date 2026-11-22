@@ -174,13 +174,13 @@
       <tr><th>#</th><th>Działanie</th><th>Efekt ({{ r.retention.what_if_default.reference_dry_year }})</th><th>Uwagi</th></tr>
       {% for m in r.retention.recommendations[:5] %}
       <tr><td>{{ m.priority_rank }}</td><td><b>{{ m.title }}</b></td>
-          <td>−{{ "%.1f"|format(m.effect_yield_pp) }} p.p. straty, {{ m.effect_reserve_days }} dni mniej stresu</td>
+          <td>{{ effect_text(m.effect_yield_pp, m.effect_reserve_days, m.retained_runoff_mm) or "—" }}</td>
           <td>{% if m.requires_permit %}Wody Polskie{% else %}{{ m.time_to_effect or "" }}{% endif %}</td></tr>
       {% endfor %}
     </table>
     {% set w = r.retention.what_if_default %}
-    <div class="whatif-pill">„Co jeśli” ({{ w.enabled_measures|join(", ") }}): strata plonu {{ "%.0f"|format(w.baseline_yield_loss_pct) }}% → <b>{{ "%.0f"|format(w.scenario_yield_loss_pct) }}%</b>,
-      +{{ w.delta_reserve_days }} dni rezerwy, +{{ "%.0f"|format(w.saved_water_mm) }} mm wody.</div>
+    <div class="whatif-pill">„Co jeśli” ({{ w.enabled_measures|join(", ") }}):
+      {{ whatif_text(w.baseline_yield_loss_pct, w.scenario_yield_loss_pct, w.delta_reserve_days, w.saved_water_mm, w.retained_runoff_mm) }}.</div>
   </div>
   {% if map_png %}<div class="col box"><img class="map" src="data:image/png;base64,{{ map_png }}" alt="Mapa działki"></div>{% endif %}
 </div>

@@ -6,6 +6,9 @@
 #   delta_taw_mm  - extra water the root zone can hold (organic matter, less evaporation,
 #                   higher groundwater level near a dammed ditch)
 #   cn_delta      - change of the SCS curve number (negative = more infiltration, less runoff)
+#   pool          - optional: measures that act on the same water reserve. Picked together, only the
+#                   strongest one of a pool counts (two structures cannot raise one groundwater table
+#                   twice); measures of different pools add up, the root-zone gain capped at 40 mm.
 # Values are literature-based assumptions for Polish conditions - DO WERYFIKACJI Z MENTOREM.
 #
 # group:
@@ -69,6 +72,7 @@ measures:
     group: wymaga_zgody
     delta_taw_mm: 20.0
     cn_delta: 0.0
+    pool: wody_gruntowe
     time_to_effect: "od wiosny po zgodzie"
     rationale: "Melioracja odprowadza wodę, którą można zatrzymać: piętrzenie podnosi poziom wód gruntowych przy działce."
     applies_if: [ditch_nearby]
@@ -78,6 +82,7 @@ measures:
     group: wymaga_zgody
     delta_taw_mm: 15.0
     cn_delta: 0.0
+    pool: wody_gruntowe
     time_to_effect: "od wiosny po zgodzie"
     rationale: "Zamknięcie wylotu drenów po roztopach zatrzymuje wodę zimową w profilu glebowym."
     applies_if: [tile_drained]

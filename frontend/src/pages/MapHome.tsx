@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "../analysis/useAnalysis";
-import { Button, CropSelect, DateBar, ParcelPopover, ParcelSearch, Wordmark, cx } from "../ds";
+import { Button, CropSelect, DateBar, Icon, ParcelPopover, ParcelSearch, Wordmark, cx } from "../ds";
 import { DEFAULT_CROP, cropOf, isCropCode, type CropCode } from "../lib/crops";
 import { todayIso, type Iso } from "../lib/dates";
-import type { Position } from "../lib/geo";
+import { unionBbox, type Position } from "../lib/geo";
 import { searchPlace, type PlaceHit } from "../lib/geocoder";
 import { landUseAt, type LandUse } from "../lib/iung";
 import { weatherFor } from "../lib/openMeteo";
@@ -57,6 +58,30 @@ export function MapHome() {
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
+
+  /** Phones: the panel is a floating island that folds into a one-line bar. Remembered for the visit. */
+  const [collapsed, setCollapsedState] = useState(() => {
+    try { return sessionStorage.getItem("rs-panel-collapsed") === "1"; } catch { return false; }
+  });
+  const setCollapsed = (v: boolean) => {
+    setCollapsedState(v);
+    try { sessionStorage.setItem("rs-panel-collapsed", v ? "1" : "0"); } catch { /* storage blocked */ }
+  };
+  const homeRef = useRef<HTMLElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  // The map controls sit just above the island, whatever its height (and during the fold transition).
+  useEffect(() => {
+    const home = homeRef.current, panel = panelRef.current;
+    if (!home || !panel || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => home.style.setProperty("--rs-island-h", `${panel.offsetHeight}px`));
+    ro.observe(panel);
+    return () => ro.disconnect();
+  }, []);
+  /** Collapsed bar, nothing selected: open the panel and put the caret in the search (inside the tap, so phones show the keyboard). */
+  const openSearch = () => {
+    flushSync(() => setCollapsed(false));
+    panelRef.current?.querySelector<HTMLInputElement>(".rs-panel__search input")?.focus();
+  };
 
   const writeUrl = (ps: Parcel[], cropMap = cropsRef.current, fallback = lastCropRef.current) =>
     setSp(ps.length ? { dzialki: ps.map((p) => `${p.id}~${cropMap[p.id] ?? fallback}`).join(",") } : {}, { replace: true });
@@ -179,7 +204,8 @@ export function MapHome() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sel, focus, crops, lastCrop],
   );
-  const bbox = focus && sel.some((p) => p.id === focus.id) ? focus.bbox : focus?.bbox ?? null;
+  // The map fits all selected parcels; focus only moves the popover, and an empty selection leaves the view alone.
+  const bbox = useMemo(() => unionBbox(sel.map((p) => p.bbox)), [sel]);
   const fl = focus ? land[focus.id] : undefined;
   const nonAgri = typeof fl === "object" && fl.kind === "nonAgri";
   const selected = !!focus && sel.some((p) => p.id === focus.id);
@@ -193,80 +219,98 @@ export function MapHome() {
       note={selected ? "Kliknij ponownie, aby usunąć z wyboru." : "Usunięta z wyboru. Kliknij, aby dodać."} />
   )) : null;
 
-  const pad = narrow ? { top: 60, bottom: Math.round(window.innerHeight * 0.5), left: 24, right: 24 } : { top: 80, bottom: 80, left: 60, right: 60 };
+  // Phones: keep the fitted parcels above the island (58vh open, a 62px bar folded, 12px off the bottom edge).
+  const pad = narrow ? { top: 60, bottom: collapsed ? 100 : Math.round(window.innerHeight * 0.58) + 28, left: 24, right: 24 } : { top: 80, bottom: 80, left: 60, right: 60 };
+
+  const sumTitle = !sel.length ? "Wybierz działki na mapie" : sel.length === 1 ? "Wybrana działka" : `Wybrane działki: ${sel.length}`;
+  const sumSub = busy ? "Wczytuję działkę…" : error ? error
+    : !sel.length ? "albo wyszukaj miejscowość"
+    : sel.length === 1 ? `Działka ${sel[0]!.number}, ${sel[0]!.region} · ${ha(sel[0]!.areaHa)} ha`
+    : `Razem ${ha(sel.reduce((s, p) => s + p.areaHa, 0))} ha`;
 
   return (
-    <main className="rs-home">
-      <aside className="rs-panel" aria-label="Wybór działek" onPointerEnter={prefetch} onFocus={prefetch}>
+    <main className="rs-home" ref={homeRef}>
+      <aside ref={panelRef} className={cx("rs-panel", collapsed && "is-collapsed")} aria-label="Wybór działek" onPointerEnter={prefetch} onFocus={prefetch}>
         <div className="rs-panel__top">
           <Link to="/" className="rs-panel__brand" aria-label="Rusałka, strona startowa"><Wordmark /></Link>
           <Link className="ar-btn ar-btn--outline" to="/metoda">Jak liczymy</Link>
+          {/* Phones only: folds the island; folded, the same button carries the summary. */}
+          <button type="button" className="rs-panel__toggle" aria-expanded={!collapsed} aria-controls="rs-panel-body"
+            aria-label={collapsed ? `Pokaż panel. ${sumTitle}. ${sumSub}` : "Schowaj panel"} title={collapsed ? "Pokaż panel" : "Schowaj panel"}
+            onClick={() => setCollapsed(!collapsed)}>
+            <span className="rs-panel__chev"><Icon name="down" /></span>
+            <span className="rs-panel__sum" aria-hidden="true"><b>{sumTitle}</b><span className={cx(error && !busy && "is-error")}>{sumSub}</span></span>
+          </button>
+          {sel.length ? <Button variant="primary" arrow className="rs-panel__go" onClick={analyse}>Analizuj</Button>
+            : <Button variant="icon" icon="search" label="Szukaj miejscowości lub działki" className="rs-panel__find" onClick={openSearch} />}
         </div>
-        <ParcelSearch className="rs-panel__search" value={text} onChange={setText} onSubmit={search} busy={busy} error={error} placeholder="Miejscowość lub numer działki, np. Gniezno" />
-        {placeNote ? (
-          <div className="rs-places">
-            <p className="rs-places__note">{placeNote}</p>
-            {placeHits.length > 1 ? (
-              <ul className="rs-places__list">
-                {placeHits.map((h, i) => (
-                  <li key={`${h.label}-${i}`}>
-                    <button
-                      type="button"
-                      className={cx("rs-places__btn", i === activePlace && "is-on")}
-                      onClick={() => {
-                        setActivePlace(i);
-                        setFlyTo({ center: [h.lon, h.lat], zoom: 15.2, seq: Date.now() });
-                        setPlaceNote(`Przeniesiono do: ${h.label}. Kliknij działkę na mapie.`);
-                      }}
-                    >
-                      <b>{h.label}</b>
-                      {h.sub ? <span>{h.sub}</span> : null}
-                    </button>
+        <div className="rs-panel__body" id="rs-panel-body">
+          <ParcelSearch className="rs-panel__search" value={text} onChange={setText} onSubmit={search} busy={busy} error={error} placeholder="Miejscowość lub numer działki, np. Gniezno" />
+          {placeNote ? (
+            <div className="rs-places">
+              <p className="rs-places__note">{placeNote}</p>
+              {placeHits.length > 1 ? (
+                <ul className="rs-places__list">
+                  {placeHits.map((h, i) => (
+                    <li key={`${h.label}-${i}`}>
+                      <button
+                        type="button"
+                        className={cx("rs-places__btn", i === activePlace && "is-on")}
+                        onClick={() => {
+                          setActivePlace(i);
+                          setFlyTo({ center: [h.lon, h.lat], zoom: 15.2, seq: Date.now() });
+                          setPlaceNote(`Przeniesiono do: ${h.label}. Kliknij działkę na mapie.`);
+                        }}
+                      >
+                        <b>{h.label}</b>
+                        {h.sub ? <span>{h.sub}</span> : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+          {sel.length ? (
+            <>
+              <div className="rs-panel__head">
+                <h2 className="rs-panel__title">{sel.length === 1 ? "Wybrana działka" : `Wybrane działki: ${sel.length}`}</h2>
+                <span className="ar-muted rs-panel__hint">Klikaj na mapie, aby dodać kolejne.</span>
+              </div>
+              <ul className="rs-panel__list">
+                {sel.map((p) => (
+                  <li key={p.id} className={p.id === focus?.id ? "is-on" : ""}>
+                    <div className="rs-panel__item">
+                      <button type="button" className="rs-panel__name" onClick={() => setFocus(p)}>
+                        <b>Działka {p.number}, {p.region}</b>
+                        <span>{p.commune} · {ha(p.areaHa)} ha · {soilText(land[p.id])}</span>
+                      </button>
+                      <CropSelect className="rs-panel__crop" value={cropOfId(p.id)} onChange={(c) => setCropFor(p.id, c)} label={`Uprawa na działce ${p.number}`} />
+                    </div>
+                    <Button variant="icon" size="sm" icon="minus" label={`Usuń działkę ${p.number} z wyboru`} onClick={() => remove(p.id)} />
                   </li>
                 ))}
               </ul>
-            ) : null}
-          </div>
-        ) : null}
-        {sel.length ? (
-          <>
-            <div className="rs-panel__head">
-              <h2 className="rs-panel__title">{sel.length === 1 ? "Wybrana działka" : `Wybrane działki: ${sel.length}`}</h2>
-              <span className="ar-muted rs-panel__hint">Klikaj na mapie, aby dodać kolejne.</span>
-            </div>
-            <ul className="rs-panel__list">
-              {sel.map((p) => (
-                <li key={p.id} className={p.id === focus?.id ? "is-on" : ""}>
-                  <div className="rs-panel__item">
-                    <button type="button" className="rs-panel__name" onClick={() => setFocus(p)}>
-                      <b>Działka {p.number}, {p.region}</b>
-                      <span>{p.commune} · {ha(p.areaHa)} ha · {soilText(land[p.id])}</span>
-                    </button>
-                    <CropSelect className="rs-panel__crop" value={cropOfId(p.id)} onChange={(c) => setCropFor(p.id, c)} label={`Uprawa na działce ${p.number}`} />
-                  </div>
-                  <Button variant="icon" size="sm" icon="minus" label={`Usuń działkę ${p.number} z wyboru`} onClick={() => remove(p.id)} />
-                </li>
-              ))}
-            </ul>
-            <div className="rs-panel__form">
-              <DateBar className="rs-panel__date" date={date} onDate={setDate} />
-              <Button variant="primary" size="lg" arrow onClick={analyse}>{sel.length === 1 ? "Analizuj działkę" : `Analizuj działki (${sel.length})`}</Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="rs-panel__empty">Kliknij działki na mapie albo wpisz miejscowość lub numer. Możesz wybrać kilka.</p>
-            <div className="rs-presets" aria-label="Przykładowe analizy">
-              <span className="ar-form__label">Przykłady (1 klik)</span>
-              {DEMO_PRESETS.map((p) => (
-                <Link key={p.id} to={p.href} className="rs-preset">
-                  <b>{p.title}</b>
-                  <span>{p.sub}</span>
-                </Link>
-              ))}
-            </div>
-          </>
-        )}
+              <div className="rs-panel__form">
+                <DateBar className="rs-panel__date" date={date} onDate={setDate} />
+                <Button variant="primary" size="lg" arrow onClick={analyse}>{sel.length === 1 ? "Analizuj działkę" : `Analizuj działki (${sel.length})`}</Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="rs-panel__empty">Kliknij działki na mapie albo wpisz miejscowość lub numer. Możesz wybrać kilka.</p>
+              <div className="rs-presets" aria-label="Przykładowe analizy">
+                <span className="ar-form__label">Przykłady (1 klik)</span>
+                {DEMO_PRESETS.map((p) => (
+                  <Link key={p.id} to={p.href} className="rs-preset">
+                    <b>{p.title}</b>
+                    <span>{p.sub}</span>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </aside>
       <ParcelMap className="rs-home__map" onPick={pick} parcels={mapParcels} bbox={bbox} flyTo={flyTo} popover={popover} popoverAt={focus ? focus.centroid : null} padding={pad} />
     </main>

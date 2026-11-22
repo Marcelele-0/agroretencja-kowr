@@ -21,7 +21,7 @@ from hydro_core.crops import CONFIG_DIR, kc_and_p_for_dates
 from hydro_core.fao_balance import WindowResult, season_summary, simulate_window
 from hydro_core.features import FeatureContext
 from hydro_core.registry import Registry
-from hydro_core.runoff import parcel_cn
+from hydro_core.runoff import CN_MAX, CN_MIN, parcel_cn
 from hydro_core.schemas import (
     PERENNIAL_CROPS,
     CropCode,
@@ -29,7 +29,7 @@ from hydro_core.schemas import (
     RetentionRecommendation,
     WhatIfScenarioResult,
 )
-from hydro_core.text import days
+from hydro_core.text import effect_text
 
 GROUP_ORDER = ("bez_urzadzen", "wymaga_zgody")
 MAX_DELTA_TAW_MM = 40.0
@@ -103,9 +103,15 @@ class RetentionMeasure:
     time_to_effect: str
     rationale: str
     applies_if: tuple[str, ...]
+    pool: str | None = None
 
     def applicable(self, fx: FeatureContext) -> bool:
         return all(APPLICABILITY.get(name)(fx) for name in self.applies_if)
+
+    @property
+    def pool_key(self) -> str:
+        """Water reserve the measure acts on: its pool, or the measure alone."""
+        return self.pool or self.id
 
 
 def load_measures() -> Registry[RetentionMeasure]:
@@ -117,7 +123,7 @@ def load_measures() -> Registry[RetentionMeasure]:
                 id=mid, title=m["title"], category=m["category"], group=m["group"],
                 delta_taw_mm=float(m["delta_taw_mm"]), cn_delta=float(m["cn_delta"]),
                 time_to_effect=m.get("time_to_effect", ""), rationale=m.get("rationale", ""),
-                applies_if=tuple(m.get("applies_if") or ()),
+                applies_if=tuple(m.get("applies_if") or ()), pool=m.get("pool"),
             ),
         )
     return reg
@@ -142,16 +148,46 @@ def reference_dry_year(fx: FeatureContext) -> int:
     return best[1] if best else ad.year
 
 
+def applicable_ids(fx: FeatureContext, measure_ids: list[str]) -> list[str]:
+    """Known measures that apply to this parcel, each once, in the given order."""
+    out: list[str] = []
+    for mid in measure_ids:
+        if mid in RETENTION_MEASURES and mid not in out and RETENTION_MEASURES.get(mid).applicable(fx):
+            out.append(mid)
+    return out
+
+
+def combined_deltas(measure_ids: list[str]) -> tuple[float, float]:
+    """(ΔTAW, ΔCN) of measures applied together, without counting one water reserve twice.
+
+    Measures of one pool act on the same reserve (e.g. a ditch dam and a closed drain outlet raise
+    the same groundwater table): only the strongest of the pool counts. Pools add up; the
+    root-zone gain is capped at ``MAX_DELTA_TAW_MM`` and the curve number is clamped by ``parcel_cn``.
+    """
+    best: dict[str, tuple[float, float]] = {}
+    for mid in dict.fromkeys(measure_ids):
+        m = RETENTION_MEASURES.get(mid)
+        taw, cn = best.get(m.pool_key, (m.delta_taw_mm, m.cn_delta))
+        best[m.pool_key] = (max(taw, m.delta_taw_mm), min(cn, m.cn_delta))
+    d_taw = sum(t for t, _ in best.values())
+    d_cn = sum(c for _, c in best.values())
+    return min(MAX_DELTA_TAW_MM, d_taw), d_cn
+
+
 def _scenario_params(fx: FeatureContext, measure_ids: list[str]) -> tuple[float, float]:
-    """(TAW, CN) of the parcel with the given measures applied together."""
-    d_taw = sum(RETENTION_MEASURES.get(m).delta_taw_mm for m in measure_ids)
-    d_cn = sum(RETENTION_MEASURES.get(m).cn_delta for m in measure_ids)
-    taw = fx.inputs.taw_mm + min(MAX_DELTA_TAW_MM, d_taw)
-    cn = parcel_cn(
-        fx.inputs.soil_category, fx.get("slope_deg") or 0.0,
-        grassland=fx.inputs.crop_code == CropCode.UZYTKI_ZIELONE, delta=d_cn,
-    )
-    return taw, cn
+    """(TAW, CN) of the parcel with the given measures applied together.
+
+    The CN shift is applied to the parcel's own baseline CN, so no measures (or measures without a
+    CN change) give exactly the baseline row and never invent a runoff change.
+    """
+    d_taw, d_cn = combined_deltas(measure_ids)
+    taw = fx.inputs.taw_mm + d_taw
+    if not d_cn:
+        return taw, fx.inputs.cn
+    args = (fx.inputs.soil_category, fx.get("slope_deg") or 0.0)
+    grass = fx.inputs.crop_code == CropCode.UZYTKI_ZIELONE
+    shift = parcel_cn(*args, grassland=grass, delta=d_cn) - parcel_cn(*args, grassland=grass)
+    return taw, min(CN_MAX, max(CN_MIN, fx.inputs.cn + shift))
 
 
 def simulate_scenarios(fx: FeatureContext, year: int, combos: list[list[str]]) -> WindowResult:
@@ -164,7 +200,7 @@ def simulate_scenarios(fx: FeatureContext, year: int, combos: list[list[str]]) -
     sl = slice(start, end + 1)
     kc, p_tab, in_season = kc_and_p_for_dates(crop, tl.dates[sl])
     dr_start = float(fx.trace.dr[0, start - 1]) if start > 0 else 0.0
-    params = [(fx.inputs.taw_mm, fx.inputs.cn)] + [_scenario_params(fx, c) for c in combos]
+    params = [_scenario_params(fx, [])] + [_scenario_params(fx, c) for c in combos]
     taw = np.array([p[0] for p in params])
     cn = np.array([p[1] for p in params])
     dr0 = np.minimum(dr_start, taw)
@@ -172,20 +208,32 @@ def simulate_scenarios(fx: FeatureContext, year: int, combos: list[list[str]]) -
 
 
 def _row_effect(res: WindowResult, i: int) -> dict[str, float]:
-    loss_b = 100.0 * (1.0 - float(res.yield_rel[0]))
-    loss_s = 100.0 * (1.0 - float(res.yield_rel[i]))
+    # Rounded first, so a measure's gain equals the difference of the losses shown with and without it.
+    loss_b = round(100.0 * (1.0 - float(res.yield_rel[0])), 1)
+    loss_s = round(100.0 * (1.0 - float(res.yield_rel[i])), 1)
     ro_b, ro_s = float(res.ro_mm[0]), float(res.ro_mm[i])
     return {
-        "loss_base": round(loss_b, 1),
-        "loss_scen": round(loss_s, 1),
+        "loss_base": loss_b,
+        "loss_scen": loss_s,
         "yield_pp": round(loss_b - loss_s, 1),
         "reserve_days": round(float(res.stress_days[0] - res.stress_days[i])),
         "retained_runoff_mm": round(max(0.0, ro_b - ro_s), 1),
         "runoff_reduction_pct": round(100.0 * max(0.0, ro_b - ro_s) / ro_b, 1) if ro_b > 0.5 else 0.0,
+        "runoff_base": round(ro_b, 1),
+        "runoff_scen": round(ro_s, 1),
+        # Signed: extra water the crop used (ETa) with the measures; negative = less.
         "saved_water_mm": round(float(res.eta_mm[i] - res.eta_mm[0]), 1),
         "stress_base": int(res.stress_days[0]),
         "stress_scen": int(res.stress_days[i]),
     }
+
+
+def _effect_sentence(year: int, eff: dict[str, float]) -> str:
+    """Simulated effect in words: only the gains, each with its own correct sign."""
+    text = effect_text(eff["yield_pp"], eff["reserve_days"], eff["retained_runoff_mm"])
+    if not text:
+        return ""
+    return f" W najsuchszym sezonie {year}: {text}{'' if text.endswith('.') else '.'}"
 
 
 def _map_hint(fx: FeatureContext, m: RetentionMeasure) -> dict[str, Any]:
@@ -217,10 +265,7 @@ def build_retention_plan(fx: FeatureContext) -> RetentionPlan:
         recs.append(
             RetentionRecommendation(
                 id=m.id, category=m.category, title=m.title,
-                rationale=(
-                    f"{m.rationale} W najsuchszym sezonie {year}: strata plonu −{eff['yield_pp']:.1f} p.p., "
-                    f"{days(eff['reserve_days'])} stresu mniej, zatrzymany spływ {eff['retained_runoff_mm']:.0f} mm."
-                ),
+                rationale=f"{m.rationale}{_effect_sentence(year, eff)}",
                 delta_taw_mm=m.delta_taw_mm,
                 runoff_reduction_pct=min(100.0, eff["runoff_reduction_pct"]),
                 priority_rank=rank,
@@ -233,6 +278,7 @@ def build_retention_plan(fx: FeatureContext) -> RetentionPlan:
                 effect_yield_pp=max(0.0, eff["yield_pp"]),
                 retained_runoff_mm=eff["retained_runoff_mm"],
                 time_to_effect=m.time_to_effect,
+                pool=m.pool,
             )
         )
     default = [r.id for r in recs if r.group == "bez_urzadzen"][:DEFAULT_WHAT_IF_COUNT]
@@ -240,9 +286,13 @@ def build_retention_plan(fx: FeatureContext) -> RetentionPlan:
 
 
 def what_if(fx: FeatureContext, enabled: list[str], year: int | None = None) -> WhatIfScenarioResult:
-    """Baseline vs all ``enabled`` measures applied together, in the reference dry season."""
+    """Baseline vs all ``enabled`` measures applied together, in the reference dry season.
+
+    Only measures that apply to this parcel count, each once; unknown or not applicable ids are
+    dropped, so the scenario holds exactly the measures listed in ``enabled_measures``.
+    """
     year = reference_dry_year(fx) if year is None else year
-    known = [m for m in enabled if m in RETENTION_MEASURES]
+    known = applicable_ids(fx, enabled)
     res = simulate_scenarios(fx, year, [known])
     eff = _row_effect(res, 1)
     return WhatIfScenarioResult(
@@ -255,4 +305,7 @@ def what_if(fx: FeatureContext, enabled: list[str], year: int | None = None) -> 
         baseline_stress_days=eff["stress_base"],
         scenario_stress_days=eff["stress_scen"],
         retained_runoff_mm=eff["retained_runoff_mm"],
+        baseline_runoff_mm=eff["runoff_base"],
+        scenario_runoff_mm=eff["runoff_scen"],
+        delta_taw_mm=combined_deltas(known)[0],
     )

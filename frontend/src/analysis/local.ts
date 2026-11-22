@@ -50,9 +50,16 @@ export function withLevers(s: DailySeries, l: Levers): DailySeries {
   return { ...s, p: s.p.map((v) => (v === null ? null : v + perDay)), et0: s.et0.map((v) => (v === null ? null : v * (1 - l.etCut))) };
 }
 
-/** Sums the levers of the picked measures (catalog assumptions); the evaporation cut is capped at 50%. */
+/** Largest evaporation cut of the what-if, the end of its slider. */
+export const ET_CUT_MAX = 0.3;
+/**
+ * Levers of measures picked together (catalog assumptions): the water kept adds up; evaporation cuts act on one
+ * flux, so each cuts a share of what is left (10% and 5% give 14.5%, not 15%), capped at the slider's 30%.
+ */
 export function leversOf(sims: ({ addMm?: number; etCut?: number } | undefined)[]): Levers {
-  return sims.reduce<Levers>((acc, m) => ({ addMm: acc.addMm + (m?.addMm ?? 0), etCut: Math.min(0.5, acc.etCut + (m?.etCut ?? 0)) }), { addMm: 0, etCut: 0 });
+  const addMm = sims.reduce((a, m) => a + (m?.addMm ?? 0), 0);
+  const left = sims.reduce((a, m) => a * (1 - Math.min(1, Math.max(0, m?.etCut ?? 0))), 1);
+  return { addMm, etCut: Math.min(ET_CUT_MAX, Math.round((1 - left) * 1000) / 1000) };
 }
 /** Days of the backend reference season used to spread its water over the year: 1 March to 30 September (IUNG season end). */
 export const WHATIF_SEASON_DAYS = 214;

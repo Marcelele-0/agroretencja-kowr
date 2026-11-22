@@ -21,6 +21,8 @@ export interface RetentionRecommendation {
   effect_yield_pp?: number;
   retained_runoff_mm?: number;
   time_to_effect?: string | null;
+  /** Water reserve the measure acts on: measures of one pool are not added up, the strongest counts. */
+  pool?: string | null;
 }
 export interface WhatIfScenarioResult {
   baseline_yield_loss_pct: number;
@@ -32,6 +34,11 @@ export interface WhatIfScenarioResult {
   baseline_stress_days?: number;
   scenario_stress_days?: number;
   retained_runoff_mm?: number;
+  /** Season runoff without and with the measures [mm]. */
+  baseline_runoff_mm?: number;
+  scenario_runoff_mm?: number;
+  /** Combined root-zone gain of the measures [mm]: one pool counted once, capped at 40 mm. */
+  delta_taw_mm?: number;
 }
 export interface RetentionPlan { recommendations: RetentionRecommendation[]; what_if_default: WhatIfScenarioResult }
 export interface IrrigationStrategySummary { strategy_name: string; avg_yield_loss_pct: number; avg_water_mm: number; avg_deep_percolation_mm: number; water_use_efficiency: number }

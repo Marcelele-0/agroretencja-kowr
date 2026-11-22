@@ -178,10 +178,31 @@ export function ParcelMap({ parcels, bbox, flyTo, onPick, popover, popoverAt, zo
   useEffect(() => {
     const map = mapRef.current, el = popRef.current;
     if (!map || !el || !popoverAt) return;
-    const upd = () => { const p = map.project(popoverAt); el.style.transform = `translate(${p.x}px, ${p.y}px)`; };
+    // Near the edges the popover slides inwards so it stays readable; the tip follows the parcel or hides when off the box.
+    const upd = () => {
+      const p = map.project(popoverAt);
+      const pop = el.firstElementChild as HTMLElement | null;
+      const w = pop?.offsetWidth ?? 0, h = pop?.offsetHeight ?? 0, cw = map.getContainer().clientWidth;
+      const edge = 8, gap = 14;
+      let dx = 0;
+      if (w && cw > w + 2 * edge) {
+        const left = p.x - w / 2;
+        if (left < edge) dx = edge - left;
+        else if (left + w > cw - edge) dx = cw - edge - (left + w);
+      }
+      const dy = h ? Math.max(0, edge - (p.y - gap - h)) : 0;
+      el.classList.toggle("is-shifted", dy > 0);
+      el.style.setProperty("--pop-dx", `${Math.round(dx)}px`);
+      el.style.setProperty("--pop-dy", `${Math.round(dy)}px`);
+      el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+    };
     upd();
     map.on("move", upd);
-    return () => { map.off("move", upd); };
+    map.on("resize", upd);
+    // The content can grow after the first paint (soil class loading), which changes the room it needs.
+    const ro = typeof ResizeObserver !== "undefined" && el.firstElementChild ? new ResizeObserver(upd) : null;
+    if (ro && el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => { map.off("move", upd); map.off("resize", upd); ro?.disconnect(); };
   }, [popoverAt?.[0], popoverAt?.[1], !!popover]);
 
   const locate = () => navigator.geolocation?.getCurrentPosition((p) => mapRef.current?.flyTo({ center: [p.coords.longitude, p.coords.latitude], zoom: 15.5 }));

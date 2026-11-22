@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeLocal, cropComparison, leversFromBackendWater, leversOf, stageShift, WHATIF_SEASON_DAYS } from "./local";
+import { computeLocal, cropComparison, ET_CUT_MAX, leversFromBackendWater, leversOf, stageShift, WHATIF_SEASON_DAYS } from "./local";
 import { DRY_MEASURES } from "../lib/catalog";
 import { toDay } from "../lib/dates";
 import type { LandUse } from "../lib/iung";
@@ -42,10 +42,13 @@ describe("cropComparison", () => {
 describe("measures → water state", () => {
   const sim = (id: string) => DRY_MEASURES.find((m) => m.id === id)!.sim;
 
-  it("sums the catalog levers of the picked measures and caps the evaporation cut", () => {
+  it("adds the water kept, cuts one evaporation flux once, and caps the cut at the slider's 30%", () => {
     expect(leversOf([sim("zastawka"), sim("pas_buforowy")])).toEqual({ addMm: 35, etCut: 0 });
-    expect(leversOf([sim("miedzyplon_mulcz"), sim("uprawa_bezorkowa")]).etCut).toBeCloseTo(0.15);
-    expect(leversOf([{ etCut: 0.4 }, { etCut: 0.3 }, undefined]).etCut).toBe(0.5);
+    // −10% then −5% of what is left: 14.5%, not 15%
+    expect(leversOf([sim("miedzyplon_mulcz"), sim("uprawa_bezorkowa")]).etCut).toBe(0.145);
+    expect(leversOf([sim("miedzyplon_mulcz")])).toEqual({ addMm: 0, etCut: 0.1 });
+    expect(leversOf([{ etCut: 0.4 }, { etCut: 0.3 }, undefined]).etCut).toBe(ET_CUT_MAX);
+    expect(leversOf([])).toEqual({ addMm: 0, etCut: 0 });
   });
 
   it("spreads the backend season water evenly over the season, per 60 days", () => {

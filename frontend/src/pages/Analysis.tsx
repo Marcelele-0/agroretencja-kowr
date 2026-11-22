@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { API_URL, backendEnabled, postWhatIf, reportPdfUrl } from "../api/backend";
-import type { AnalysisResponse, RlCompareResponse, RlPlan14d, RlRecommendResponse, RlSoilZoneDay, RlSource, WhatIfScenarioResult } from "../api/contract";
-import { computeLocal, cropComparison, leversOf, soilCause, stageShift, withLevers, type CropStage, type Levers, type LocalResult, type TimelineDay } from "../analysis/local";
+import type { AnalysisResponse, RetentionRecommendation, RlCompareResponse, RlPlan14d, RlRecommendResponse, RlSoilZoneDay, RlSource, WhatIfScenarioResult } from "../api/contract";
+import { computeLocal, cropComparison, ET_CUT_MAX, leversOf, soilCause, withLevers, type CropStage, type Levers, type LocalResult, type TimelineDay } from "../analysis/local";
+import { activePicks, backendChips, backendLevers, MAX_ROOT_ZONE_GAIN_MM, measureText, pickedLabel, signed, signedUnit, stageTrend, whatIfSummary, type EffectChip } from "../analysis/measures";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
 import { useRowAnalyses } from "../analysis/useRowAnalyses";
 import { alignBins, zoneBins, zoneClassOrder, zonesFromFeatures, type JointZoneInput } from "../analysis/jointZones";
@@ -11,7 +12,7 @@ import { useTerrainUpgrade } from "../analysis/useTerrainUpgrade";
 import { farmerFields, useFarmerVersion } from "../analysis/farmerData";
 import { FarmerInputs } from "./FarmerInputs";
 import { BAL, balKey, balStep, cx, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, LayerSwitch, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
-import { DRY_MEASURES, measureLook, PERMIT_URL, simForBackend, WET_MEASURES, type Measure } from "../lib/catalog";
+import { DRY_MEASURES, measureLook, measuresForStage, PERMIT_URL } from "../lib/catalog";
 import { backendCrop, cropOf, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
 import { addDays, formatDayMonth, formatLong, isIso, isoOf, minIso, monthName, parts, todayIso, type Iso } from "../lib/dates";
 import { isAbort } from "../lib/http";
@@ -21,6 +22,7 @@ import { coversRange, seasonWeatherFor, type DailySeries } from "../lib/openMete
 import type { SourceEntry } from "../lib/sources";
 import { containsPoint } from "../lib/geo";
 import { ParcelMap, type MapParcel, type MapZone } from "../map/ParcelMap";
+import { openPrintReport } from "../report/openReport";
 import { PrintReport } from "../report/PrintReport";
 import { ReportDocumentBuilder } from "../report/reportBuilder";
 import { dec, ha, mm, timePl } from "./shared";
@@ -461,7 +463,10 @@ export function Analysis() {
       <header className="rs-ahead">
         <Link to={`/?dzialki=${encodeURIComponent(key)}`} aria-label="Wróć do mapy"><Wordmark /></Link>
         <p className="rs-ahead__parcel ar-muted">{items.length === 1 ? "1 działka" : `${items.length} działki`} · {formatLong(date)}</p>
-        {items.length === 1 && pdf ? <Button variant="light" arrow="down" href={pdf}>Pobierz raport PDF</Button> : <Button variant="light" arrow="down" onClick={() => window.print()}>Pobierz raport PDF</Button>}
+        {/* Both open the report in a new tab: the server PDF for one parcel, else the A4 print view of all parcels. */}
+        {items.length === 1 && pdf
+          ? <Button variant="light" arrow href={pdf} target="_blank" rel="noopener noreferrer" title="Raport otworzy się w nowej karcie">Otwórz raport PDF</Button>
+          : <Button variant="light" arrow onClick={() => openPrintReport(reportDoc)} title="Raport otworzy się w nowej karcie">Otwórz raport PDF</Button>}
       </header>
 
       <div className="rs-grid">
@@ -971,12 +976,25 @@ function Causes({ local, backend, land, weatherFailed }: { local: LocalResult | 
   );
 }
 
-interface MeasureItem { id: string; title: string; effect: string; permit: boolean; image: string; sim?: Measure["sim"]; backendNote?: string }
+interface MeasureItem {
+  id: string;
+  title: string;
+  effect: string;
+  permit: boolean;
+  /** When the measure starts to work (server measures). */
+  when: string | null;
+  /** Levers of the measure alone in the what-if; null = advice only, not simulated. */
+  lv: Levers | null;
+  /** Server results of the measure alone in the reference dry season. */
+  chips: EffectChip[];
+  rec: RetentionRecommendation | null;
+  selectable: boolean;
+}
 const stageName = (n: number | null) => (n === null ? "brak danych" : BAL[String(n)]!.toLowerCase());
 
 /**
- * One list of measures: the whole card toggles it into the simulation. Each measure is simulated alone to rank
- * the list by water gain; the selected ones are simulated together below the list.
+ * One list of measures: the whole card toggles it into the simulation. Each measure is simulated alone for its
+ * result line; the picked ones are simulated together below the list, from the same baseline with no measures.
  */
 function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, picked, onPick, onWhatIfData, onSimStage }: {
   parcelId: string; local: LocalResult | null; st: AnalysisState; backend: AnalysisResponse | null; crop: CropCode; date: Iso; weatherFailed: boolean; picked: Set<string>; onPick: (id: string) => void; onWhatIfData?: (res: WhatIfScenarioResult | null) => void; onSimStage?: (stage: number | null) => void;
@@ -990,34 +1008,43 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
   });
   const land = landForCalc(st.land);
   const series = st.weather.status === "ready" ? st.weather.data : null;
-  const recs = backend?.retention?.recommendations;
-  const items: MeasureItem[] = recs?.length
-    ? recs.map((r) => {
-      const look = measureLook(`${r.id} ${r.category}`);
-      const note = [r.delta_taw_mm > 0 ? `+${dec(r.delta_taw_mm, 0)} mm wody` : null, r.runoff_reduction_pct > 0 ? `${dec(r.runoff_reduction_pct, 0)}% mniej spływu` : null].filter(Boolean).join(" · ");
-      return { id: r.id, title: r.title, effect: r.rationale || note, permit: r.requires_permit ?? look.permit, image: look.image, sim: simForBackend(r), backendNote: note };
-    })
-    : ((local?.stage ?? 0) >= 2 ? WET_MEASURES : DRY_MEASURES).map((m) => ({ id: m.id, title: m.title, effect: m.effect, permit: m.permit, image: m.image, sim: m.sim }));
+  const recs = backend?.retention?.recommendations?.length ? backend.retention.recommendations : null;
+  const items: MeasureItem[] = recs
+    ? recs.map((r) => ({
+      id: r.id, title: r.title, effect: measureText(r.rationale), permit: r.requires_permit ?? measureLook(`${r.id} ${r.category}`).permit,
+      when: r.time_to_effect || null, lv: backendLevers([r], recs), chips: backendChips(r), rec: r, selectable: !!local,
+    }))
+    : measuresForStage(local?.stage).map((m) => ({
+      id: m.id, title: m.title, effect: m.effect, permit: m.permit, when: null, lv: m.sim ? leversOf([m.sim]) : null, chips: [], rec: null, selectable: !!local && !!m.sim,
+    }));
+  // Levers can change with the same ids (another crop or parcel), so the memos key on them too.
+  const itemsKey = items.map((m) => `${m.id}:${m.lv ? `${m.lv.addMm}/${m.lv.etCut}` : "-"}:${m.selectable ? 1 : 0}`).join();
 
   const run = (lv: Levers) => (series && land && land.kind !== "nonAgri" ? computeLocal(land, withLevers(series, lv), crop, date, todayIso()) : null);
-  const solo = useMemo(() => new Map(items.map((m) => [m.id, m.sim ? run({ addMm: m.sim.addMm ?? 0, etCut: m.sim.etCut ?? 0 }) : null])), [series, land, crop, date, items.map((m) => m.id).join()]);
-  const gain = (id: string) => { const r = solo.get(id); return r && local?.kbw60 !== null && local?.kbw60 !== undefined && r.kbw60 !== null ? r.kbw60 - local.kbw60 : -Infinity; };
-  const ordered = recs?.length ? items : [...items].sort((a, b) => gain(b.id) - gain(a.id));
+  // Baseline ("Teraz") of the simulation: the same rain-and-evaporation grading with no measures. `local` can hold the
+  // server's soil-water state and the farmer's gauge, which would mix two models in one "before → after".
+  const base = useMemo(() => run({ addMm: 0, etCut: 0 }), [series, land, crop, date]); // eslint-disable-line react-hooks/exhaustive-deps
+  const solo = useMemo(() => new Map(items.map((m) => [m.id, m.lv && (m.lv.addMm || m.lv.etCut) ? run(m.lv) : null])), [series, land, crop, date, itemsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const gain = (id: string) => { const r = solo.get(id); return r && base && r.kbw60 !== null && base.kbw60 !== null ? r.kbw60 - base.kbw60 : -Infinity; };
+  const ordered = recs ? items : [...items].sort((a, b) => gain(b.id) - gain(a.id));
 
-  const preset = useMemo<Levers>(() => leversOf(items.filter((m) => picked.has(m.id)).map((m) => m.sim)), [picked, items.map((m) => m.id).join()]);
+  // Only picks of this list count: a pick left over from another crop, date or data source is neither simulated nor sent.
+  const active = activePicks(items, picked);
+  const activeIds = active.map((m) => m.id);
+  const activeKey = activeIds.join(",");
+  const preset = useMemo<Levers>(
+    () => (recs ? backendLevers(active.map((m) => m.rec!), recs) : leversOf(active.map((m) => m.lv ?? undefined))),
+    [activeKey, itemsKey], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   useEffect(() => setOwn(null), [preset, parcelId]);
   const lv = own ?? preset;
-  const combined = useMemo(() => (lv.addMm || lv.etCut ? run(lv) : null), [lv, series, land, crop, date]);
-  // Baseline of the simulation: the same rain-and-evaporation grading with no measures. `local.stage` can hold the
-  // server's soil-water state, which would mix two models in one "before → after".
-  const base = useMemo(() => run({ addMm: 0, etCut: 0 }), [series, land, crop, date]); // eslint-disable-line react-hooks/exhaustive-deps
-  const dryYears = (r: LocalResult) => r.years.filter((y) => y.value !== null && y.value <= -3).length;
+  const combined = useMemo(() => (lv.addMm || lv.etCut ? run(lv) : null), [lv, series, land, crop, date]); // eslint-disable-line react-hooks/exhaustive-deps
+  const after = combined ?? base;
 
   const bc = backendCrop(crop);
-  const pickedSorted = [...picked].sort().join(",");
   const farmer = farmerFields(parcelId, date);
-  const whatIfKey = backendEnabled && backend && bc && own === null && picked.size > 0
-    ? `${parcelId}|${bc}|${date}|${pickedSorted}|${JSON.stringify(farmer)}`
+  const whatIfKey = backendEnabled && recs && bc && own === null && activeIds.length > 0
+    ? `${parcelId}|${bc}|${date}|${[...activeIds].sort().join(",")}|${JSON.stringify(farmer)}`
     : "";
 
   useEffect(() => {
@@ -1028,7 +1055,7 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
     }
     const ctl = new AbortController();
     setWhatIf((prev) => ({ key: whatIfKey, loading: true, data: prev.data, error: null }));
-    postWhatIf({ parcel_id: parcelId, crop: bc, analysis_date: date, enabled_measures: [...picked], ...farmer }, ctl.signal).then(
+    postWhatIf({ parcel_id: parcelId, crop: bc, analysis_date: date, enabled_measures: activeIds, ...farmer }, ctl.signal).then(
       (data) => {
         if (ctl.signal.aborted) return;
         setWhatIf({ key: whatIfKey, loading: false, data, error: null });
@@ -1047,165 +1074,171 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
   const activeWhatIf = whatIfKey && whatIf.key === whatIfKey ? whatIf.data : null;
 
   // Water state before → after, both from KBW 60 against the IUNG threshold, with the same levers the
-  // "Dostosuj założenia" sliders show. The backend season simulation stays in the table below; mixing its
-  // season total in here made the result jump when the response arrived and contradict the sliders.
-  const simLv = lv;
+  // "Dostosuj założenia" sliders show. The server season simulation stays in the results and table below.
   const simShown = !!activeWhatIf || !!combined;
-  // Same baseline and same simulation as the per-measure lines above (computeLocal with levers), so the
-  // summary never disagrees with a single measure's "before → after".
-  const shift = useMemo(
-    () => (simShown && local && series && land && land.kind !== "nonAgri"
-      ? { before: base?.stage ?? null, after: (combined ?? base)?.stage ?? null, kbwGainMm: stageShift(land, series, crop, date, simLv).kbwGainMm }
-      : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [simShown, local, base, combined, series, land, crop, date, simLv.addMm, simLv.etCut],
-  );
-  const hasShift = !!shift && shift.before !== null && shift.after !== null;
-  useEffect(() => { onSimStage?.(hasShift ? shift!.after : null); }, [hasShift, shift?.after]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shift = simShown && base && after && base.stage !== null && after.stage !== null
+    ? { before: base.stage, after: after.stage, k0: base.kbw60, k1: after.kbw60 }
+    : null;
+  useEffect(() => { onSimStage?.(shift ? shift.after : null); }, [shift?.after]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => onSimStage?.(null), []); // eslint-disable-line react-hooks/exhaustive-deps
-  const shiftText = (() => {
-    if (!hasShift || shift!.after !== shift!.before) return null;
-    const days = activeWhatIf?.delta_reserve_days ?? 0;
-    if (days > 0) return `Stan się nie zmienia, ale zapas wody rośnie o ${days} ${days === 1 ? "dzień" : "dni"}.`;
-    const g = shift!.kbwGainMm;
-    return g !== null && g >= 1 ? `Stan się nie zmienia, ale bilans wody z 60 dni rośnie o ${dec(g, 0)} mm.` : "Stan się nie zmienia.";
-  })();
-  const shiftNote = [
-    hasShift ? "Stan po działaniach liczymy z założeń poniżej: woda zatrzymana w glebie i mniej parowania w 60 dniach." : null,
-    hasShift && backend ? "Stan wyjściowy liczymy z opadu i parowania z 60 dni, więc może różnić się od oceny powyżej." : null,
-  ].filter(Boolean).join(" ");
+  const kbwGain = shift && shift.k0 !== null && shift.k1 !== null ? shift.k1 - shift.k0 : null;
+  const trend = shift ? stageTrend(shift.before, shift.after) : null;
+  const shiftText = !shift ? null
+    : shift.after === shift.before ? (kbwGain !== null && kbwGain >= 1 ? "Stan wody bez zmiany, ale w bilansie jest więcej wody." : "Stan wody bez zmiany.")
+      : trend === "worse" && shift.after > 0 ? "Zatrzymana woda zostaje w glebie na suche miesiące." : null;
   const stateWord = (n: number) => BAL[String(n)]!;
+  const dryYears = (r: LocalResult) => r.years.filter((y) => y.value !== null && y.value <= -3).length;
+  const summary = activeWhatIf ? whatIfSummary(activeWhatIf) : null;
 
   if (!local && !recs && !weatherFailed) return <Skeleton lines={["Działania"]} />;
+  // Only the local excess-water list is advice without a simulation; elsewhere the cards can be picked.
+  const canPick = items.some((m) => m.selectable) || !local || !!recs;
   const groups = [{ title: "Bez urządzeń wodnych", items: ordered.filter((m) => !m.permit) }, { title: "Wymaga zgody Wód Polskich", items: ordered.filter((m) => m.permit) }];
-  const effectLine = (m: MeasureItem) => {
-    if (m.backendNote) return m.backendNote;
+  const chipsOf = (m: MeasureItem): EffectChip[] => {
     const r = solo.get(m.id);
-    if (!r || !local) return null;
+    const out: EffectChip[] = [];
     const b = base?.stage ?? null;
-    if (r.stage !== null && b !== null && r.stage !== b) return `${BAL[String(b)]} → ${stageName(r.stage)}`;
+    // A state change is shown only toward the optimum; on the wet side more water is not a gain.
+    if (r && r.stage !== null && b !== null && stageTrend(b, r.stage) === "better") out.push({ label: "stan wody", value: `${stateWord(b)} → ${stageName(r.stage)}` });
+    if (m.rec) return [...out, ...m.chips];
     const g = gain(m.id);
-    return Number.isFinite(g) && g > 0 ? `+${dec(g, 0)} mm wody w bilansie 60 dni` : null;
+    if (Number.isFinite(g) && Math.abs(g) >= 1) out.push({ label: "bilans 60 dni", value: signedUnit(g, "mm") });
+    return out;
   };
   return (
     <>
-      <p className="rs-lead">Kliknij działania, które rozważasz. Wynik dla tej działki pokaże się pod listą.</p>
+      <p className="rs-lead">
+        {canPick ? "Zaznacz działania, które rozważasz. Wynik dla tej działki pokaże się pod listą." : "Te działania chronią glebę w mokrym okresie i zatrzymują nadmiar wody na suche miesiące."}
+      </p>
       {groups.filter((g) => g.items.length).map((g) => (
         <div key={g.title} className="rs-group">
           <h4 className="rs-subtitle">{g.title}</h4>
           <div className="rs-measures">
             {g.items.map((m) => {
-              const on = picked.has(m.id);
-              const can = !!m.sim && !!local;
-              const eff = effectLine(m);
-              return (
-                <button key={m.id} type="button" className={`rs-measure${on ? " is-on" : ""}`} aria-pressed={can ? on : undefined} disabled={!can && !m.backendNote} onClick={() => can && onPick(m.id)}>
-                  <span className="rs-measure__img" style={{ backgroundImage: `url("${m.image}")` }} aria-hidden="true" />
-                  <span className="rs-measure__body">
+              const on = m.selectable && picked.has(m.id);
+              const chips = chipsOf(m);
+              const body = (
+                <span className="rs-measure__body">
+                  <span className="rs-measure__head">
                     <b className="rs-measure__title">{m.title}</b>
-                    <span className="rs-measure__effect">{m.effect}</span>
-                    {eff ? <span className="rs-measure__result">{eff}</span> : null}
+                    {m.permit ? <span className="rs-measure__permit"><Icon name="file" />Zgoda Wód Polskich</span> : null}
                   </span>
-                  {can ? <span className="rs-measure__check" aria-hidden="true">{on ? <Icon name="check" /> : null}</span> : null}
+                  <span className="rs-measure__effect">{m.effect}</span>
+                  {chips.length ? (
+                    <span className="rs-measure__result">
+                      {chips.map((c) => <span key={c.label} className="rs-measure__chip"><span>{c.label}</span> <b>{c.value}</b></span>)}
+                    </span>
+                  ) : null}
+                  {m.when ? <span className="rs-measure__when">Efekt: {m.when}</span> : null}
+                </span>
+              );
+              return m.selectable ? (
+                <button key={m.id} type="button" className={cx("rs-measure", on && "is-on")} aria-pressed={on} onClick={() => onPick(m.id)}>
+                  <span className="rs-measure__check" aria-hidden="true">{on ? <Icon name="check" /> : null}</span>
+                  {body}
                 </button>
+              ) : (
+                <div key={m.id} className="rs-measure rs-measure--static">{body}</div>
               );
             })}
           </div>
         </div>
       ))}
       {items.some((m) => m.permit) ? <p className="ar-muted rs-why__note">Zgody i zgłoszenia wodnoprawne: <a href={PERMIT_URL} target="_blank" rel="noreferrer">Wody Polskie</a>.</p> : null}
-      {local ? (
+      {local && base ? (
         <div className="ar-card rs-whatif">
-          <h4 className="rs-subtitle">Z wybranymi działaniami</h4>
-          <p className="ar-card__text">
-            {activeWhatIf
-              ? `Symulacja FAO-56 + SCS-CN (rok odniesienia ${activeWhatIf.reference_dry_year}).`
-              : combined
-                ? "Porównanie stanu obecnego z wybranymi założeniami."
-                : "Wybierz działanie powyżej albo przesuń suwaki poniżej."}
-          </p>
+          <div className="rs-whatif__head">
+            <h4 className="rs-subtitle">Z wybranymi działaniami</h4>
+            {active.length ? <span className="rs-whatif__count">{pickedLabel(active.length)}</span> : null}
+          </div>
+          {active.length
+            ? <p className="rs-whatif__picked">{active.map((m) => m.title).join(" · ")}</p>
+            : <p className="ar-card__text">{own ? "Wynik dla założeń z suwaków poniżej." : canPick ? "Zaznacz działanie powyżej albo przesuń suwaki poniżej." : "Przesuń suwaki poniżej, aby sprawdzić, ile wody można zatrzymać."}</p>}
           {whatIf.loading && whatIfKey ? <p className="rs-updating" role="status">Przeliczam symulację na serwerze…</p> : null}
           {whatIf.error && whatIfKey ? <p className="rs-updating" role="status">{whatIf.error} (wynik lokalny poniżej).</p> : null}
-          {hasShift ? (
+          {shift ? (
             <div className="rs-shift">
-              <p className="rs-shift__states" role="img" aria-label={`Stan wody teraz: ${stateWord(shift!.before!).toLowerCase()}, z działaniami: ${stateWord(shift!.after!).toLowerCase()}`}>
-                <span className="rs-shift__st"><i className={cx("rs-zhist__sw", `ar-b-${balKey(shift!.before!)}`)} aria-hidden="true" />{stateWord(shift!.before!)}</span>
+              <p className="rs-shift__states" role="img" aria-label={`Stan wody teraz: ${stateWord(shift.before).toLowerCase()}, z działaniami: ${stateWord(shift.after).toLowerCase()}`}>
+                <span className="rs-shift__st"><i className={cx("rs-zhist__sw", `ar-b-${balKey(shift.before)}`)} aria-hidden="true" />{stateWord(shift.before)}</span>
                 <span className="rs-shift__to">
                   <span className="rs-shift__arrow" aria-hidden="true">→</span>
-                  <span className="rs-shift__st rs-shift__st--after"><i className={cx("rs-zhist__sw", `ar-b-${balKey(shift!.after!)}`)} aria-hidden="true" />{stateWord(shift!.after!)}</span>
+                  <span className="rs-shift__st rs-shift__st--after"><i className={cx("rs-zhist__sw", `ar-b-${balKey(shift.after)}`)} aria-hidden="true" />{stateWord(shift.after)}</span>
                 </span>
               </p>
+              {shift.k0 !== null && shift.k1 !== null ? (
+                <p className="rs-shift__kbw">
+                  Bilans wody z 60 dni: <b>{mm(shift.k0)} → {mm(shift.k1)} mm</b>
+                  {kbwGain !== null && Math.abs(kbwGain) >= 0.5 ? <span className="rs-shift__gain">{signedUnit(kbwGain, "mm")}</span> : null}
+                </p>
+              ) : null}
               {shiftText ? <p className="ar-card__text rs-shift__text">{shiftText}</p> : null}
-              {shiftNote ? <p className="ar-muted rs-why__note">{shiftNote}</p> : null}
             </div>
+          ) : null}
+          {summary?.tiles.length ? (
+            <dl className="rs-whatif__tiles">
+              {summary.tiles.map((t) => <div key={t.key} className="rs-whatif__tile"><dt>{t.label}</dt><dd>{t.value}</dd></div>)}
+            </dl>
           ) : null}
           <table className="rs-compare">
             <colgroup><col className="rs-compare__k" /><col className="rs-compare__v" /><col className="rs-compare__v" /></colgroup>
-            <thead><tr><th /><th>Teraz</th><th>Z działaniami</th></tr></thead>
-            {activeWhatIf ? (
+            <thead><tr><th /><th className="rs-compare__num">Teraz</th><th className="rs-compare__num">Z działaniami</th></tr></thead>
+            {summary ? (
               <tbody>
-                <tr>
-                  <td>Strata plonu ({activeWhatIf.reference_dry_year})</td>
-                  <td>{dec(activeWhatIf.baseline_yield_loss_pct, 1)}%</td>
-                  <td><b>{dec(activeWhatIf.scenario_yield_loss_pct, 1)}%</b></td>
-                </tr>
-                <tr>
-                  <td>Dni stresu w sezonie</td>
-                  <td>{activeWhatIf.baseline_stress_days ?? "—"}</td>
-                  <td><b>{activeWhatIf.scenario_stress_days ?? "—"}</b></td>
-                </tr>
-                <tr>
-                  <td>Dodatkowa rezerwa wody</td>
-                  <td>0 dni</td>
-                  <td><b>{activeWhatIf.delta_reserve_days > 0 ? `+${activeWhatIf.delta_reserve_days}` : activeWhatIf.delta_reserve_days < 0 ? `−${-activeWhatIf.delta_reserve_days}` : "0"} dni</b></td>
-                </tr>
-                <tr>
-                  <td>Zatrzymana woda{activeWhatIf.retained_runoff_mm ? ` (spływ −${dec(activeWhatIf.retained_runoff_mm, 0)} mm)` : ""}</td>
-                  <td>0 mm</td>
-                  <td><b>+{dec(activeWhatIf.saved_water_mm, 0)} mm</b></td>
-                </tr>
+                {summary.rows.map((r) => (
+                  <tr key={r.key}><td>{r.label}</td><td className="rs-compare__num">{r.now}</td><td className="rs-compare__num"><b>{r.after}</b></td></tr>
+                ))}
               </tbody>
             ) : (
               <tbody>
-                {hasShift ? null : (
+                {shift ? null : (
                   <tr>
                     <td>Stan wody</td>
-                    <td><WaterBalance size="sm" value={local.stage} /></td>
-                    <td className={combined ? undefined : "rs-compare__same"}><WaterBalance size="sm" value={(combined ?? local).stage} /></td>
+                    <td><WaterBalance size="sm" value={base.stage} /></td>
+                    <td className={combined ? undefined : "rs-compare__same"}><WaterBalance size="sm" value={after!.stage} /></td>
                   </tr>
                 )}
                 <tr>
                   <td>Bilans wody z 60 dni</td>
-                  <td>{mm(local.kbw60)} mm</td>
-                  <td className={combined ? undefined : "rs-compare__same"}>{mm((combined ?? local).kbw60)} mm</td>
+                  <td className="rs-compare__num">{mm(base.kbw60)} mm</td>
+                  <td className={cx("rs-compare__num", !combined && "rs-compare__same")}><b>{mm(after!.kbw60)} mm</b></td>
                 </tr>
                 <tr>
-                  <td>Okna z suszą IUNG w sezonie {local.season}</td>
-                  <td>{local.droughtCount} z {local.knownCount}</td>
-                  <td className={combined ? undefined : "rs-compare__same"}>{(combined ?? local).droughtCount} z {(combined ?? local).knownCount}</td>
+                  <td>Okna z suszą IUNG w sezonie {base.season}</td>
+                  <td className="rs-compare__num">{base.droughtCount} z {base.knownCount}</td>
+                  <td className={cx("rs-compare__num", !combined && "rs-compare__same")}><b>{after!.droughtCount} z {after!.knownCount}</b></td>
                 </tr>
                 <tr>
                   <td>Lata z suszą ({formatDayMonth(date)}, 10 lat)</td>
-                  <td>{dryYears(local)} z {local.years.length}</td>
-                  <td className={combined ? undefined : "rs-compare__same"}>{dryYears(combined ?? local)} z {(combined ?? local).years.length}</td>
+                  <td className="rs-compare__num">{dryYears(base)} z {base.years.length}</td>
+                  <td className={cx("rs-compare__num", !combined && "rs-compare__same")}><b>{dryYears(after!)} z {after!.years.length}</b></td>
                 </tr>
               </tbody>
             )}
           </table>
+          <p className="ar-muted rs-why__note">
+            {activeWhatIf
+              ? `Symulacja FAO-56 + SCS-CN w najsuchszym sezonie ${activeWhatIf.reference_dry_year}: „Teraz” bez działań, obok wszystkie wybrane działania razem.`
+              : "Bilans opadu i parowania z 60 dni: „Teraz” bez działań, obok z założeniami z suwaków."}
+            {shift && backend ? " Stan wody liczymy tu z tego bilansu, więc może różnić się od oceny powyżej." : ""}
+          </p>
           <div className="rs-more rs-more--inline">
             <div className="rs-sliders__head">
               <h4 className="rs-subtitle">Dostosuj założenia</h4>
               {own ? <button type="button" className="rs-linkbtn" onClick={() => setOwn(null)}>Przywróć z listy</button> : null}
             </div>
             <div className="rs-sliders">
-              <label><span>Woda zatrzymana w glebie: <b>+{lv.addMm} mm</b> na 60 dni</span>
-                <input type="range" min={0} max={80} step={5} value={lv.addMm} onChange={(e) => setOwn({ ...lv, addMm: Number(e.target.value) })} />
+              <label><span>Woda zatrzymana w glebie: <b>{signedUnit(lv.addMm, "mm")}</b> na 60 dni</span>
+                <input type="range" min={0} max={Math.max(80, lv.addMm)} step={1} value={lv.addMm} onChange={(e) => setOwn({ ...lv, addMm: Number(e.target.value) })} />
               </label>
-              <label><span>Mniej parowania: <b>−{Math.round(lv.etCut * 100)}%</b></span>
-                <input type="range" min={0} max={30} step={1} value={Math.round(lv.etCut * 100)} onChange={(e) => setOwn({ ...lv, etCut: Number(e.target.value) / 100 })} />
+              <label><span>Mniej parowania: <b>{signed(-lv.etCut * 100)}%</b></span>
+                <input type="range" min={0} max={ET_CUT_MAX * 100} step={1} value={Math.round(lv.etCut * 100)} onChange={(e) => setOwn({ ...lv, etCut: Number(e.target.value) / 100 })} />
               </label>
             </div>
-            <p className="ar-muted rs-why__note">Założenia: {DRY_MEASURES.filter((m) => m.sim).map((m) => `${m.title.toLowerCase()} ${m.sim!.note}`).join(", ")}. Backend zastąpi je bilansem FAO-56 i modelem terenu.</p>
+            <p className="ar-muted rs-why__note">
+              {recs
+                ? `Założenia z listy: woda, którą wybrane działania zatrzymają w glebie (działania na tym samym zasobie wody, np. zastawka i sterowany odpływ, liczymy raz; razem do ${MAX_ROOT_ZONE_GAIN_MM} mm), i zatrzymany spływ z sezonu.`
+                : `Założenia: ${DRY_MEASURES.filter((m) => m.sim).map((m) => `${m.title.toLowerCase()} ${m.sim!.note}`).join(", ")}. Pełna analiza liczy je bilansem wodnym FAO-56 i modelem terenu.`}
+            </p>
           </div>
         </div>
       ) : null}

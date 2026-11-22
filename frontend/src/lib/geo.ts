@@ -70,6 +70,7 @@ export function bboxOf(g: AreaGeometry): BBox {
   for (const rings of polys) for (const [x, y] of rings[0] ?? []) { w = Math.min(w, x); e = Math.max(e, x); s = Math.min(s, y); n = Math.max(n, y); }
   return [w, s, e, n];
 }
+/** Smallest box covering all boxes; null for an empty list. */
 export function unionBbox(boxes: BBox[]): BBox | null {
   if (!boxes.length) return null;
   return boxes.reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);

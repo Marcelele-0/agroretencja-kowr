@@ -1,5 +1,6 @@
 import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse, RlSource, WhatIfScenarioResult } from "../api/contract";
-import { DRY_MEASURES, measureLook, WET_MEASURES } from "../lib/catalog";
+import { backendChips, signed, signedUnit } from "../analysis/measures";
+import { measureLook, measuresForStage } from "../lib/catalog";
 import { cropOf, type CropCode } from "../lib/crops";
 import { formatDayMonth, formatLong, type Iso } from "../lib/dates";
 import type { AreaGeometry, Position } from "../lib/geo";
@@ -200,11 +201,8 @@ function buildMeasures(
     const sorted = [...recs].sort((a, b) => a.priority_rank - b.priority_rank).slice(0, 5);
     const rows = sorted.map((r) => {
       const look = measureLook(`${r.id} ${r.category}`);
-      const parts = [
-        r.delta_taw_mm > 0 ? `+${dec(r.delta_taw_mm, 0)} mm TAW` : null,
-        r.runoff_reduction_pct > 0 ? `−${dec(r.runoff_reduction_pct, 0)}% spływu` : null,
-        r.effect_yield_pp ? `−${dec(r.effect_yield_pp, 1)} p.p. straty` : null,
-      ].filter(Boolean);
+      // Same signed results as the cards on the page: water kept "+", runoff and yield loss "−".
+      const parts = backendChips(r).map((c) => `${c.label} ${c.value}`);
       return {
         id: r.id,
         rank: r.priority_rank,
@@ -217,8 +215,7 @@ function buildMeasures(
     return { rows, whatIfSummary: null };
   }
 
-  const wet = (local?.stage ?? 0) >= 2;
-  const list = wet ? WET_MEASURES : DRY_MEASURES;
+  const list = measuresForStage(local?.stage);
   const rows = list.slice(0, 5).map((m, idx) => ({
     id: m.id,
     rank: idx + 1,
@@ -236,7 +233,7 @@ function formatWhatIf(
   measures: ReportMeasureRow[],
 ): string | null {
   if (whatIfBackend) {
-    return `Symulacja „Co jeśli” (rok ${whatIfBackend.reference_dry_year}): strata plonu ${dec(whatIfBackend.baseline_yield_loss_pct, 1)}% → ${dec(whatIfBackend.scenario_yield_loss_pct, 1)}%, rezerwa +${whatIfBackend.delta_reserve_days} dni, zatrzymana woda +${dec(whatIfBackend.saved_water_mm, 0)} mm.`;
+    return `Symulacja „Co jeśli” (rok ${whatIfBackend.reference_dry_year}): ${whatIfParts(whatIfBackend, 1)}.`;
   }
   const pickedTitles = measures.filter((m) => m.selected).map((m) => m.title);
   if (pickedTitles.length) {
@@ -244,9 +241,20 @@ function formatWhatIf(
   }
   const def = backend?.retention?.what_if_default;
   if (def) {
-    return `Domyślne działania bez urządzeń (rok ${def.reference_dry_year}): strata plonu ${dec(def.baseline_yield_loss_pct, 0)}% → ${dec(def.scenario_yield_loss_pct, 0)}%, +${def.delta_reserve_days} dni rezerwy, +${dec(def.saved_water_mm, 0)} mm wody.`;
+    return `Domyślne działania bez urządzeń (rok ${def.reference_dry_year}): ${whatIfParts(def, 0)}.`;
   }
   return null;
+}
+
+/** What-if results with the sign of their meaning (as on the page): fewer stress days "−N", runoff "−X mm"; zero parts left out. */
+function whatIfParts(w: WhatIfScenarioResult, lossDigits: number): string {
+  const kept = w.retained_runoff_mm ?? 0;
+  return [
+    `strata plonu ${dec(w.baseline_yield_loss_pct, lossDigits)}% → ${dec(w.scenario_yield_loss_pct, lossDigits)}%`,
+    w.delta_reserve_days ? `dni stresu ${signed(-w.delta_reserve_days)}` : null,
+    Math.abs(w.saved_water_mm) >= 0.5 ? `woda dla roślin ${signedUnit(w.saved_water_mm, "mm")}` : null,
+    kept >= 0.5 ? `spływ ${signedUnit(-kept, "mm")}` : null,
+  ].filter(Boolean).join(", ");
 }
 
 function buildIrrigation(

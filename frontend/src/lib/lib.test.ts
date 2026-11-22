@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { BackendError, parseBackendError } from "../api/backend";
 import { quickPicks } from "../ds/inputs";
 import { projectParcelSvg, ReportDocumentBuilder } from "../report/reportBuilder";
-import { measureLook, simForBackend } from "./catalog";
+import { measureLook } from "./catalog";
 import { isCropCode } from "./crops";
 import { addDays, inSeason, isIso, seasonYear, toDay } from "./dates";
 import { parseUug } from "./geocoder";
-import { containsPoint, parcelLabelPose, parseWkt, polygonsArea, toGeometry } from "./geo";
+import { containsPoint, parcelLabelPose, parseWkt, polygonsArea, toGeometry, unionBbox, type BBox } from "./geo";
 import { classifyIung, IUNG_PROGI, thresholdsFor } from "./iung";
 import { activeWindow, kbw, progressiveSeasonWindows, riskFromStage, seasonWindows, stageFromKbw, windowsFor } from "./kbw";
 import { compareYears, coversRange, neededRanges, type DailySeries } from "./openMeteo";
@@ -64,6 +64,21 @@ describe("WKT", () => {
     expect(containsPoint(strip, sp.center)).toBe(true);
     expect(Math.abs(sp.chord[1][1] - sp.chord[0][1])).toBeLessThan(1e-5);
     expect(sp.chord[1][0] - sp.chord[0][0]).toBeGreaterThan(0.004);
+  });
+});
+
+describe("bbox union", () => {
+  it("returns null for no boxes", () => {
+    expect(unionBbox([])).toBeNull();
+  });
+  it("keeps a single box as is", () => {
+    const b: BBox = [17.1, 52.2, 17.3, 52.4];
+    expect(unionBbox([b])).toEqual(b);
+  });
+  it("covers several boxes, including disjoint and nested ones", () => {
+    const boxes: BBox[] = [[17.1, 52.2, 17.3, 52.4], [18.0, 51.9, 18.2, 52.0], [17.15, 52.25, 17.2, 52.3]];
+    expect(unionBbox(boxes)).toEqual([17.1, 51.9, 18.2, 52.4]);
+    expect(boxes[0]).toEqual([17.1, 52.2, 17.3, 52.4]);
   });
 });
 
@@ -194,18 +209,9 @@ describe("geocoder (GUGiK UUG)", () => {
 });
 
 describe("backend measure levers, quick picks, and presets", () => {
-  it("maps backend retention metrics and falls back to catalog defaults", () => {
-    expect(simForBackend({ id: "rec_1", category: "retention", delta_taw_mm: 18.4, runoff_reduction_pct: 20 })).toEqual({
-      addMm: 18,
-      etCut: 0.1,
-      note: "+18 mm, −20% spływu",
-    });
-    expect(simForBackend({ id: "miedzyplon_mulcz", category: "agrotechnika", delta_taw_mm: 0, runoff_reduction_pct: 0 })).toEqual({
-      etCut: 0.1,
-      note: "−10% parowania",
-    });
-    expect(simForBackend({ id: "unknown_0", category: "other", delta_taw_mm: 0, runoff_reduction_pct: 0 })).toBeUndefined();
+  it("flags water devices as needing a permit (backend levers: analysis/measures.test.ts)", () => {
     expect(measureLook("sterowany_odplyw urzadzenie_wodne").permit).toBe(true);
+    expect(measureLook("mulcz agrotechnika").permit).toBe(false);
   });
 
   it("includes Susza 2019 in quickPicks for 2026-11-21", () => {

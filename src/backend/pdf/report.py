@@ -28,7 +28,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from hydro_core.crops import crop_params
 from hydro_core.registry import Registry
 from hydro_core.schemas import AnalysisResponse
-from hydro_core.text import days, state_label
+from hydro_core.text import effect_text, state_label, whatif_text
 from hydro_core.topography import TerrainAnalysis, terrain_wetness_offset
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,9 @@ RENDERERS: Registry[Renderer] = Registry("renderery raportu")
 
 @lru_cache(maxsize=1)
 def _env() -> Environment:
-    return Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html", "j2"]))
+    env = Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html", "j2"]))
+    env.globals.update(effect_text=effect_text, whatif_text=whatif_text)
+    return env
 
 
 def _png(fig: plt.Figure) -> str:
@@ -178,7 +180,8 @@ def _matplotlib(html: str, r: AnalysisResponse, images: dict[str, str | None]) -
         ),
         *[(f"– {v}", T, "normal") for v in r.causes.explanations.values()],
         (f"3. Ranking działań retencyjnych (rok odniesienia {r.retention.what_if_default.reference_dry_year})", H2, "bold"),
-        *[(f"{m.priority_rank}. {m.title}: −{m.effect_yield_pp:.1f} p.p. straty plonu, {days(m.effect_reserve_days)} stresu mniej"
+        *[(f"{m.priority_rank}. {m.title}"
+           + (f": {eff}" if (eff := effect_text(m.effect_yield_pp, m.effect_reserve_days, m.retained_runoff_mm)) else "")
            + (" – wymaga zgody Wód Polskich" if m.requires_permit else ""), T, "normal") for m in r.retention.recommendations[:8]],
     ]
     page2: list[tuple[str, float, str]] = [

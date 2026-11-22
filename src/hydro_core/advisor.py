@@ -28,7 +28,7 @@ from hydro_core.schemas import (
     WaterRiskAssessment,
     YearlyDroughtPoint,
 )
-from hydro_core.text import days, num
+from hydro_core.text import days, effect_text, num
 
 PREPARE_HORIZON_DAYS = 7
 DOSE_STEP_MM = 10.0
@@ -204,8 +204,9 @@ def _r_retention(fx: FeatureContext, ctx: AdviceContext) -> list[FarmerAdvice]:
     return [FarmerAdvice(
         id="retencja", kind=AdviceKind.RETENCJA, priority=3,
         title=f"Zatrzymaj wodę tam, gdzie spadła: {top.title.lower()}",
-        text=(f"W najsuchszym sezonie {wi.reference_dry_year} ten zabieg zmniejszyłby stratę plonu o "
-              f"{top.effect_yield_pp:.1f} p.p. i skrócił okres stresu o {top.effect_reserve_days} dni."),
+        text=(f"W najsuchszym sezonie {wi.reference_dry_year} ten zabieg daje: {eff}{'' if eff.endswith('.') else '.'}"
+              if (eff := effect_text(top.effect_yield_pp, top.effect_reserve_days, top.retained_runoff_mm))
+              else top.rationale),
         evidence={"rok_odniesienia": float(wi.reference_dry_year), "efekt_pp": top.effect_yield_pp}, based_on=["symulator Co jeśli (FAO-56/33)"],
     )]
 
