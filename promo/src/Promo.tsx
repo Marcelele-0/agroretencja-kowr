@@ -16,15 +16,15 @@ const clipDur = (name: keyof typeof RATES, fallback: number, max = 600) => {
 };
 
 const SCENES: Scene[] = [
-  { id: "hook", dur: 240, enter: "cut", C: Hook },
-  { id: "extremes", dur: 170, enter: "fade", C: Extremes },
-  { id: "sources", dur: 270, enter: "fade", C: Sources },
-  { id: "reveal", dur: 210, enter: "cut", C: Reveal },
-  { id: "ortho", dur: 160, enter: "wipe", C: Ortho },
+  { id: "hook", dur: 186, enter: "cut", C: Hook },
+  { id: "extremes", dur: 126, enter: "fade", C: Extremes },
+  { id: "sources", dur: 216, enter: "fade", C: Sources },
+  { id: "reveal", dur: 176, enter: "cut", C: Reveal },
+  { id: "ortho", dur: 132, enter: "wipe", C: Ortho },
   { id: "search", dur: clipDur("map_search", 300), enter: "fade", C: Search },
   { id: "analysis", dur: clipDur("analysis_load", 270), enter: "fade", C: Analysis },
   { id: "today", dur: clipDur("today", 330), enter: "fade", C: Today },
-  { id: "replay", dur: clipDur("replay", 180, MAX.replay), enter: "fade", C: Replay },
+  { id: "replay", dur: clipDur("replay", 240, MAX.replay), enter: "fade", C: Replay },
   { id: "measures", dur: clipDur("detail_scroll", 300, MAX.detail_scroll), enter: "fade", C: Measures },
   { id: "crops", dur: clipDur("crops", 480), enter: "fade", C: Crops },
   { id: "models", dur: 240, enter: "wipe", C: Models },

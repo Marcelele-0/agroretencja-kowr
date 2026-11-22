@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const mPath = join(root, "public", "rec", "manifest.json");
-const FPS = 30, MIN_FREEZE = 0.8, HOLD = 15, END_HOLD = 75; // the last hold leaves time to read the caption
+const FPS = 30, MIN_FREEZE = 1.2, HOLD = 30, END_HOLD = 105; // the last hold leaves time to read the caption
 
 const m = JSON.parse(readFileSync(mPath, "utf8"));
 for (const [name, clip] of Object.entries(m.clips)) {
