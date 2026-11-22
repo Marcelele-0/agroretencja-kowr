@@ -110,3 +110,84 @@ export function Future() {
     </AbsoluteFill>
   );
 }
+
+const SHARES: { name: string; what: string; pct: number; color: string; note?: string }[] = [
+  { name: "Satelita Sentinel-2", what: "wilgotność łanu, z wagą według pokrycia gleby przez uprawę", pct: 30, color: "#62b2da", note: "do" },
+  { name: "Woda w glebie", what: "bilans FAO-56 w strefie korzeni, dzień po dniu", pct: 28, color: "#2b6f9e" },
+  { name: "Pojemność wodna gleby", what: "kategoria IUNG-PIB i SoilGrids", pct: 15, color: "#94673a" },
+  { name: "Teren i spływ", what: "NMT: spadki, zagłębienia, rowy", pct: 15, color: "#5d7d2c" },
+  { name: "Bilans IUNG-PIB", what: "opad minus parowanie z 60 dni wobec progu uprawy", pct: 12, color: "#f09a52" },
+];
+
+/** What each data layer contributes to the water score: the real weights of scoring.yaml as one bar. */
+export function Shares() {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const barX = 140, barW = W - 280, barY = 330, barH = 56;
+  let acc = 0;
+  return (
+    <AbsoluteFill style={{ background: C.night, color: C.onNight }}>
+      <div style={{ position: "absolute", left: 140, top: 130 }}>
+        <Line at={4} size={76}>Co waży w ocenie działki</Line>
+      </div>
+      {SHARES.map((s, i) => {
+        const grow = interpolate(frame, [20 + i * 10, 50 + i * 10], [0, 1], { ...clamp, easing: ease });
+        const x = barX + (barW * acc) / 100;
+        const w = (barW * s.pct) / 100;
+        acc += s.pct;
+        return <div key={s.name} style={{ position: "absolute", left: x + 2, top: barY, width: Math.max(0, w * grow - 4), height: barH, borderRadius: 6, background: s.color }} />;
+      })}
+      <div style={{ position: "absolute", left: barX, top: barY + barH + 46, width: barW, display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: 28 }}>
+        {SHARES.map((s, i) => {
+          const p = spring({ frame: frame - 40 - i * 10, fps, config: { damping: 200 } });
+          return (
+            <div key={s.name} style={{ opacity: p, transform: `translateY(${(1 - p) * 16}px)` }}>
+              <div style={{ font: `500 64px/1 ${FONT}`, letterSpacing: "-0.03em", color: s.color }}>{s.note ? <span style={{ fontSize: 30 }}>{s.note} </span> : null}{s.pct}%</div>
+              <div style={{ marginTop: 14, font: `600 26px/1.15 ${FONT}` }}>{s.name}</div>
+              <div style={{ marginTop: 8, font: `400 20px/1.35 ${FONT}`, color: C.muted }}>{s.what}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ position: "absolute", left: 140, right: 140, bottom: 120, font: `400 28px/1.4 ${FONT}`, color: C.lime, opacity: interpolate(frame, [130, 150], [0, 1], clamp) }}>
+        Gdy nad polem są chmury albo uprawa dopiero wschodzi, waga satelity spada, a reszta danych przejmuje jej część.
+      </div>
+    </AbsoluteFill>
+  );
+}
+
+/** AI is one component, not the verdict: physics and IUNG rules compute the state, AI fills two gaps. */
+export function AiRole() {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const col = (at: number) => spring({ frame: frame - at, fps, config: { damping: 200 } });
+  const a = col(16), b = col(40);
+  const row = (title: string, body: string) => (
+    <div style={{ padding: "22px 0 24px", borderTop: `1px solid ${C.lineNight}` }}>
+      <div style={{ font: `600 32px/1.15 ${FONT}`, letterSpacing: "-0.02em" }}>{title}</div>
+      <div style={{ marginTop: 8, font: `400 22px/1.4 ${FONT}`, color: C.muted }}>{body}</div>
+    </div>
+  );
+  return (
+    <AbsoluteFill style={{ background: C.night, color: C.onNight }}>
+      <div style={{ position: "absolute", left: 140, top: 130, width: 1640 }}>
+        <Line at={4} size={76}>Sztuczna inteligencja to składowa,</Line>
+        <Line at={14} size={76} dim>nie cała ocena.</Line>
+      </div>
+      <div style={{ position: "absolute", left: 140, top: 400, width: 780, opacity: a, transform: `translateY(${(1 - a) * 20}px)` }}>
+        <div style={{ font: `500 22px/1 ${FONT}`, color: C.muted, marginBottom: 14 }}>Stan wody liczą fizyka i reguły</div>
+        {row("Bilans wody FAO-56", "woda w strefie korzeni z opadu, parowania i fazy uprawy")}
+        {row("Progi suszy IUNG-PIB", "ta sama metoda co państwowy monitoring suszy rolniczej")}
+        {row("SCS-CN i FAO-33", "spływ po deszczu i strata plonu przy stresie wodnym")}
+      </div>
+      <div style={{ position: "absolute", left: 1000, top: 400, width: 780, opacity: b, transform: `translateY(${(1 - b) * 20}px)` }}>
+        <div style={{ font: `500 22px/1 ${FONT}`, color: C.lime, marginBottom: 14 }}>AI pomaga w dwóch miejscach</div>
+        {row("HydroFusion-PL", "uzupełnia satelitę w dni z chmurami i podaje przedział niepewności")}
+        {row("Agent RL", "układa plan podlewania; porównany na 10 sezonach działki z regułami FAO")}
+      </div>
+      <div style={{ position: "absolute", left: 140, right: 140, bottom: 110, font: `400 28px/1.4 ${FONT}`, color: C.lime, opacity: interpolate(frame, [110, 130], [0, 1], clamp) }}>
+        Publiczne dane warstwami i przejrzysty model to wzorzec, który od lat działa w mapach ryzyka powodziowego i planowaniu przestrzennym.
+      </div>
+    </AbsoluteFill>
+  );
+}

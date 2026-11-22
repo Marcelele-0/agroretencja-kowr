@@ -80,6 +80,8 @@ Tekst odpowiada napisom w filmie. Lektor czyta spokojnie, około 2,3 słowa na s
 | Działania | Rusałka podpowiada, od czego zacząć, i liczy, ile wody zatrzymasz. |
 | Uprawy | Inna uprawa to inny próg suszy. Rusałka pokazuje stan wody dla każdej uprawy i po wybranych działaniach. |
 | Decyzja | Jak powstaje decyzja: dane publiczne, progi suszy IUNG-PIB, bilans wody FAO-56, satelita ważony fazą uprawy z HydroFusion-PL i agent RL. Każdy wynik ma podane źródło. |
+| Udział danych | Satelita do 30%, woda w glebie 28%, pojemność gleby 15%, teren 15%, bilans IUNG 12%. Gdy są chmury albo uprawa wschodzi, waga satelity spada. |
+| Rola AI | Stan wody liczą fizyka i reguły. AI pomaga w dwóch miejscach: uzupełnia satelitę w dni z chmurami i układa plan podlewania. |
 | Telefon | Działa w telefonie, na miedzy. Bez instalacji. |
 | Dowód | Metoda IUNG-PIB. Dane publiczne. Za darmo, dla każdej działki. |
 | Co dalej | Widget z decyzją na dziś dla zapamiętanej działki, poranne powiadomienie, czujniki wilgotności w glebie i mapa suszy dla gminy. |

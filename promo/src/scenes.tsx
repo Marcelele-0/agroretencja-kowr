@@ -15,10 +15,10 @@ export function Hook() {
     <AbsoluteFill>
       <BRoll video={ai("01-susza")} photo="img/pola-konturowe.jpg" grade="drought" />
       <Scrim />
-      <Sequence durationInFrames={92} layout="none">
+      <Sequence durationInFrames={118} layout="none">
         <Block><Line at={8}>Susza nie zaczyna się,</Line><Line at={18}>gdy liście więdną.</Line></Block>
       </Sequence>
-      <Sequence from={92} layout="none">
+      <Sequence from={118} layout="none">
         <Block><Line at={4}>Zaczyna się tygodnie wcześniej.</Line><Line at={16} dim>Pod ziemią.</Line></Block>
       </Sequence>
     </AbsoluteFill>
@@ -72,7 +72,7 @@ export function Sources() {
       <div style={{ position: "absolute", left: 120, top: 200, width: 640 }}>
         <Line at={4} size={84}>Dane o wodzie</Line>
         <Line at={12} size={84}>są rozproszone.</Line>
-        <Sequence from={110} layout="none"><div style={{ marginTop: 36 }}><Line at={0} size={40} weight={400} color={C.lime}>Rolnik nie ma czasu ich składać.</Line></div></Sequence>
+        <Sequence from={130} layout="none"><div style={{ marginTop: 36 }}><Line at={0} size={40} weight={400} color={C.lime}>Rolnik nie ma czasu ich składać.</Line></div></Sequence>
       </div>
       <div style={{ position: "absolute", left: 800, top: 190, width: 1010, display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 40 }}>
         {SOURCES.map(([name, what], i) => {
