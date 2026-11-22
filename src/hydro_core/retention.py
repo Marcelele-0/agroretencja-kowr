@@ -23,11 +23,13 @@ from hydro_core.features import FeatureContext
 from hydro_core.registry import Registry
 from hydro_core.runoff import parcel_cn
 from hydro_core.schemas import (
+    PERENNIAL_CROPS,
     CropCode,
     RetentionPlan,
     RetentionRecommendation,
     WhatIfScenarioResult,
 )
+from hydro_core.text import days
 
 GROUP_ORDER = ("bez_urzadzen", "wymaga_zgody")
 MAX_DELTA_TAW_MM = 40.0
@@ -50,6 +52,12 @@ APPLICABILITY: Registry[Predicate] = Registry("warunki stosowalności zabiegów"
 @APPLICABILITY.register("not_grassland")
 def _not_grassland(fx: FeatureContext) -> bool:
     return fx.inputs.crop_code != CropCode.UZYTKI_ZIELONE
+
+
+@APPLICABILITY.register("annual_crop")
+def _annual_crop(fx: FeatureContext) -> bool:
+    """Crop sown every year (catch crop and no-till make sense): not grassland, orchard, hops or strawberries."""
+    return fx.inputs.crop_code != CropCode.UZYTKI_ZIELONE and fx.inputs.crop_code not in PERENNIAL_CROPS
 
 
 @APPLICABILITY.register("sloped_parcel")
@@ -211,7 +219,7 @@ def build_retention_plan(fx: FeatureContext) -> RetentionPlan:
                 id=m.id, category=m.category, title=m.title,
                 rationale=(
                     f"{m.rationale} W najsuchszym sezonie {year}: strata plonu −{eff['yield_pp']:.1f} p.p., "
-                    f"{eff['reserve_days']} dni stresu mniej, zatrzymany spływ {eff['retained_runoff_mm']:.0f} mm."
+                    f"{days(eff['reserve_days'])} stresu mniej, zatrzymany spływ {eff['retained_runoff_mm']:.0f} mm."
                 ),
                 delta_taw_mm=m.delta_taw_mm,
                 runoff_reduction_pct=min(100.0, eff["runoff_reduction_pct"]),

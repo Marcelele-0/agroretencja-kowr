@@ -190,7 +190,12 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
     ];
   }, [p, activeWeather, w.status, landAt]);
 
-  return { parcel, land, weather: w, local, updating, backend, rl, rlCompare, sources, elapsedMs };
+  // Once the full analysis is in, its irrigation answer (started from the step-1 soil water) replaces the
+  // separate /rl/recommend call, so the assessment and the irrigation card show one storage and one threshold.
+  const fromAnalysis = backend.status === "ready" ? backend.data.irrigation?.rl_recommendation : null;
+  const rlShown: Res<RlRecommendResponse> = fromAnalysis && fromAnalysis.status === "ok" ? { status: "ready", data: fromAnalysis } : rl;
+
+  return { parcel, land, weather: w, local, updating, backend, rl: rlShown, rlCompare, sources, elapsedMs };
 }
 
 interface PortfolioStateRow { parcel: Res<Parcel>; land: LandUse | null; weather: DailySeries | null; weatherDate: Iso | null; error: string | null }

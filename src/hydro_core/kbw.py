@@ -156,6 +156,14 @@ CROP_TO_IUNG_GROUP: dict[CropCode, str | None] = {
     CropCode.BURAK_CUKROWY: "burak_cukrowy",
     CropCode.ZIEMNIAK: "ziemniak",
     CropCode.UZYTKI_ZIELONE: None,
+    CropCode.KUKURYDZA_KISZONKA: "kukurydza_kiszonka",
+    CropCode.STRACZKOWE: "rosliny_straczkowe",
+    CropCode.WARZYWA: "warzywa_gruntowe",
+    CropCode.CHMIEL: "chmiel",
+    CropCode.TYTON: "tyton",
+    CropCode.DRZEWA_OWOCOWE: "drzewa_owocowe",
+    CropCode.KRZEWY_OWOCOWE: "krzewy_owocowe",
+    CropCode.TRUSKAWKI: "truskawki",
 }
 
 

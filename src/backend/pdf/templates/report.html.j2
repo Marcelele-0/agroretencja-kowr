@@ -126,7 +126,7 @@
 <h2>1. Ocena sytuacji wodnej</h2>
 <div class="row sec">
   <div class="col box">
-    <div class="big">{{ "%+.1f"|format(a.water_state) }}</div>
+    <div class="big">{{ "%+.1f"|format(a.water_state) }} – {{ state_text }}</div>
     <div class="small">stan wody (−5 skrajna susza … 0 optimum … +5 zalanie)</div>
     <div class="scale">
       {% for s in [-5,-4,-3,-2,-1,0,1,2,3,4,5] %}
@@ -156,12 +156,13 @@
 
 <div class="sec">
   <h2>2. Przyczyny niedoboru wody</h2>
+  {% if not r.causes.has_deficit %}<p><b>Brak istotnego niedoboru wody</b> – udziałów przyczyn nie wyznacza się. Czynniki, które wpływają na wodę na działce:</p>{% endif %}
   <table>
-    <tr><th>Czynnik</th><th>Udział</th><th>Wyjaśnienie</th></tr>
-    <tr><td>Klimat (opad vs parowanie)</td><td><b>{{ "%.0f"|format(r.causes.climate_pct) }}%</b></td><td>{{ r.causes.explanations.get("klimat", "") }}</td></tr>
-    <tr><td>Gleba (pojemność wodna)</td><td><b>{{ "%.0f"|format(r.causes.soil_pct) }}%</b></td><td>{{ r.causes.explanations.get("gleba", "") }}</td></tr>
-    <tr><td>Spływ powierzchniowy (NMT)</td><td><b>{{ "%.0f"|format(r.causes.runoff_pct) }}%</b></td><td>{{ r.causes.explanations.get("splyw", "") }}</td></tr>
-    <tr><td>Uprawa (faza, zapotrzebowanie)</td><td><b>{{ "%.0f"|format(r.causes.crop_pct) }}%</b></td><td>{{ r.causes.explanations.get("uprawa", "") }}</td></tr>
+    <tr><th>Czynnik</th>{% if r.causes.has_deficit %}<th>Udział</th>{% endif %}<th>Wyjaśnienie</th></tr>
+    <tr><td>Klimat (opad vs parowanie)</td>{% if r.causes.has_deficit %}<td><b>{{ "%.0f"|format(r.causes.climate_pct) }}%</b></td>{% endif %}<td>{{ r.causes.explanations.get("klimat", "") }}</td></tr>
+    <tr><td>Gleba (pojemność wodna)</td>{% if r.causes.has_deficit %}<td><b>{{ "%.0f"|format(r.causes.soil_pct) }}%</b></td>{% endif %}<td>{{ r.causes.explanations.get("gleba", "") }}</td></tr>
+    <tr><td>Spływ powierzchniowy (model terenu)</td>{% if r.causes.has_deficit %}<td><b>{{ "%.0f"|format(r.causes.runoff_pct) }}%</b></td>{% endif %}<td>{{ r.causes.explanations.get("splyw", "") }}</td></tr>
+    <tr><td>Uprawa (faza, zapotrzebowanie)</td>{% if r.causes.has_deficit %}<td><b>{{ "%.0f"|format(r.causes.crop_pct) }}%</b></td>{% endif %}<td>{{ r.causes.explanations.get("uprawa", "") }}</td></tr>
   </table>
   <div class="small">Metoda: {{ r.causes.method }}</div>
 </div>

@@ -28,7 +28,14 @@ from hydro_core.retention import (
     what_if,
 )
 from hydro_core.runoff import parcel_cn, scs_runoff
-from hydro_core.schemas import AdviceKind, CropCode, DayKind, IungSoilCategory, RiskLevel
+from hydro_core.schemas import (
+    PERENNIAL_CROPS,
+    AdviceKind,
+    CropCode,
+    DayKind,
+    IungSoilCategory,
+    RiskLevel,
+)
 from hydro_core.scoring import (
     SCORE_COMPONENTS,
     VETO_RULES,
@@ -36,6 +43,7 @@ from hydro_core.scoring import (
     assess_risk,
     compute_water_score,
     physical_water_state,
+    risk_floor_from_state,
     storage_score,
     water_state,
 )
@@ -227,7 +235,8 @@ def test_gauge_rain_replaces_the_last_week_only(fx: FeatureContext) -> None:
 # --- steps 2-3, history, advice -----------------------------------------------------------
 def test_causes_sum_to_100(fx: FeatureContext) -> None:
     c = attribute_causes(fx)
-    assert c.climate_pct + c.soil_pct + c.runoff_pct + c.crop_pct == pytest.approx(100.0, abs=0.5)
+    expected = 100.0 if c.has_deficit else 0.0  # no deficit -> no invented shares
+    assert c.climate_pct + c.soil_pct + c.runoff_pct + c.crop_pct == pytest.approx(expected, abs=0.5)
     assert set(c.explanations) == {"klimat", "gleba", "splyw", "uprawa"}
 
 
@@ -244,6 +253,25 @@ def test_retention_plan_groups_and_what_if(fx: FeatureContext) -> None:
     wi = what_if(fx, all_free)
     assert wi.scenario_yield_loss_pct <= wi.baseline_yield_loss_pct
     assert wi.reference_dry_year == year
+
+
+def test_stress_is_never_low_risk() -> None:
+    assert risk_floor_from_state(-3.0) == RiskLevel.WYSOKIE
+    assert risk_floor_from_state(-4.6) == RiskLevel.KRYTYCZNE
+    assert risk_floor_from_state(0.4) == RiskLevel.NISKIE
+
+
+@pytest.mark.parametrize("crop", list(CropCode))
+def test_every_ui_crop_has_a_full_assessment(crop: CropCode) -> None:
+    """All 15 crops of the frontend: score, water state, causes and retention are computed."""
+    fx = make_inputs(crop=crop)
+    score = compute_water_score(fx)
+    assert 0.0 <= score.total <= 100.0
+    assert -5.0 <= physical_water_state(fx) <= 5.0
+    attribute_causes(fx)
+    ids = {r.id for r in build_retention_plan(fx).recommendations}
+    if crop in PERENNIAL_CROPS or crop == CropCode.UZYTKI_ZIELONE:
+        assert "miedzyplon" not in ids and "uprawa_uproszczona" not in ids
 
 
 def test_history_has_ten_years_and_same_day_state(fx: FeatureContext) -> None:

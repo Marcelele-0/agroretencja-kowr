@@ -67,21 +67,21 @@ RL_WEIGHTS = ARTIFACT_MODELS_DIR / "ppo_irrigator_weights.npz"
 ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV"}
 STRATEGY_LABELS = {
     "none": "Bez nawadniania",
-    "calendar": "Kalendarz (stala dawka co N dni)",
-    "fao_rule": "Regula FAO-56 (Dr > RAW)",
-    "fao_forecast": "Regula FAO-56 + prognoza opadu",
-    "fao_small": "Regula FAO-56, male dawki 10 mm + prognoza opadu",
+    "calendar": "Kalendarz (stała dawka co N dni)",
+    "fao_rule": "Reguła FAO-56 (Dr > RAW)",
+    "fao_forecast": "Reguła FAO-56 + prognoza opadu",
+    "fao_small": "Reguła FAO-56, małe dawki 10 mm + prognoza opadu",
     "rl": "Agent RL (MaskablePPO)",
     "oracle": "Wyrocznia (znana pogoda, gorna granica)",
 }
 
 STATIC_LIMITATIONS = [
-    "Model bilansu jest jednowarstwowy (FAO-56 'wiadro'): nie uwzglednia podsiaku wod gruntowych, splywu powierzchniowego ani drenazu.",
-    "Pogoda pochodzi z reanalizy i modelu ECMWF na siatce ok. 9-25 km, a nie z pomiaru na dzialce; lokalne burze moga sie roznic.",
-    "Pojemnosc wodna gleby (TAW) to wartosc reprezentatywna dla kategorii IUNG-PIB, a nie pomiar na dzialce; nie zalezy od glebokosci korzeni uprawy.",
-    "Parametry upraw (Kc, p, Ky, terminy siewu i dlugosci faz) sa z FAO-56/FAO-33 i wymagaja weryfikacji z ekspertem dla warunkow Polski.",
-    "Plon wzgledny wg FAO-33 to wskaznik straty z niedoboru wody, a nie prognoza plonu w t/ha (nie uwzglednia nawozenia, chorob, odmiany).",
-    "Nawadnianie jest ostatnim krokiem po dzialaniach retencyjnych i agrotechnicznych - ta rekomendacja ich nie zastepuje.",
+    "Model bilansu jest jednowarstwowy (FAO-56 'wiadro'): nie uwzględnia podsiąku wód gruntowych ani drenażu; spływ powierzchniowy liczy tylko ocena w kroku 1.",
+    "Pogoda pochodzi z reanalizy i modelu ECMWF na siatce ok. 9–25 km, a nie z pomiaru na działce; lokalne burze mogą się różnić.",
+    "Pojemność wodna gleby (TAW) to wartość reprezentatywna dla kategorii IUNG-PIB, a nie pomiar na działce; nie zależy od głębokości korzeni uprawy.",
+    "Parametry upraw (Kc, p, Ky, terminy siewu i długości faz) są z FAO-56/FAO-33 i wymagają weryfikacji z ekspertem dla warunków Polski.",
+    "Plon względny wg FAO-33 to wskaźnik straty z niedoboru wody, a nie prognoza plonu w t/ha (nie uwzględnia nawożenia, chorób, odmiany).",
+    "Nawadnianie jest ostatnim krokiem po działaniach retencyjnych i agrotechnicznych – ta rekomendacja ich nie zastępuje.",
 ]
 
 
@@ -137,7 +137,7 @@ def _soil_message(code: int | None) -> tuple[str, str]:
         return "no_data", soils["no_data"].get(code, soils["no_data"][0]) if code is not None else soils["no_data"][0]
     if code in soils["non_arable"]:
         return "not_arable", soils["non_arable"][code]
-    return "not_arable", f"Kod IUNG {code}: nieznana klasa - brak rekomendacji"
+    return "not_arable", f"Kod IUNG {code}: nieznana klasa – brak rekomendacji"
 
 
 def _in_poland(lat: float, lon: float) -> bool:
@@ -298,6 +298,7 @@ def _run_plan(
     budget_left: float,
     history: dict[int, float] | None,
     days: int = 7,
+    initial_depletion_mm: float | None = None,
 ) -> dict[str, Any]:
     actions = default_actions()
     dr = batch.dr0.copy()
@@ -313,6 +314,10 @@ def _run_plan(
         dr = balance_step(dr, batch.precip[:, t], irr, batch.et0[:, t], batch.kc[:, t], batch.taw, batch.p_tab)[0]
         past_irr += float(irr[0])
         past_doses[t] = float(irr[0])
+    if initial_depletion_mm is not None:
+        # state of the main assessment (step 1: continuous balance with runoff) replaces the
+        # season-only replay, so steps 1 and 4 show one soil-water number
+        dr = np.clip(np.array([float(initial_depletion_mm)]), 0.0, batch.taw)
     state0 = SimState(t_date, dr.copy(), np.array([budget_left]), batch)
     bl = np.array([budget_left])
     plan = []
@@ -467,11 +472,11 @@ def _long_plan(batch: SeasonBatch, pol: Any, state0: SimState, t_date: int, date
         "water_need_mm": water,
         "forecast_days_used": n_fc,
         "probability_source": prob_source,
-        "method": "Plan: ta sama polityka dzien po dniu na pogodzie zakladanej dzis (prognoza, dalej klimatologia). "
-                  + ("Prawdopodobienstwo podlewania i zakres wody: plan powtorzony dla kazdego z czlonkow ensemble ECMWF (14 dni)."
+        "method": "Plan: ta sama polityka dzień po dniu na pogodzie zakładanej dziś (prognoza, dalej klimatologia). "
+                  + ("Prawdopodobieństwo podlewania i zakres wody: plan powtórzony dla każdego z członków ensemble ECMWF (14 dni)."
                      if prob_source == "ecmwf_ens" else
-                     "Prawdopodobienstwo i zakres wody: scenariusze z pogody tych samych dni w innych latach archiwum."),
-        "advice": "Wiazaca jest dawka na dzis; plan aktualizuje sie codziennie wraz z nowa prognoza.",
+                     "Prawdopodobieństwo i zakres wody: scenariusze z pogody tych samych dni w innych latach archiwum."),
+        "advice": "Wiążąca jest dawka na dziś; plan aktualizuje się codziennie wraz z nową prognozą.",
         **({"soil_zones": soil_zones} if soil_zones else {}),
     }
 
@@ -495,8 +500,13 @@ def recommend(
     client: HttpClient | None = None,
     today: dt.date | None = None,
     _prefetched: tuple[int, DailySeries, list[SourceRecord], DailySeries | None] | None = None,
+    initial_state: tuple[float, float] | None = None,
 ) -> dict[str, Any]:
     """7-day irrigation recommendation for a point (or parcel) in Poland on ``date``.
+
+    ``initial_state = (depletion_mm, raw_mm)`` on ``date`` from the main backend assessment (step 1):
+    the agent then starts from the same root-zone depletion and stress threshold the farmer sees in
+    the report, instead of its own season-only replay (which has no surface runoff).
 
     ``plan_days`` = 8..14 adds ``recommendation.plan_14d``: the daily plan continued to ``plan_days``
     days, the probability of an irrigation day and the range of the water need from the plan repeated
@@ -531,11 +541,11 @@ def recommend(
 
     crop_key = resolve_crop(crop)
     if crop_key is None:
-        return finish("invalid_input", f"Nieznana uprawa '{crop}'. Dostepne: {', '.join(accepted_crop_codes())}")
+        return finish("invalid_input", f"Nieznana uprawa '{crop}'. Dostępne: {', '.join(accepted_crop_codes())}")
     if date > today or date < ARCHIVE_START:
-        return finish("invalid_input", f"Data analizy musi byc z zakresu {ARCHIVE_START} - {today}.")
+        return finish("invalid_input", f"Data analizy musi być z zakresu {ARCHIVE_START} – {today}.")
     if budget_mm < 0 or budget_used_mm < 0:
-        return finish("invalid_input", "Budzet wody nie moze byc ujemny.")
+        return finish("invalid_input", "Budżet wody nie może być ujemny.")
     if parcel_id:
         try:
             parcel, psrc = fetch_parcel(client, parcel_id)
@@ -543,11 +553,11 @@ def recommend(
             lat, lon = parcel.centroid_lat, parcel.centroid_lon
             base["location_parcel"] = {"parcel_id": parcel.parcel_id, "teryt": parcel.teryt, "centroid": [lat, lon]}
         except DataUnavailableError as err:
-            return finish("no_data", f"Nie znaleziono dzialki {parcel_id} w ULDK: {err}")
+            return finish("no_data", f"Nie znaleziono działki {parcel_id} w ULDK: {err}")
     if lat is None or lon is None:
-        return finish("invalid_input", "Podaj wspolrzedne (lat, lon) albo numer dzialki.")
+        return finish("invalid_input", "Podaj współrzędne (lat, lon) albo numer działki.")
     if not _in_poland(lat, lon):
-        return finish("outside_poland", "Punkt lezy poza Polska - modul dziala tylko dla Polski.")
+        return finish("outside_poland", "Punkt leży poza Polską – moduł działa tylko dla Polski.")
 
     c = crops[crop_key]
     season_start, season_end = c.season_start(date.year), c.season_end(date.year)
@@ -585,8 +595,8 @@ def recommend(
         when = "przed sezonem" if date < season_start else "po sezonie"
         return finish(
             "out_of_season",
-            f"Data {date} jest {when} uprawy '{c.label_pl}' ({season_start} - {season_end}). "
-            "Brak rekomendacji dawek - ponizej porownanie strategii z ostatnich sezonow.",
+            f"Data {date} jest {when} uprawy '{c.label_pl}' ({season_start} – {season_end}). "
+            "Brak rekomendacji dawek – poniżej porównanie strategii z ostatnich sezonów.",
             location=location,
             crop=crop_info,
             history=hist.get("strategies"),
@@ -613,7 +623,8 @@ def recommend(
             k = (dt.date.fromisoformat(d_s) - season_start).days
             if 0 <= k < t_date:
                 history[k] = history.get(k, 0.0) + float(mm)
-    run = _run_plan(batch, pol, t_date, budget_used_mm, budget_left, history, days=plan_days)
+    dr_init = initial_state[0] if initial_state is not None else None
+    run = _run_plan(batch, pol, t_date, budget_used_mm, budget_left, history, days=plan_days, initial_depletion_mm=dr_init)
     long_plan = run["plan"]
     run = {**run, "plan": long_plan[:7]}
 
@@ -624,12 +635,12 @@ def recommend(
         n = min(7, int(b2.length[0]) - t_date)
         b2.precip[0, t_date : t_date + n] = issued_p[:n] * factor
         b2.forecast[0, t_date : t_date + n + 1] *= factor
-        scen[label] = float(sum(d["dose_mm"] for d in _run_plan(b2, pol, t_date, budget_used_mm, budget_left, history)["plan"]))
+        scen[label] = float(sum(d["dose_mm"] for d in _run_plan(b2, pol, t_date, budget_used_mm, budget_left, history, initial_depletion_mm=dr_init)["plan"]))
     alt_name = "fao_rule" if pname == "rl" else "rl"
     alt = None
     if alt_name == "fao_rule" or load_rl_policy() is not None:
         _, apol = get_policy(alt_name)
-        aplan = _run_plan(batch, apol, t_date, budget_used_mm, budget_left, history)["plan"]
+        aplan = _run_plan(batch, apol, t_date, budget_used_mm, budget_left, history, initial_depletion_mm=dr_init)["plan"]
         alt = {"policy": alt_name, "label": STRATEGY_LABELS[alt_name], "dose_today_mm": aplan[0]["dose_mm"] if aplan else 0.0, "total_7d_mm": float(sum(d["dose_mm"] for d in aplan))}
 
     st = run["state0"]
@@ -638,7 +649,8 @@ def recommend(
     dr0 = float(st.dr[0])
     et0_7 = float(b.et0_hist7[0, t])
     etc_today = float(b.kc[0, t] * et0_7 / 7.0)
-    raw = float(st.raw_estimate()[0])
+    # stress threshold: the one of step 1 when given, so the text matches the report
+    raw = float(initial_state[1]) if initial_state is not None else float(st.raw_estimate()[0])
     days_to_stress = max(0.0, (raw - dr0) / max(etc_today, 0.1))
     f = b.forecast[0, t]
     stage_key = STAGES[int(b.stage[0, t])]
@@ -654,43 +666,53 @@ def recommend(
 
     storage_pct = 100 * (1 - dr0 / taw)
     stress_storage_pct = 100 * (1 - raw / taw)
+    p3, p7 = float(f[:3].sum()), float(f.sum())
     if dose_today > 0:
-        action_now = f"Nawadniaj dzis: {dose_today:.0f} mm"
-        why = f"zapas wody {storage_pct:.0f}% TAW jest {'ponizej' if dr0 > raw else 'blisko'} progu stresu ({stress_storage_pct:.0f}% TAW), prognoza opadu na 3 dni: {f[:3].sum():.0f} mm"
+        action_now = f"Nawadniaj dziś: {dose_today:.0f} mm"
+        why = f"zapas wody {storage_pct:.0f}% TAW jest {'poniżej' if dr0 > raw else 'blisko'} progu stresu ({stress_storage_pct:.0f}% TAW), prognoza opadu na 3 dni: {p3:.0f} mm"
     elif budget_left <= 0:
-        action_now = "Nie nawadniaj - budzet wody wyczerpany"
-        why = f"pozostaly budzet 0 mm; zapas wody {storage_pct:.0f}% TAW"
+        action_now = "Nie nawadniaj – budżet wody wyczerpany"
+        why = f"pozostały budżet 0 mm; zapas wody {storage_pct:.0f}% TAW"
     else:
-        action_now = "Nie nawadniaj dzis"
-        if dr0 <= raw:
-            why = f"zapas wody {storage_pct:.0f}% TAW jest powyzej progu stresu ({stress_storage_pct:.0f}% TAW); przy obecnym zuzyciu stres za ok. {days_to_stress:.0f} dni bez deszczu"
+        action_now = "Nie nawadniaj dziś"
+        if dr0 <= raw and days_to_stress >= 1.0:
+            why = (f"zapas wody {storage_pct:.0f}% TAW jest powyżej progu stresu ({stress_storage_pct:.0f}% TAW); "
+                   f"przy obecnym zużyciu stres za ok. {days_to_stress:.0f} dni bez deszczu")
+        elif dr0 <= raw:
+            # on the threshold: stress starts within a day unless it rains
+            why = (f"zapas wody {storage_pct:.0f}% TAW jest na progu stresu ({stress_storage_pct:.0f}% TAW) – bez deszczu "
+                   f"stres zacznie się w ciągu doby, ale prognoza daje {p3:.0f} mm opadu w 3 dni i {p7:.0f} mm w 7 dni; "
+                   "sprawdź jutro, czy deszcz spadł")
         else:
-            why = f"mimo niedoboru ({storage_pct:.0f}% TAW) prognozowany opad {f[:3].sum():.0f} mm w 3 dni / {f.sum():.0f} mm w 7 dni lub oszczedzanie budzetu ({budget_left:.0f} mm) na pozniejsza faze"
+            why = (f"mimo niedoboru ({storage_pct:.0f}% TAW) prognozowany opad {p3:.0f} mm w 3 dni / {p7:.0f} mm w 7 dni "
+                   f"lub oszczędzanie budżetu ({budget_left:.0f} mm) na późniejszą fazę")
     next_doses = [d for d in plan[1:] if d["dose_mm"] > 0]
-    text = f"{action_now} - {why}."
+    text = f"{action_now} – {why}."
     if next_doses:
-        text += " Plan na kolejne dni (warunkowy, zalezy od opadu): " + ", ".join(f"{d['date']}: {d['dose_mm']:.0f} mm" for d in next_doses) + "."
+        text += " Plan na kolejne dni (warunkowy, zależy od opadu): " + ", ".join(f"{d['date']}: {d['dose_mm']:.0f} mm" for d in next_doses) + "."
     else:
-        text += " W kolejnych 6 dniach nie przewiduje sie nawadniania (jesli prognoza sie sprawdzi)."
+        text += " W kolejnych 6 dniach nie przewiduje się nawadniania (jeśli prognoza się sprawdzi)."
 
     uncertainty = [
-        f"Suma dawek na 7 dni: {scen['bez_opadu']:.0f} mm gdyby nie padalo, {scen['wg_prognozy']:.0f} mm wg prognozy, {scen['opad_x1_5']:.0f} mm przy opadzie 1,5 x prognoza.",
+        f"Suma dawek na 7 dni: {scen['bez_opadu']:.0f} mm gdyby nie padało, {scen['wg_prognozy']:.0f} mm wg prognozy, {scen['opad_x1_5']:.0f} mm przy opadzie 1,5 × prognoza.",
         {
-            "live_ecmwf": "Prognoza: ECMWF IFS 0,25 deg na zywo (Open-Meteo). Skutecznosc prognozy opadu spada z wyprzedzeniem (korelacja ok. 0,7 na 1 dzien i 0,3 na 7 dni, kalibracja 2024).",
-            "archived_ecmwf": "Prognoza: archiwalna prognoza ECMWF wydana dzien przed data analizy (Open-Meteo Previous Runs).",
-            "climatology": "Prognoza: dla dat sprzed 2024 brak archiwalnych prognoz - uzyto klimatologii punktu (srednia z innych lat), bez zagladania w przyszlosc.",
+            "live_ecmwf": "Prognoza: ECMWF IFS 0,25° na żywo (Open-Meteo). Trafność prognozy opadu spada z wyprzedzeniem (korelacja ok. 0,7 na 1 dzień i 0,3 na 7 dni, kalibracja 2024).",
+            "archived_ecmwf": "Prognoza: archiwalna prognoza ECMWF wydana dzień przed datą analizy (Open-Meteo Previous Runs).",
+            "climatology": "Prognoza: dla dat sprzed 2024 brak archiwalnych prognoz – użyto klimatologii punktu (średnia z innych lat), bez zaglądania w przyszłość.",
         }[fmode],
     ]
+    if initial_state is not None:
+        uncertainty.append("Stan wody w glebie w dniu analizy przejęto z bilansu kroku 1 (ten sam zapas i próg stresu co w ocenie).")
     if history is None and budget_used_mm > 0:
-        uncertainty.append(f"Historia nawodnien nie zostala podana: przyjeto, ze zuzyte {budget_used_mm:.0f} mm podano zgodnie z wybrana strategia.")
+        uncertainty.append(f"Historia nawodnień nie została podana: przyjęto, że zużyte {budget_used_mm:.0f} mm podano zgodnie z wybraną strategią.")
     elif history is None:
-        uncertainty.append("Przyjeto brak nawadniania od poczatku sezonu do daty analizy (budzet zuzyty = 0).")
+        uncertainty.append("Przyjęto brak nawadniania od początku sezonu do daty analizy (budżet zużyty = 0).")
     if confidence:
-        uncertainty.append(f"Pewnosc agenta RL dla dzisiejszej decyzji (prawdopodobienstwa akcji): {confidence}.")
+        uncertainty.append(f"Pewność agenta RL dla dzisiejszej decyzji (prawdopodobieństwa akcji): {confidence}.")
     limitations = list(STATIC_LIMITATIONS)
     rl_status = "domyslny" if load_rl_config()["default_policy"] == "rl" else "eksperymentalny (domyslna jest regula FAO - patrz reports/evaluation.md)"
     if pname == "rl" and rl_status != "domyslny":
-        limitations.insert(0, "Uzyto agenta RL oznaczonego jako eksperymentalny - na tescie nie spelnil kryterium gotowosci.")
+        limitations.insert(0, "Użyto agenta RL oznaczonego jako eksperymentalny – na teście nie spełnił kryterium gotowości.")
 
     plan_14d = None
     if plan_days > 7:
@@ -768,7 +790,7 @@ def compare_strategies(
     sources: list[SourceRecord] = []
     crop_key = resolve_crop(crop)
     if crop_key is None:
-        return {**out, "status": "invalid_input", "message": f"Nieznana uprawa '{crop}'. Dostepne: {', '.join(accepted_crop_codes())}"}
+        return {**out, "status": "invalid_input", "message": f"Nieznana uprawa '{crop}'. Dostępne: {', '.join(accepted_crop_codes())}"}
     if parcel_id:
         parcel, psrc = fetch_parcel(client, parcel_id)
         sources.append(psrc)
@@ -887,7 +909,7 @@ def to_irrigation_advice(rec: dict[str, Any], comparison: dict[str, Any] | None 
     }
 
 
-SOURCE_CATEGORY = {"Open-Meteo": "dane meteorologiczne", "IUNG": "dane glebowe", "GUGiK": "dane przestrzenne (dzialki)"}
+SOURCE_CATEGORY = {"Open-Meteo": "dane meteorologiczne", "IUNG": "dane glebowe", "GUGiK": "dane przestrzenne (działki)"}
 
 
 def to_source_audit_entries(sources: list[dict[str, str]], observation_date: str) -> list[dict[str, Any]]:
@@ -895,7 +917,7 @@ def to_source_audit_entries(sources: list[dict[str, str]], observation_date: str
     out = []
     for s in sources:
         cat = next((v for k, v in SOURCE_CATEGORY.items() if s["name"].startswith(k)), "inne")
-        res = "ok. 9-25 km (siatka modelu)" if "Open-Meteo" in s["name"] else ("raster IUNG-PIB" if "IUNG" in s["name"] else "dzialka ewidencyjna")
+        res = "ok. 9–25 km (siatka modelu)" if "Open-Meteo" in s["name"] else ("raster IUNG-PIB" if "IUNG" in s["name"] else "działka ewidencyjna")
         out.append(
             {
                 "category": cat,

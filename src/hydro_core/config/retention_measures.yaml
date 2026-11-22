@@ -26,7 +26,7 @@ measures:
     cn_delta: -5.0
     time_to_effect: "1 sezon"
     rationale: "Okrywa glebę po zbiorze, zwiększa infiltrację opadu i ilość materii organicznej."
-    applies_if: [not_grassland]
+    applies_if: [annual_crop]
   mulcz:
     title: "Mulcz z resztek pożniwnych"
     category: "agrotechnika"
@@ -44,7 +44,7 @@ measures:
     cn_delta: -3.0
     time_to_effect: "2-3 sezony"
     rationale: "Zachowuje strukturę gleby i kanaliki po korzeniach, mniej wody ucieka z parowaniem."
-    applies_if: [not_grassland]
+    applies_if: [annual_crop]
   materia_organiczna:
     title: "Zwiększenie materii organicznej (obornik, kompost)"
     category: "agrotechnika"

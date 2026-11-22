@@ -259,15 +259,33 @@ def risk_from_score(score: float) -> RiskLevel:
     return RiskLevel.WYSOKIE
 
 
+def risk_floor_from_state(state: float) -> RiskLevel:
+    """Risk implied by the water state alone (same steps as the browser scale: |stage| 2/3/4+)."""
+    a = abs(round(state))
+    if a >= 4:
+        return RiskLevel.KRYTYCZNE
+    if a == 3:
+        return RiskLevel.WYSOKIE
+    if a == 2:
+        return RiskLevel.UMIARKOWANE
+    return RiskLevel.NISKIE
+
+
 def assess_risk(fx: FeatureContext, score: WaterScoreBreakdown) -> WaterRiskAssessment:
+    """Risk = max(score level, physical water state, veto rules). A crop in water stress is
+    therefore never reported with low risk, whatever the other score components say."""
     hits = [h for rule in VETO_RULES.values() if (h := rule(fx)) is not None]
-    level = risk_from_score(score.total)
+    base = risk_from_score(score.total)
+    floor = risk_floor_from_state(physical_water_state(fx))
+    if _RISK_ORDER.index(floor) > _RISK_ORDER.index(base):
+        base = floor
+    level = base
     for h in hits:
         if _RISK_ORDER.index(h.level) > _RISK_ORDER.index(level):
             level = h.level
     return WaterRiskAssessment(
         level=level,
-        veto_triggered=any(_RISK_ORDER.index(h.level) > _RISK_ORDER.index(risk_from_score(score.total)) for h in hits),
+        veto_triggered=any(_RISK_ORDER.index(h.level) > _RISK_ORDER.index(base) for h in hits),
         veto_reasons=[h.reason for h in hits],
     )
 

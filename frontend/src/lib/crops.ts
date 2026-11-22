@@ -36,11 +36,13 @@ export function isCropCode(s: string | null | undefined): s is CropCode {
 export function cropOf(code: CropCode): Crop {
   return CROPS.find((c) => c.code === code)!;
 }
-/** Crop code of the backend contract (src/hydro_core/schemas.py). null = the backend has no model for this crop yet. */
+/** Crop code of the backend contract (src/hydro_core/schemas.py CropCode); every UI crop has a full backend analysis. */
+const BACKEND_CROP: Record<CropCode, string> = {
+  kukurydza_ziarno: "kukurydza", kukurydza_kiszonka: "kukurydza_kiszonka", zboza_ozime: "pszenica_ozima", zboza_jare: "pszenica_jara",
+  rzepak: "rzepak_ozimy", burak_cukrowy: "burak_cukrowy", ziemniak: "ziemniak", uzytki_zielone: "uzytki_zielone",
+  straczkowe: "straczkowe", warzywa: "warzywa", chmiel: "chmiel", tyton: "tyton",
+  drzewa_owocowe: "drzewa_owocowe", krzewy_owocowe: "krzewy_owocowe", truskawki: "truskawki",
+};
 export function backendCrop(code: CropCode): string | null {
-  const map: Partial<Record<CropCode, string>> = {
-    kukurydza_ziarno: "kukurydza", kukurydza_kiszonka: "kukurydza", zboza_ozime: "pszenica_ozima", zboza_jare: "pszenica_jara",
-    rzepak: "rzepak_ozimy", burak_cukrowy: "burak_cukrowy", ziemniak: "ziemniak", uzytki_zielone: "uzytki_zielone",
-  };
-  return map[code] ?? null;
+  return BACKEND_CROP[code] ?? null;
 }

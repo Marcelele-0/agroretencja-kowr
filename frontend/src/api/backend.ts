@@ -2,10 +2,12 @@ import { request } from "../lib/http";
 import type { AnalysisRequest, AnalysisResponse, RlCompareResponse, RlRecommendRequest, RlRecommendResponse, TerrainStatus, WhatIfRequest, WhatIfScenarioResult, ZonesRequest, ZonesResponse } from "./contract";
 
 /**
- * Loose hooks to the FastAPI backend. Empty VITE_API_URL = hooks off: the UI hides the steps that need the server.
+ * Hooks to the FastAPI backend. VITE_API_URL not set = "/" (same-origin proxy of `pnpm dev` / `pnpm preview` to
+ * 127.0.0.1:8000), so the documented start gives the full analysis. Explicitly empty VITE_API_URL= = hooks off:
+ * the UI shows the browser-only IUNG estimate and hides the steps that need the server.
  * Endpoints: POST /api/analyze, POST /api/zones, POST /api/what-if, GET /api/report.pdf, POST /rl/recommend, POST /rl/compare.
  */
-const RAW_API_URL: string = (import.meta.env.VITE_API_URL ?? "").trim();
+const RAW_API_URL: string = (import.meta.env.VITE_API_URL ?? "/").trim();
 export const backendEnabled = RAW_API_URL !== "";
 export const API_URL: string = RAW_API_URL === "/" ? "" : RAW_API_URL.replace(/\/$/, "");
 

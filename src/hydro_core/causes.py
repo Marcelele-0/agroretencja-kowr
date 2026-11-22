@@ -126,9 +126,11 @@ def attribute_causes(fx: FeatureContext) -> CauseAttribution:
     d0 = _deficit(base)
     gains = {g: max(0.0, d0 - _deficit(cf(fx, base))) for g, cf in COUNTERFACTUALS.items() if g in CAUSE_GROUPS}
     total = sum(gains.values())
-    if total < 1.0:
-        pct = {g: 25.0 for g in CAUSE_GROUPS}
-        method = METHOD_PHYSICAL + " – brak istotnego niedoboru wody"
+    has_deficit = total >= 1.0
+    if not has_deficit:
+        # no deficit to explain: do not invent shares (KOWR: no apparent precision)
+        pct = {g: 0.0 for g in CAUSE_GROUPS}
+        method = METHOD_PHYSICAL + " – brak istotnego niedoboru wody, udziałów przyczyn nie wyznacza się"
     else:
         pct = {g: round(100.0 * gains.get(g, 0.0) / total, 1) for g in CAUSE_GROUPS}
         method = METHOD_PHYSICAL
@@ -139,6 +141,7 @@ def attribute_causes(fx: FeatureContext) -> CauseAttribution:
         crop_pct=pct["uprawa"],
         method=method,
         explanations={g: _explain(fx, g, gains.get(g, 0.0)) for g in CAUSE_GROUPS},
+        has_deficit=has_deficit,
     )
 
 

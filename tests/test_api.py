@@ -55,7 +55,8 @@ def test_analyze_returns_all_kowr_steps(client_factory) -> None:
     assert len(a["water_state_timeline"]) > 30
     assert any(p["forecast"] for p in a["water_state_timeline"])
     assert len(a["history_10y"]) == 11
-    assert abs(sum(d["causes"][k] for k in ("climate_pct", "soil_pct", "runoff_pct", "crop_pct")) - 100) < 0.5
+    shares = sum(d["causes"][k] for k in ("climate_pct", "soil_pct", "runoff_pct", "crop_pct"))
+    assert abs(shares - (100 if d["causes"]["has_deficit"] else 0)) < 0.5
     assert d["retention"]["recommendations"]
     assert d["irrigation"]["policy_used"] in ("rl", "fao_rule")
     assert d["irrigation"]["strategies_10y"]

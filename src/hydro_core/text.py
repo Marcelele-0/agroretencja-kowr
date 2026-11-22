@@ -22,3 +22,15 @@ def plural(n: float, one: str, few: str, many: str) -> str:
 def days(n: float) -> str:
     """'1 dzień', '3 dni', '12 dni'."""
     return f"{round(n)} {plural(n, 'dzień', 'dni', 'dni')}"
+
+
+# Same words as the browser scale (frontend/src/ds/status.tsx)
+_STATE_LABELS = {
+    -5: "susza skrajna", -4: "susza silna", -3: "susza", -2: "niedobór wody", -1: "lekki niedobór", 0: "optimum",
+    1: "lekki nadmiar", 2: "nadmiar wody", 3: "przewilgocenie", 4: "silne przewilgocenie", 5: "zalanie",
+}
+
+
+def state_label(state: float) -> str:
+    """Word for a water state on the −5…+5 axis, e.g. state_label(-1.2) -> 'lekki niedobór'."""
+    return _STATE_LABELS[max(-5, min(5, round(state)))]

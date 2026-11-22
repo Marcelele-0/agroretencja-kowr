@@ -28,6 +28,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from hydro_core.crops import crop_params
 from hydro_core.registry import Registry
 from hydro_core.schemas import AnalysisResponse
+from hydro_core.text import days, state_label
 from hydro_core.topography import TerrainAnalysis, terrain_wetness_offset
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,7 @@ def terrain_map(terrain: TerrainAnalysis | None, water_state: float) -> plt.Figu
 def build_html(r: AnalysisResponse, images: dict[str, str | None]) -> str:
     return _env().get_template("report.html.j2").render(
         r=r, a=r.assessment, crop_label=crop_params(r.assessment.crop).label_pl, irrigation_text=irrigation_text(r),
+        state_text=state_label(r.assessment.water_state),
         generated=dt.datetime.now().strftime("%Y-%m-%d %H:%M"), chart=images.get("chart"), map_png=images.get("map"),
     )
 
@@ -160,14 +162,23 @@ def _matplotlib(html: str, r: AnalysisResponse, images: dict[str, str | None]) -
         (f"Ocena wody na działce {p.parcel_id}", H, "bold"),
         (f"{p.voivodeship or ''} · {p.county or ''} · {p.commune or ''} · {p.area_ha:.2f} ha · {crop_params(a.crop).label_pl} · {a.analysis_date}", T, "normal"),
         ("1. Ocena sytuacji wodnej", H2, "bold"),
-        (f"Stan wody {a.water_state:+.1f} (−5…+5), WaterScore {a.water_score.total:.0f}/100, ryzyko {a.water_risk.level.value}, pewność {a.confidence.level.value}.", T, "normal"),
+        (
+            (f"Stan wody: {state_label(a.water_state)} ({a.water_state:+.1f} w skali od −5 susza do +5 nadmiar), "
+             f"WaterScore {a.water_score.total:.0f}/100, ryzyko {a.water_risk.level.value}, pewność {a.confidence.level.value}."),
+            T, "normal",
+        ),
         (a.summary_text, T, "normal"),
         *[(f"Weto: {v}", T, "normal") for v in a.water_risk.veto_reasons],
         ("2. Przyczyny niedoboru", H2, "bold"),
-        (f"Klimat {r.causes.climate_pct:.0f}% · gleba {r.causes.soil_pct:.0f}% · spływ {r.causes.runoff_pct:.0f}% · uprawa {r.causes.crop_pct:.0f}% ({r.causes.method})", T, "normal"),
+        (
+            f"Klimat {r.causes.climate_pct:.0f}% · gleba {r.causes.soil_pct:.0f}% · spływ {r.causes.runoff_pct:.0f}% · uprawa {r.causes.crop_pct:.0f}% ({r.causes.method})"
+            if r.causes.has_deficit
+            else "Brak istotnego niedoboru wody – udziałów przyczyn nie wyznacza się. Czynniki, które wpływają na wodę na działce:",
+            T, "normal",
+        ),
         *[(f"– {v}", T, "normal") for v in r.causes.explanations.values()],
         (f"3. Ranking działań retencyjnych (rok odniesienia {r.retention.what_if_default.reference_dry_year})", H2, "bold"),
-        *[(f"{m.priority_rank}. {m.title}: −{m.effect_yield_pp:.1f} p.p. straty plonu, {m.effect_reserve_days} dni stresu mniej"
+        *[(f"{m.priority_rank}. {m.title}: −{m.effect_yield_pp:.1f} p.p. straty plonu, {days(m.effect_reserve_days)} stresu mniej"
            + (" – wymaga zgody Wód Polskich" if m.requires_permit else ""), T, "normal") for m in r.retention.recommendations[:8]],
     ]
     page2: list[tuple[str, float, str]] = [

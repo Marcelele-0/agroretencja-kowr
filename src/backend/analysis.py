@@ -56,7 +56,7 @@ from hydro_core.scoring import (
     daily_water_states,
     physical_water_state,
 )
-from hydro_core.text import days, num
+from hydro_core.text import days, num, state_label
 from hydro_core.timeline import DailyTimeline, build_timeline, kind_is_forecast, with_gauge_rain
 from hydro_core.topography import TerrainAnalysis, analyse_terrain
 
@@ -195,7 +195,12 @@ def _hydro(bundle: ParcelDataBundle) -> HydroContext:
 def _summary_text(fx: FeatureContext, total: float, state: float, risk: RiskLevel, in_season: bool, kbw_drought: bool | None) -> str:
     storage = fx.get("storage_pct")
     dts = fx.get("days_to_stress")
-    parts = [f"Stan wody {num(state, 1, sign=True)} w skali −5…+5 (WaterScore {num(total)}/100), ryzyko {_RISK_PL[risk]}."]
+    parts = [
+        (
+            f"Stan wody: {state_label(state)} ({num(state, 1, sign=True)} w skali od −5 susza do +5 nadmiar wody), "
+            f"ryzyko {_RISK_PL[risk]}. Ogólna ocena warunków wodnych działki (WaterScore): {num(total)}/100."
+        )
+    ]
     if storage is not None:
         parts.append(f"Zapas wody w strefie korzeniowej {num(storage)}% pojemności.")
     if kbw_drought is True:

@@ -1,7 +1,7 @@
 # Rusałka: asystent wody dla działki rolnej
 
-# Rusałka: asystent wody dla działki rolnej
-
+> **Zespół:** _[UZUPEŁNIJ: nazwa zespołu z Platformy konkursowej]_
+> **Tytuł rozwiązania:** Rusałka – asystent wody dla działki rolnej
 > **Zadanie:** HackNation 2026, KOWR: *Zatrzymaj wodę, chroń plony – Inteligentne wsparcie gospodarowania wodą w rolnictwie*
 > **Repozytorium:** prywatne repozytorium konkursowe. Kod jest pisany od zera zgodnie z § 5 Regulaminu KOWR.
 > **Dokumentacja:**
@@ -9,25 +9,39 @@
 > - [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md): plan i stan prac;
 > - [docs/BACKEND_ARCHITECTURE.md](docs/BACKEND_ARCHITECTURE.md): architektura backendu i rejestry rozszerzeń;
 > - [docs/RL_IRRIGATION_DECISION_MODEL.md](docs/RL_IRRIGATION_DECISION_MODEL.md): model decyzji nawadniania (PPO vs FAO-56);
-> - [frontend/README.md](frontend/README.md): aplikacja webowa.
+> - [frontend/README.md](frontend/README.md): aplikacja webowa;
+> - [reports/](reports/): przykładowe raporty PDF wygenerowane przez prototyp.
 
 Rusałka pokazuje stan wody na dowolnej działce rolnej w Polsce, dla dowolnej daty z ostatnich 10 lat. Wynik zawiera:
-- ocenę suszy według progów IUNG-PIB;
+- ocenę sytuacji wodnej (zapas wody w glebie, susza według progów IUNG-PIB, historia 10 lat);
 - przyczyny niedoboru wody;
-- działania retencyjne z symulacją;
-- poradę o nawadnianiu.
+- działania retencyjne i agrotechniczne z symulacją „co jeśli”;
+- poradę o nawadnianiu (dawka na dziś i plan na 14 dni).
 
 Wzorem jest System Monitoringu Suszy Rolniczej IUNG-PIB, liczony na poziomie jednej działki (ustalenie z mentorami KOWR, 21.11.2026).
+
+**Problem.** Dane satelitarne, meteorologiczne, glebowe i hydrologiczne są otwarte, ale rozproszone i trudne dla rolnika.
+**Rozwiązanie.** Rolnik podaje numer działki (albo klika na mapie), uprawę i datę. W ok. 5–16 s dostaje ocenę wody liczoną z danych pobranych w tej chwili, przyczyny niedoboru, działania retencyjne posortowane według efektu na tej działce i poradę o nawadnianiu, a na końcu raport PDF ze źródłami i ograniczeniami.
 
 ---
 
 ## 1. Instrukcja uruchomienia rozwiązania
 
 ### Wymagania
-- Node.js 20+ i [`pnpm`](https://pnpm.io/) (frontend).
+- Node.js 20+ i [`pnpm`](https://pnpm.io/) (frontend). Jeśli `pnpm` nie jest zainstalowany: `corepack enable` (Node 20+ ma corepack) albo `npm install -g pnpm`.
 - Python 3.11 i [`uv`](https://docs.astral.sh/uv/) (backend i moduły ML).
+- System: Windows, Linux lub macOS. Rolnik potrzebuje tylko przeglądarki.
 
-### Aplikacja webowa (frontend)
+### Krok 1: backend (FastAPI, port 8000)
+
+```bash
+uv sync
+uv run uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+Sprawdzenie: `http://127.0.0.1:8000/api/health` zwraca `"status": "ok"` i listę 15 upraw.
+
+### Krok 2: aplikacja webowa (frontend, w drugim terminalu)
 
 ```bash
 cd frontend
@@ -36,20 +50,16 @@ pnpm build
 pnpm preview      # http://localhost:4173
 ```
 
-Aplikacja działa w przeglądarkach Chrome, Edge, Firefox i Safari oraz na telefonie. Użytkownik nic nie instaluje. Szczegóły i tryb deweloperski: [frontend/README.md](frontend/README.md).
+Domyślnie frontend łączy się z backendem przez pośrednika Vite (`/api`, `/rl` → `127.0.0.1:8000`), więc nie trzeba tworzyć pliku `frontend/.env`. Inny adres backendu ustawia `VITE_API_URL` (wzór w [frontend/.env.example](frontend/.env.example)). `VITE_API_URL=` (puste) wyłącza backend: zostaje tylko uproszczona ocena IUNG liczona w przeglądarce.
 
-### Backend (FastAPI)
+Tryb deweloperski: `pnpm dev` (http://localhost:5173). Aplikacja działa w przeglądarkach Chrome, Edge, Firefox, Safari i Opera oraz na telefonie. Użytkownik nic nie instaluje. Szczegóły: [frontend/README.md](frontend/README.md).
 
-```bash
-uv sync
-uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000
-```
-
-Adres backendu dla frontendu ustawia `VITE_API_URL` w `frontend/.env`. Bez backendu frontend liczy ocenę IUNG w przeglądarce, a kroki serwera są ukryte.
+### Raport PDF na Windows
+Backend próbuje kolejno: WeasyPrint (pełny układ, wymaga bibliotek GTK/Pango), Matplotlib (ta sama treść w prostszym układzie, działa na każdym Windows), HTML. Nagłówek `X-Report-Renderer` mówi, który renderer zadziałał.
 
 ### Moduł nawadniania RL
 
-Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty bezpośrednio pod API FastAPI (`POST /rl/recommend`, `POST /rl/compare`) oraz używany w kroku 4 analizy (`src/backend/irrigation.py`). Obsługuje wszystkie 15 upraw frontendu. Z `plan_days=14` daje plan na 14 dni z prognozy zespołowej ECMWF (51 wariantów) i prognozę wody w trzech strefach gleby (0–28, 28–100, 100–200 cm, SoilGrids) jako klasy z prawdopodobieństwem. Opis decyzji: [docs/RL_IRRIGATION_DECISION_MODEL.md](docs/RL_IRRIGATION_DECISION_MODEL.md), prognoza 14-dniowa: [ml/rl_irrigator/reports/forecast14.md](ml/rl_irrigator/reports/forecast14.md).
+Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty pod API FastAPI (`POST /rl/recommend`, `POST /rl/compare`) i używany w kroku 4 analizy (`src/backend/irrigation.py`). Obsługuje wszystkie 15 upraw. W analizie agent startuje z zapasu wody w glebie policzonego w kroku 1, więc ocena i nawadnianie pokazują tę samą liczbę. Z `plan_days=14` daje plan na 14 dni z prognozy zespołowej ECMWF (51 wariantów). Opis decyzji: [docs/RL_IRRIGATION_DECISION_MODEL.md](docs/RL_IRRIGATION_DECISION_MODEL.md), prognoza 14-dniowa: [ml/rl_irrigator/reports/forecast14.md](ml/rl_irrigator/reports/forecast14.md).
 
 ---
 
@@ -57,23 +67,22 @@ Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty bezpośrednio pod API FastAP
 
 1. **Wybór działek na mapie.**
    - Ortofotomapa GUGiK z granicami działek ewidencyjnych.
-   - Działkę dodajesz kliknięciem albo numerem TERYT. Możesz wybrać kilka i dla każdej ustawić uprawę.
-   - Dla działki nierolniczej (las, woda, zabudowa) serwis pokazuje komunikat zamiast analizy.
-2. **Ocena sytuacji wodnej** dla wybranej daty:
-   - stan wody słownie i na skali graficznej (od suszy przez optimum do nadmiaru wody);
-   - ryzyko i pewność danych;
+   - Działkę dodajesz kliknięciem, numerem TERYT albo nazwą obrębu i numerem. Możesz wybrać kilka i dla każdej ustawić uprawę.
+   - Dla działki nierolniczej (las, woda, zabudowa wg mapy IUNG-PIB) serwis pokazuje komunikat zamiast analizy.
+2. **Ocena sytuacji wodnej** dla wybranej daty (dziś albo dowolny dzień od 1.01.2016):
+   - stan wody słownie i na skali od −5 (susza skrajna) przez 0 (optimum) do +5 (zalanie). Strona sucha wynika z zapasu wody w strefie korzeniowej (bilans FAO-56), poprawionego o bardzo niski bilans opad − parowanie z 60 dni i spadek wilgotności łanu z satelity; strona mokra z przesiąku i spływu z ostatnich 14–30 dni oraz dodatniego bilansu z 60 dni. Ryzyko nie jest niższe, niż wskazuje stan wody;
+   - ryzyko (z wetem: susza wg progów IUNG-PIB, głęboki niedobór w fazie wrażliwej) i pewność danych;
+   - ogólna ocena warunków wodnych 0–100 (WaterScore: zapas wody, KBW, satelita NDMI, pojemność gleby, teren);
    - wykres stanu dzień po dniu z prognozą na kolejne dni;
    - 14 okien klimatycznego bilansu wodnego (KBW) z progami IUNG dla uprawy i kategorii gleby;
-   - ten sam dzień albo miesiąc w 10 latach.
-3. **Przyczyny niedoboru wody:** opad i parowanie na tle średniej z 10 lat, kategoria gleby IUNG. Backend dodaje udział procentowy przyczyn, spływ z modelu terenu i fazę uprawy.
+   - ten sam dzień w każdym z 10 poprzednich lat.
+3. **Przyczyny niedoboru wody:** udział klimatu, gleby, spływu i uprawy, policzony scenariuszami „co gdyby” na tym samym bilansie. Gdy niedoboru nie ma, serwis mówi to wprost i nie podaje procentów.
 4. **Działania i symulacja „co jeśli”.**
-   - Lista działań jest posortowana według zysku wody na tej działce.
+   - Lista działań jest posortowana według zysku wody na tej działce w najsuchszym sezonie z 10 lat.
    - Działania na urządzeniach wodnych mają oznaczenie „Wymaga zgody Wód Polskich”.
-   - Wybrane działania przelicza symulacja na tych samych danych.
-5. **Nawadnianie:**
-   - w sezonie: porada z prognozy opadu („poczekaj, za 5 dni prognozowany opad”);
-   - z modułem RL (wszystkie uprawy): dawka na dziś, plan na 14 dni z szansą podlewania w każdym dniu, woda w trzech strefach gleby i ryzyko stresu na 14 dni oraz porównanie strategii z 10 sezonów.
-6. **Raport:** tabela źródeł z czasem pobrania. Przycisk „Pobierz raport PDF” drukuje stronę, a z backendem pobiera PDF z serwera.
+   - Dla upraw wieloletnich (sady, krzewy, chmiel, truskawki) i łąk serwis nie proponuje międzyplonu ani uprawy bezorkowej.
+5. **Nawadnianie** (wszystkie uprawy, w sezonie): dawka na dziś, plan na 14 dni z szansą podlewania w każdym dniu oraz porównanie strategii z 10 sezonów. Poza sezonem: tylko porównanie strategii.
+6. **Raport:** tabela źródeł z czasem pobrania i trybem (na żywo / bufor / zapas / brak danych), ograniczenia i niepewność. Przycisk „Pobierz raport PDF” pobiera PDF z serwera (bez serwera drukuje stronę).
 
 ---
 
@@ -81,17 +90,19 @@ Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty bezpośrednio pod API FastAP
 
 ```text
 Przeglądarka (frontend/, React + MapLibre)
-  ├─ ULDK, KIEG, ortofotomapa GUGiK, IUNG WMS, Open-Meteo (przez pośrednika /om)
-  ├─ src/analysis/local.ts: KBW w oknach IUNG, stan wody, symulacja (fallback w przeglądarce)
-  └─ src/api/: podpięcia do backendu (VITE_API_URL)
+  ├─ ULDK, KIEG, ortofotomapa GUGiK, IUNG WMS, Open-Meteo (pośrednik /om; przy limicie dane z backendu: /api/weather/daily z zapasem NASA POWER)
+  ├─ src/analysis/local.ts: KBW w oknach IUNG (ocena uproszczona, gdy serwer nie odpowiada)
+  └─ src/api/: podpięcia do backendu (domyślnie ten sam adres, pośrednik Vite)
 Backend (src/backend, FastAPI)        → POST /api/analyze, POST /api/what-if, GET /api/report.pdf, GET /api/registries
-  ├─ src/hydro_core: wzór stanu wody: bilans FAO-56 + Sentinel-2/ML + gleba + teren, weto IUNG
-  └─ ml/rl_irrigator (kowr_rl)        → POST /rl/recommend, POST /rl/compare
+  ├─ clients/: 8 źródeł pobieranych równolegle, twardy limit 25 s, bufor SQLite
+  ├─ src/hydro_core: bilans FAO-56 + SCS-CN, stan wody, WaterScore, weta IUNG, przyczyny, retencja, porady
+  ├─ inference/hydrofusion.py: HydroFusion-PL (LightGBM) – NDMI pod chmurami z przedziałem 90%
+  └─ ml/rl_irrigator (kowr_rl)        → POST /rl/recommend, POST /rl/compare, krok 4 analizy
 ```
 
 Architekturę backendu (rejestry rozszerzeń, jedna oś czasu historii i prognozy, decyzje ADR) opisuje [docs/BACKEND_ARCHITECTURE.md](docs/BACKEND_ARCHITECTURE.md).
 
-- Frontend działa bez backendu i nie używa makiet. Każda liczba pochodzi z obliczenia na prawdziwych danych.
+- Frontend nie używa makiet. Każda liczba pochodzi z obliczenia na danych pobranych dla tej działki i daty.
 - Gdy backend odpowiada, jego wynik zastępuje obliczenie przeglądarki. Kontrakt jest w `frontend/src/api/contract.ts`.
 
 ---
@@ -100,59 +111,76 @@ Architekturę backendu (rejestry rozszerzeń, jedna oś czasu historii i prognoz
 
 | Kategoria | Źródło | Zakres | Gdzie |
 | --- | --- | --- | --- |
-| Przestrzenne | GUGiK ULDK | granica działki, gmina, obręb | frontend, backend |
+| Przestrzenne | GUGiK ULDK | granica działki, gmina, obręb | frontend, backend, RL |
 | Przestrzenne | GUGiK ortofotomapa (WMTS i WMS), KIEG (WMS) | podkład mapy, granice i numery działek | frontend |
-| Glebowo-rolnicze | IUNG-PIB WMS `Susza:katgl_landuse2024` | kategoria gleby I–IV, użytkowanie | frontend, backend, RL |
+| Glebowo-rolnicze | IUNG-PIB WMS `Susza:katgl_landuse2024` | kategoria gleby I–IV, użytkowanie (odmowa dla lasu, wody, zabudowy) | frontend, backend, RL |
 | Glebowo-rolnicze | IUNG-PIB progi SMSR (Rozp. MRiRW z 11.04.2019) | krytyczne KBW: 14 upraw × 4 gleby × 14 okien | frontend, backend |
-| Meteorologiczne | Open-Meteo (ERA5 + ECMWF IFS), NASA POWER (zapas), IMGW-PIB | dzienny opad i ET₀ (FAO-56), 10 lat i prognoza, stacje meteo | frontend, backend, RL |
-| Satelitarne | Sentinel-2 L2A (Earth Search STAC) | NDVI, NDMI | backend |
-| Ukształtowanie terenu | GUGiK NMT 1 m (WCS), Copernicus DEM 30 m (zapas) | spadek, spływ, TWI | backend |
-| Glebowe | ISRIC SoilGrids v2.0 | piasek, ił, węgiel organiczny (zapas gleby) | backend |
-| Hydrologiczne | BDOT10k (WMS) | cieki, rowy, sieć hydrograficzna | backend |
+| Meteorologiczne | Open-Meteo (ERA5 / ERA5-Land, ECMWF IFS, ECMWF ENS) | dzienny opad, ET₀ (FAO-56), Tmax; 10 lat, prognoza 16 dni, prognoza zespołowa | frontend, backend, RL |
+| Meteorologiczne | NASA POWER (zapas za Open-Meteo) | dzienny opad, temperatura, wilgotność, wiatr, promieniowanie → ET₀ FAO-56 | backend (frontend przez pośrednika /om) |
+| Meteorologiczne | IMGW-PIB (API danych publicznych) | najbliższa stacja: temperatura, odległość, różnica wysokości | backend (data bieżąca) |
+| Satelitarne | Copernicus Sentinel-2 L2A Collection 1 (Earth Search STAC) | NDVI, NDMI działki, anomalia względem tego samego okresu w latach poprzednich | backend |
+| Ukształtowanie terenu | GUGiK NMT 1 m (WCS), Copernicus DEM GLO-30 (zapas) | spadek, spływ, TWI, zagłębienia | backend |
+| Glebowe | ISRIC SoilGrids v2.0 | piasek, ił, węgiel organiczny, woda użyteczna | backend, RL (plan 14 dni) |
+| Hydrologiczne | GUGiK BDOT10k (pliki powiatów, opendata.geoportal.gov.pl) | rowy melioracyjne, cieki, kanały, wody powierzchniowe | backend |
 
-Obszar: cała Polska. Okno czasowe: 10 lat wstecz od dnia analizy.
+Obszar: cała Polska. Okno czasowe: 10 lat wstecz od dnia analizy (sceny Sentinel-2 dla Polski są w katalogu Earth Search od grudnia 2017 r.).
 
 ---
 
 ## 5. Podział danych: `LIVE` vs `PRE-FETCHED`
 
+Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobrane są tylko tabele i dane do trenowania modeli.
+
 | Źródło | Tryb | Uwagi |
 | --- | --- | --- |
-| ULDK, KIEG, ortofotomapa, IUNG WMS | **LIVE** | Każda analiza pyta usługę w chwili wyboru działki. |
-| Open-Meteo | **LIVE** + cache | Archiwum starsze niż 7 dni się nie zmienia, więc przeglądarka i backend je buforują. |
+| ULDK, KIEG, ortofotomapa, IUNG WMS | **LIVE** + bufor | Każda nowa działka jest pobierana w chwili wyboru. Granica działki i kategoria gleby są buforowane (7 i 30 dni). |
+| Open-Meteo (archiwum i prognoza) | **LIVE** + bufor | Pełne lata archiwum się nie zmieniają, więc przeglądarka i backend je buforują (bieżący rok: 6 h). Prognoza: 30 min (przeglądarka), 1 h (backend). |
+| NASA POWER | **LIVE** (zapas) | Tylko gdy Open-Meteo odrzuci zapytania (limit) lub nie odpowie. Raport to zaznacza. |
+| Sentinel-2, NMT / Copernicus DEM, SoilGrids, IMGW | **LIVE** + bufor | Sceny Sentinel-2 i model terenu działki są buforowane bez wygasania (się nie zmieniają). |
+| BDOT10k | **LIVE** + bufor | Plik powiatu pobierany przy pierwszej analizie w danym powiecie. W `data/cache/bdot10k` jest 11 powiatów pobranych 21–22.11.2026. Skrypt `scripts/prefetch_bdot10k.py` pobiera kolejne. |
+| Prognoza zespołowa ECMWF | **LIVE** + bufor (3 h) | Plan 14-dniowy. Dla dat od 2.04.2024 archiwum prognoz (dynamical.org), wcześniej lata analogiczne. |
 | Progi IUNG SMSR | **PRE-FETCHED** (21.11.2026) | Tabela `frontend/src/data/iung-progi.json` z `susza.iung.pulawy.pl/progi`. Odświeżenie: `pnpm iung:progi`. |
-| Dane treningowe RL | **PRE-FETCHED** | Pobierane lokalnie skryptami z `ml/rl_irrigator/scripts` (w repozytorium są tylko manifesty ze źródłami i datami pobrania). |
-| Prognoza zespołowa ECMWF, SoilGrids | **LIVE** + cache | Tylko dla planu 14-dniowego modułu RL; profil gleby punktu jest buforowany bez wygasania, prognoza przez 3 h. |
+| Dane treningowe RL | **PRE-FETCHED** (21.11.2026) | Open-Meteo 2016–2026, IUNG, SoilGrids, archiwum ECMWF ENS. Manifesty z datami: `ml/rl_irrigator/data/**/MANIFEST.json`. |
+| Dane treningowe HydroFusion-PL | **PRE-FETCHED** (21–22.11.2026) | Próbki Sentinel-2 i SoilGrids w `ml/hydrofusion/data/` (ok. 2,3 MB), opis w [ml/hydrofusion/README.md](ml/hydrofusion/README.md). |
 
 ---
 
 ## 6. Wykaz bibliotek, komponentów, modeli ML, usług zewnętrznych i narzędzi AI
 
-- **Frontend:** React 18, React Router, Vite 5, TypeScript, MapLibre GL 4, Vitest.
-- **Backend:** Python 3.11, FastAPI, Pydantic v2, HTTPX, NumPy, Rasterio, Shapely, WeasyPrint.
+- **Frontend:** React 18, React Router 6, Vite 5, TypeScript 5, MapLibre GL 4, Vitest 2.
+- **Backend:** Python 3.11, FastAPI, Uvicorn, Pydantic v2 (+ pydantic-settings), HTTPX, NumPy, SciPy, Shapely, pyproj, Rasterio (GDAL), LightGBM, Matplotlib, Pillow, Jinja2, WeasyPrint, PyYAML.
+- **Trening (grupa `train`, poza aplikacją):** PyTorch (CPU), Stable-Baselines3, sb3-contrib (`MaskablePPO`), Gymnasium, scikit-learn, Optuna, pandas, PyArrow, xarray, zarr.
 - **Modele ML:**
-  - agent nawadniania PPO (`MaskablePPO`), eksportowany do NumPy (`ml/rl_irrigator`, wagi w `artifacts/models/ppo_irrigator_weights.npz`);
-  - opcjonalny runtime rekonstrukcji NDMI i TreeSHAP `HydroFusion-PL` (`src/backend/inference/hydrofusion.py`, ze ścieżką fizyczną FAO-56 jako fallbackiem).
-- **Usługi zewnętrzne:**
-  - `uldk.gugik.gov.pl`
-  - `mapy.geoportal.gov.pl`
-  - `integracja.gugik.gov.pl`
-  - `sgeo.iung.pl`
-  - `susza.iung.pulawy.pl`
-  - `archive-api.open-meteo.com`
-  - `api.open-meteo.com`
-- **Narzędzia AI:** asystenci programistyczni przy projektowaniu i pisaniu kodu (do uzupełnienia dokładnymi nazwami przy oddaniu). Kalkulator rolnika nie używa modeli językowych.
+  - agent nawadniania PPO (`MaskablePPO`), eksportowany do NumPy (`ml/rl_irrigator`, wagi w `artifacts/models/ppo_irrigator_weights.npz`, karta modelu `ppo_irrigator_card.json`);
+  - `HydroFusion-PL`: LightGBM (kwantyle 5/50/95%) z przedziałem conformal i obszarem stosowalności AoA, odtwarza NDMI pod chmurami (`artifacts/models/hydrofusion_*`, runtime `src/backend/inference/hydrofusion.py`). Poza obszarem stosowalności model nie jest używany.
+- **Usługi zewnętrzne (wszystkie bez konta i bez opłat):**
+  - GUGiK: `uldk.gugik.gov.pl`, `mapy.geoportal.gov.pl` (ortofotomapa, NMT WCS), `integracja.gugik.gov.pl` (KIEG), `services.gugik.gov.pl` (wyszukiwarka adresów), `opendata.geoportal.gov.pl` (BDOT10k);
+  - IUNG-PIB: `sgeo.iung.pl` (WMS), `susza.iung.pulawy.pl` (progi SMSR);
+  - Open-Meteo: `archive-api.open-meteo.com`, `api.open-meteo.com`, `ensemble-api.open-meteo.com`, `previous-runs-api.open-meteo.com`;
+  - NASA POWER: `power.larc.nasa.gov`;
+  - IMGW-PIB: `danepubliczne.imgw.pl`;
+  - Sentinel-2: `earth-search.aws.element84.com` (katalog STAC) i AWS Open Data (pliki COG);
+  - Copernicus DEM: `copernicus-dem-30m.s3.amazonaws.com`;
+  - ISRIC: `rest.isric.org`;
+  - archiwum prognoz ECMWF ENS: `data.dynamical.org` (tylko skrypty treningowe i opcjonalnie plan 14 dni).
+- **Narzędzia AI:**
+  - przy tworzeniu kodu i dokumentacji: _[UZUPEŁNIJ: nazwy asystentów programistycznych używanych przez zespół]_; Claude Code (Anthropic) – przegląd zgodności z wymaganiami, testy end-to-end i poprawki (22.11.2026);
+  - w samej aplikacji: modele ML opisane wyżej (PPO, LightGBM). Aplikacja nie używa modeli językowych: wszystkie teksty dla rolnika są generowane regułami z policzonych wartości.
 
 ---
 
 ## 7. Licencje i warunki korzystania
 
 - **Kod i dokumentacja:** autorskie prawa majątkowe przechodzą na KOWR zgodnie z § 5 Regulaminu.
-- **Biblioteki:** licencje permisywne (MIT, BSD, Apache-2.0).
-- **Dane GUGiK** (ULDK, ortofotomapa, KIEG, NMT): otwarte dane PZGiK.
-- **IUNG-PIB:** publiczna usługa WMS. Progi pochodzą z Rozporządzenia MRiRW z 11.04.2019.
-- **Open-Meteo:** CC BY 4.0 (ERA5 Copernicus). Przy skali produkcyjnej potrzebna jest własna instancja albo licencja komercyjna.
-- **Sentinel-2 i EDO:** licencja Copernicus i JRC (CC BY 4.0).
+- **Biblioteki:** licencje permisywne: MIT (React, React Router, Vite, Vitest, FastAPI, pydantic, pyproj, LightGBM, Stable-Baselines3, Gymnasium), BSD (MapLibre GL, NumPy, SciPy, Rasterio, Shapely, Jinja2, WeasyPrint, Uvicorn, HTTPX, PyTorch, scikit-learn), Apache-2.0 (TypeScript), licencja Matplotlib (oparta na PSF, zgodna z BSD).
+- **Dane GUGiK** (ULDK, ortofotomapa, KIEG, NMT, BDOT10k): dane PZGiK udostępniane bez opłat do dowolnych celów (ustawa Prawo geodezyjne i kartograficzne, od 31.07.2020).
+- **IUNG-PIB:** publiczna usługa WMS SMSR. Progi pochodzą z Rozporządzenia MRiRW z 11.04.2019.
+- **Open-Meteo:** dane CC BY 4.0 (ERA5 Copernicus, ECMWF). Darmowe API jest do użytku niekomercyjnego (limit ok. 10 000 zapytań na dobę). Przy wdrożeniu potrzebna jest własna instancja (kod open source) albo plan komercyjny.
+- **NASA POWER:** dane publiczne NASA, bez ograniczeń, z podaniem źródła (NASA Langley Research Center POWER Project).
+- **IMGW-PIB:** dane publiczne zgodnie z regulaminem serwisu danepubliczne.imgw.pl; wymagane podanie źródła („Źródłem pochodzenia danych jest Instytut Meteorologii i Gospodarki Wodnej – Państwowy Instytut Badawczy”).
+- **Sentinel-2:** dane Copernicus wolne i otwarte (Copernicus Sentinel data [rok]).
+- **Copernicus DEM GLO-30:** licencja ESA/Airbus, bezpłatnie z podaniem źródła (© DLR e.V. 2010–2014 i © Airbus Defence and Space GmbH 2014–2018, Copernicus, UE i ESA).
+- **ECMWF ENS (Open-Meteo, dynamical.org):** CC BY 4.0.
 - **ISRIC SoilGrids:** CC BY 4.0.
 - **Zdjęcia w interfejsie:** CC0, domena publiczna i CC BY, z autorami w `frontend/public/img/CREDITS.md`.
 
@@ -161,38 +189,39 @@ Obszar: cała Polska. Okno czasowe: 10 lat wstecz od dnia analizy.
 ## 8. Znane ograniczenia techniczne i plan skalowania
 
 ### Ograniczenia
-- **Pogoda:** pochodzi z siatki ok. 9 km, a nie z pomiaru na działce. Lokalna burza może się różnić.
-- **Gleba:** kategorię I–IV wyznacza jeden punkt w środku działki.
+- **Pogoda:** pochodzi z siatki ok. 9 km (Open-Meteo), a przy zapasie NASA POWER z siatki ok. 50 km, a nie z pomiaru na działce. Lokalna burza może się różnić. Raport zaznacza, które źródło użyto.
+- **Gleba:** kategorię I–IV wyznacza 5 punktów na działce (większość głosów). Pojemność wodna to wartość reprezentatywna kategorii, a nie pomiar.
+- **Bilans wody:** jednowarstwowy model FAO-56 („wiadro”) ze spływem SCS-CN. Nie uwzględnia wód gruntowych, podsiąku ani drenażu rurkowego.
 - **Ewapotranspiracja:** IUNG liczy ją metodą Penmana, a Open-Meteo metodą FAO-56 Penman-Monteith. Wyniki mogą różnić się o kilka procent.
-- **Stan wody w przeglądarce:** jest tymczasowy, bo wynika tylko z KBW i progu IUNG. Pełny wzór liczy backend.
-- **Model terenu:** NMT 1 m przez WCS GUGiK odpowiadał w testach po ponad 20 s. Backend musi go buforować.
+- **Satelita:** NDMI porównujemy z tym samym okresem na tej samej działce w poprzednich latach, a nie z wartością typową dla uprawy (w poprzednich latach na działce mogła rosnąć inna roślina). HydroFusion-PL odtwarza NDMI pod chmurami z R² 0,62, poniżej celu 0,78.
+- **Model terenu:** usługa NMT 1 m (WCS GUGiK) nie odpowiadała w testach 22.11.2026 nawet w 120 s. Analiza czeka na nią ok. 4,5 s, potem używa Copernicus DEM 30 m (spadki przybliżone). Pobieranie 1 m trwa dalej w tle; gdy się uda, kolejna analiza działki użyje NMT 1 m.
+- **ULDK:** przy przeciążeniu GUGiK przekierowuje zapytania na stronę zastępczą. Pośrednik frontendu ponawia zapytanie do 5 razy, backend buforuje granice działek.
 - **Zgody wodnoprawne:** każda zmiana urządzeń wodnych (zastawka, piętrzenie, zbiornik) wymaga zgody Wód Polskich.
+- **Parametry upraw** (Kc, p, Ky, terminy) są z FAO-56/33 i wymagają weryfikacji z ekspertem dla warunków Polski.
 
 ### Skalowanie
-- **Cache pogody:** po stronie serwera, na poziomie oczka siatki Open-Meteo. Jedno oczko obsługuje wiele działek.
-- **Statyczny frontend:** dowolny hosting statyczny, obliczenia lekkie (poniżej 10 ms na działkę).
-- **Wyniki backendu:** cache par (działka, data) w bazie.
+- **Limity i dostępność źródeł:** bufor SQLite (`data/cache`) dla granic działek, gleby, scen Sentinel-2, modelu terenu i pogody; pobieranie równoległe z twardym limitem 25 s; źródło, które nie zdąży, jest w raporcie oznaczone „brak danych” zamiast zatrzymywać analizę; zapasowe źródła (NASA POWER, Copernicus DEM, SoilGrids za IUNG).
+- **Ruch:** pogoda jest buforowana na poziomie oczka siatki Open-Meteo, więc jedno oczko obsługuje wiele działek; frontend jest statyczny (dowolny hosting); gotowa analiza (działka, uprawa, data) jest trzymana w pamięci 1 h, więc PDF i „co jeśli” nie liczą jej drugi raz. Przy większym ruchu: Redis lub PostGIS zamiast SQLite, kilka procesów Uvicorn, nocne odświeżanie pogody dla oczek z aktywnymi działkami.
+- **Aktualizacja danych:** archiwum pogody i sceny satelitarne starsze niż 7 dni nie zmieniają się; prognoza odświeża się co godzinę; progi IUNG skryptem `pnpm iung:progi`.
+- **Koszty:** jeden serwer obsługujący ponad 50 tys. analiz na dobę to szacunkowo ok. 350–500 zł/mies., plus plan komercyjny Open-Meteo albo własna instancja przy wdrożeniu (szacunek zespołu, [docs/SOLUTION_BLUEPRINT.md](docs/SOLUTION_BLUEPRINT.md)). Pozostałe źródła są bezpłatne.
 
 ---
 
 ## 9. Sposób weryfikacji wyników i metryki walidacji
 
-1. **Testy jednostkowe frontendu** (`pnpm test`) sprawdzają:
-   - parsery ULDK i WKT;
-   - powierzchnię działki;
-   - 14 okien IUNG;
-   - zgodność tabeli progów z publikacją IUNG;
+1. **Testy jednostkowe frontendu** (`pnpm test`, 38 testów) sprawdzają:
+   - parsery ULDK i WKT oraz powierzchnię działki;
+   - 14 okien IUNG i zgodność tabeli progów z publikacją IUNG;
    - KBW i skalę stanu wody;
-   - zakresy pobierania pogody.
-2. **Test na prawdziwych usługach** (`pnpm test:live`) przechodzi działkę 040706_5.0050.78/2 od numeru do wyniku. Pomiar z 21.11.2026: ok. 0,8 s.
-3. **Czasy w przeglądarce** (pomiar z 21.11.2026):
-   - otwarcie analizy z linku: ok. 1,1 s do wyniku;
-   - przejście z mapy do analizy: ok. 90 ms przy danych pobranych wcześniej.
-4. **Walidacja z IUNG (plan):** werdykt suszy dla działki porównany z wykazem gminnym SMSR z lat 2020–2025.
-5. **Walidacja modułu RL:** czasowy i przestrzenny hold-out, opisane w `ml/rl_irrigator/reports/` oraz `artifacts/validation/`.
-6. **Walidacja `HydroFusion-PL`** (wilgotność łanu NDMI w dni zachmurzone, 22.11.2026), opis w [ml/hydrofusion/README.md](ml/hydrofusion/README.md):
+   - zakresy pobierania pogody;
+   - bufor analiz i strefy łączone kilku działek.
+2. **Testy backendu i modułu RL bez sieci** (`uv run pytest`, 148 testów): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, stan wody na osi susza–nadmiar, WaterScore i weta, przyczyny (bez procentów przy braku niedoboru), ranking retencji, pełna analiza dla każdej z 15 upraw, porady, API kroków 1–5, odmowa dla działki nierolniczej, HydroFusion-PL, środowisko i polityka RL.
+3. **Test na prawdziwych usługach** (`pnpm test:live`) przechodzi działkę 040706_5.0050.78/2 od numeru do wyniku.
+4. **Test end-to-end backendu** (22.11.2026, prawdziwe usługi): działki z 6 województw, daty 2018–2026, 15 upraw. Analiza trwa 5–16 s; las i zabudowa dostają odmowę; ocena i nawadnianie pokazują ten sam zapas wody. Przykładowe raporty: [reports/](reports/).
+5. **Walidacja z IUNG (plan):** werdykt suszy dla działki porównany z wykazem gminnym SMSR z lat 2020–2025.
+6. **Walidacja modułu RL:** czasowy i przestrzenny hold-out, opisane w `ml/rl_irrigator/reports/` oraz `artifacts/validation/`.
+7. **Walidacja `HydroFusion-PL`** (wilgotność łanu NDMI w dni zachmurzone, 22.11.2026), opis w [ml/hydrofusion/README.md](ml/hydrofusion/README.md):
    - **50 nowych lokalizacji** (12 175 obserwacji Sentinel-2): RMSE 0,133, MAE 0,099, R² 0,62, pokrycie przedziału 90%: 0,89;
    - **lata suszy 2018 i 2023:** RMSE 0,131, R² 0,61, pokrycie 0,91;
    - **porównanie:** model jest lepszy od metody „jak na ostatnim bezchmurnym zdjęciu” (RMSE 0,160) i „jak w poprzednich latach” (RMSE 0,187); bez spełnienia tej reguły model nie byłby wdrożony;
    - **cel ze specyfikacji (R² ≥ 0,78) nie jest osiągnięty;** przyczyny i ograniczenia opisuje raport modelu.
-7. **Testy backendu bez sieci** (`uv run pytest tests`): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, WaterScore i weta, przyczyny, ranking retencji, porady, API kroków 1–5, odmowa dla działki nierolniczej, wczytanie i działanie HydroFusion-PL.

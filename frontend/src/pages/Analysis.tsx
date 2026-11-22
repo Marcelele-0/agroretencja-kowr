@@ -822,6 +822,7 @@ function Why({ local, components }: { local: LocalResult; components?: NonNullab
     return (
       <div className="rs-why">
         <h4 className="rs-subtitle">Skąd ten wynik</h4>
+        <p className="ar-muted rs-why__note">Stan wody (susza – optimum – nadmiar) wynika z bilansu wody w strefie korzeniowej (FAO-56) i bilansu opad − parowanie z 60 dni. Tabela pokazuje składniki ogólnej oceny warunków wodnych działki (0–100).</p>
         <table><tbody>{components.map((c) => <tr key={c.key}><td>{c.label}{c.weight !== undefined ? ` (waga ${dec(c.weight * 100, 0)}%)` : ""}</td><td><b>{c.value}</b>{c.detail ? <span className="ar-muted"> · {c.detail}</span> : null}{c.source ? <span className="ar-muted"> · {c.source}</span> : null}</td></tr>)}</tbody></table>
         <p className="ar-muted rs-why__note">Wynik z modelu serwera. <Link to="/metoda">Jak liczymy</Link></p>
       </div>
@@ -850,7 +851,7 @@ function Why({ local, components }: { local: LocalResult; components?: NonNullab
         </tbody>
       </table>
       {driver ? <p className="rs-why__driver">{driver}</p> : null}
-      <p className="ar-muted rs-why__note">Skala jest tymczasowa: wynika z KBW i progu IUNG. Backend doda bilans wody w glebie (FAO-56), zdjęcia satelitarne i model terenu. <Link to="/metoda">Jak liczymy</Link></p>
+      <p className="ar-muted rs-why__note">Ocena uproszczona (serwer analizy nie odpowiada): stan wynika tylko z KBW i progu IUNG, bez bilansu wody w glebie (FAO-56), zdjęć satelitarnych i modelu terenu. <Link to="/metoda">Jak liczymy</Link></p>
     </div>
   );
 }
@@ -859,6 +860,26 @@ function Causes({ local, backend, land, weatherFailed }: { local: LocalResult | 
   const c = backend?.causes;
   if (c) {
     const e = c.explanations;
+    if (c.has_deficit === false) {
+      const rows = [
+        { key: "klimat", label: "Klimat", note: e.klimat ?? e.climate }, { key: "gleba", label: "Gleba", note: e.gleba ?? e.soil },
+        { key: "splyw", label: "Spływ", note: e.splyw ?? e.runoff }, { key: "uprawa", label: "Uprawa", note: e.uprawa ?? e.crop },
+      ];
+      return (
+        <div className="ar-card">
+          <p className="ar-card__text">Na działce nie ma teraz istotnego niedoboru wody, więc nie liczymy udziału przyczyn. Co wpływa na wodę:</p>
+          <ul className="ar-cause__list">
+            {rows.map((x) => (
+              <li key={x.key} className="ar-cause__item">
+                <span className={`ar-cause__sw ar-c-${x.key}`} aria-hidden="true" />
+                <span className="ar-cause__name">{x.label}</span>
+                {x.note ? <span className="ar-cause__note">{x.note}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
     return <div className="ar-card"><CauseBreakdown causes={[
       { key: "klimat", pct: c.climate_pct, note: e.klimat ?? e.climate }, { key: "gleba", pct: c.soil_pct, note: e.gleba ?? e.soil },
       { key: "splyw", pct: c.runoff_pct, note: e.splyw ?? e.runoff }, { key: "uprawa", pct: c.crop_pct, note: e.uprawa ?? e.crop },

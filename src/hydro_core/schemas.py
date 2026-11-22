@@ -19,6 +19,19 @@ class CropCode(str, Enum):
     BURAK_CUKROWY = "burak_cukrowy"
     ZIEMNIAK = "ziemniak"
     UZYTKI_ZIELONE = "uzytki_zielone"
+    # the other IUNG-PIB SMSR crops (parameters in ml/rl_irrigator/config/crops.yaml)
+    KUKURYDZA_KISZONKA = "kukurydza_kiszonka"
+    STRACZKOWE = "straczkowe"
+    WARZYWA = "warzywa"
+    CHMIEL = "chmiel"
+    TYTON = "tyton"
+    DRZEWA_OWOCOWE = "drzewa_owocowe"
+    KRZEWY_OWOCOWE = "krzewy_owocowe"
+    TRUSKAWKI = "truskawki"
+
+
+# Perennial crops: no ploughing and no catch crop between seasons
+PERENNIAL_CROPS = frozenset({CropCode.CHMIEL, CropCode.DRZEWA_OWOCOWE, CropCode.KRZEWY_OWOCOWE, CropCode.TRUSKAWKI})
 
 
 class RiskLevel(str, Enum):
@@ -220,6 +233,8 @@ class CauseAttribution(BaseModel):
     crop_pct: float = Field(..., ge=0.0, le=100.0)
     method: str
     explanations: dict[str, str]
+    # False = no significant water deficit: shares are not computed (all 0) instead of a fake 25/25/25/25
+    has_deficit: bool = True
 
 
 class YearlyDroughtPoint(BaseModel):
@@ -347,6 +362,9 @@ class IrrigationAdvice(BaseModel):
     plan_7d: list[IrrigationPlanDay] = Field(default_factory=list)
     in_season: bool = True
     limitations: list[str] = Field(default_factory=list)
+    # Full POST /rl/recommend answer (plan_days=14) computed from the step-1 soil-water state:
+    # the frontend shows it instead of its own /rl/recommend call, so both steps show one number.
+    rl_recommendation: dict[str, Any] | None = None
 
 
 class AdviceKind(str, Enum):

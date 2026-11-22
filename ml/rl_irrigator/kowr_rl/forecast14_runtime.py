@@ -43,9 +43,9 @@ ARCHIVE_ENS_START = dt.date(2024, 4, 2)
 SOILGRIDS_LICENSE = "CC BY 4.0 (ISRIC - World Soil Information, SoilGrids 2.0)"
 ENS_LICENSE = "CC BY 4.0 (ECMWF IFS ENS; Open-Meteo.com / dynamical.org)"
 ZONE_LABELS = tuple(f"{int(a * 100)}-{int(b * 100)} cm" for a, b in ZONE_BOUNDS_M)
-DATA_SCALE = ("Skala danych: pogoda z modelu ECMWF na siatce 0,25 st. (ok. 25 km, 51 czlonkow ensemble), gleba z map SoilGrids "
-              "(250 m) dopasowanych do pojemnosci kategorii IUNG-PIB. Stan strefy to wartosc reprezentatywna dla punktu, "
-              "podawana jako klasa z prawdopodobienstwem.")
+DATA_SCALE = ("Skala danych: pogoda z modelu ECMWF na siatce 0,25° (ok. 25 km, 51 członków ensemble), gleba z map SoilGrids "
+              "(250 m) dopasowanych do pojemności kategorii IUNG-PIB. Stan strefy to wartość reprezentatywna dla punktu, "
+              "podawana jako klasa z prawdopodobieństwem.")
 _DYN: dict[str, Any] = {}
 
 
@@ -295,8 +295,8 @@ def soil_zones_block(date: dt.date, d0: np.ndarray, awc: np.ndarray, frac: np.nd
         "soil_profile_source": profile_source,
         "data_scale": DATA_SCALE,
         "method": ("Trzy strefy gleby (0-28, 28-100, 100-200 cm, jak warstwy ERA5-Land): parowanie z wierzchniej strefy, "
-                   "transpiracja z zasiegu korzeni rosnacego od 0,2 m do glebokosci maksymalnej uprawy. Stan na dzis z bilansu "
-                   "od 1 sierpnia poprzedniego roku; kolejne 14 dni dla kazdego czlonka ensemble ECMWF, z poprawka rozrzutu "
-                   "i przedzialu P10-P90 dopasowana na roku walidacyjnym 2024."),
+                   "transpiracja z zasięgu korzeni rosnącego od 0,2 m do głębokości maksymalnej uprawy. Stan na dziś z bilansu "
+                   "od 1 sierpnia poprzedniego roku; kolejne 14 dni dla każdego członka ensemble ECMWF, z poprawką rozrzutu "
+                   "i przedziału P10–P90 dopasowaną na roku walidacyjnym 2024."),
     }
 

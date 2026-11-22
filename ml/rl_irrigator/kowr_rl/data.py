@@ -51,7 +51,7 @@ USER_AGENT = "kowr-rl/0.1 (HackNation 2026 prototype)"
 
 LICENSES = {
     "open-meteo": "CC BY 4.0 (Open-Meteo.com; ECMWF / Copernicus ERA5 data); free API for non-commercial use",
-    "iung": "IUNG-PIB, Mapa podatnosci gleb na susze (katgl_landuse2024), publiczna usluga WMS",
+    "iung": "IUNG-PIB, Mapa podatności gleb na suszę (katgl_landuse2024), publiczna usługa WMS",
     "uldk": "GUGiK ULDK, dane publiczne (ustawa Prawo geodezyjne i kartograficzne)",
 }
 
@@ -488,7 +488,7 @@ def fetch_iung_code(client: HttpClient, lat: float, lon: float) -> tuple[int | N
     """Raw IUNG raster code at the point (1-4 soil category, 5 organic, 11+ non-arable)."""
     res = client.get(IUNG_WMS_URL, iung_params(lat, lon), max_age_s=None)
     return parse_iung(res.payload), SourceRecord(
-        name="IUNG-PIB WMS Susza:katgl_landuse2024 (kategorie podatnosci gleb na susze)",
+        name="IUNG-PIB WMS Susza:katgl_landuse2024 (kategorie podatności gleb na suszę)",
         url=res.url,
         retrieved_at=res.retrieved_at,
         mode="cache" if res.from_cache else "live",

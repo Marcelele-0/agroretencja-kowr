@@ -104,7 +104,7 @@ describe("IUNG table", () => {
 });
 
 function series(from: string, days: number, p: number, e: number): DailySeries {
-  return { start: from, startDay: toDay(from), p: new Array(days).fill(p), et0: new Array(days).fill(e), forecastFrom: addDays(from, days), forecastOk: true, grid: { lat: 0, lon: 0, elevation: null }, retrievedAt: new Date() };
+  return { start: from, startDay: toDay(from), p: new Array(days).fill(p), et0: new Array(days).fill(e), forecastFrom: addDays(from, days), forecastOk: true, grid: { lat: 0, lon: 0, elevation: null }, retrievedAt: new Date(), providers: ["open-meteo"] };
 }
 
 describe("KBW and water state", () => {
