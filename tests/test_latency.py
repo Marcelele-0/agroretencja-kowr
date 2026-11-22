@@ -145,3 +145,34 @@ def test_sentinel2_grid_mismatch_is_detected(shift: float) -> None:
     a = s2._Grid(CRS.from_epsg(32633), t, 10, 10, np.zeros((0, 0), bool))
     b = s2._Grid(CRS.from_epsg(32633), Affine(20.0, 0.0, 600000.0 + shift, 0.0, -20.0, 5900000.0), 10, 10, np.zeros((0, 0), bool))
     assert not s2._same_grid(a, b)
+
+
+async def test_analysis_service_reuses_bundle_and_terrain_on_crop_change() -> None:
+    from synthetic_data import ANALYSIS_DATE, TODAY, make_bundle
+
+    from backend.analysis import AnalysisService
+
+    calls = 0
+
+    class _CountingCollector:
+        def __init__(self) -> None:
+            self.clients: dict[str, Any] = {}
+
+        async def collect(self, request: AnalysisRequest, today: date | None = None):
+            nonlocal calls
+            calls += 1
+            return make_bundle(request.analysis_date)
+
+    svc = AnalysisService(_CountingCollector())  # type: ignore[arg-type]
+    r1 = await svc.analyze(
+        AnalysisRequest(parcel_id="302111_5.0015.72", crop=CropCode.KUKURYDZA, analysis_date=ANALYSIS_DATE),
+        today=TODAY,
+    )
+    r2 = await svc.analyze(
+        AnalysisRequest(parcel_id="302111_5.0015.72", crop=CropCode.ZIEMNIAK, analysis_date=ANALYSIS_DATE),
+        today=TODAY,
+    )
+    assert calls == 1
+    assert r1.response.assessment.crop == CropCode.KUKURYDZA
+    assert r2.response.assessment.crop == CropCode.ZIEMNIAK
+    assert r1.response.assessment.kbw_periods != r2.response.assessment.kbw_periods

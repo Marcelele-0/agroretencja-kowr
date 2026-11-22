@@ -290,10 +290,21 @@ def test_zones_endpoint_contract(zones_client) -> None:
     # Same request: in-process cache, no second DEM load.
     assert client.post("/api/zones", json=body).json()["zones"] == d["zones"]
     assert fake.clients["nmt"].calls == 1
-    # Another crop is another cache entry.
+    # Another crop or water_state recomputes zones from the cached prepared terrain without reloading DEMs.
     body["parcels"][1]["crop"] = "kukurydza"
-    assert client.post("/api/zones", json=body).status_code == 200
-    assert fake.clients["nmt"].calls == 2
+    body["parcels"][1]["water_state"] = 1.5
+    r2 = client.post("/api/zones", json=body)
+    assert r2.status_code == 200
+    assert fake.clients["nmt"].calls == 1
+    expected = compute_joint_zones(
+        [
+            ZoneParcelInput("P-A", fake.parcels["P-A"].geojson, -0.6, "pszenica"),
+            ZoneParcelInput("P-B", fake.parcels["P-B"].geojson, 1.5, "kukurydza"),
+        ],
+        [_dem(unary_union([BOX_A, BOX_B]), 30.0, 390.0, "Copernicus DEM GLO-30 (test)")],
+    )
+    assert _shares(r2.json()["zones"]["P-A"]) == _shares(expected.zones["P-A"])
+    assert _shares(r2.json()["zones"]["P-B"]) == _shares(expected.zones["P-B"])
 
 
 @pytest.mark.parametrize("body", [

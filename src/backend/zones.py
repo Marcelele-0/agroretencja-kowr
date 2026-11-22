@@ -60,6 +60,7 @@ POLY_CELL_M = 2.5  # polygonization cell of the upsampled class field
 MAX_POLY_CELLS = 2_500_000
 SMOOTH_TOL_M = 3.0  # coverage simplification of the shared class polygons
 RESULT_CACHE_SIZE = 256
+TERRAIN_CACHE_SIZE = 64
 ZONES_VERSION = 2  # in the result cache key; bump when the zone field changes
 MEAN_TOL = 0.05  # max deviation of a parcel's field mean from its water state
 MEAN_BLEND_PASSES = 3  # blended (continuous) corrections before the exact per-parcel shift
@@ -264,17 +265,28 @@ def _parcel_means(field: np.ndarray, cells: list[np.ndarray]) -> list[float]:
     return out
 
 
-def compute_joint_zones(parcels: list[ZoneParcelInput], dems: list[DemRaster]) -> JointZones:
-    """Zones of all parcels on one shared grid (CPU only; call it from a worker thread).
+@dataclass
+class _PreparedGroup:
+    """Crop- and water-state-independent geometry + shared terrain wetness offset grid."""
 
-    ``dems``: rasters of ONE source covering the group (per-parcel or tiles); empty = flat.
-    """
+    pids: list[str]
+    geoms: list[BaseGeometry]
+    grid: _Grid
+    off: np.ndarray
+    dem_source: str
+
+
+def _prepare_group(pids: list[str], geojsons: list[dict[str, Any]], dems: list[DemRaster]) -> _PreparedGroup:
+    """Project parcel geometries, mosaic DEMs, and sample TPI wetness offset onto the shared class grid."""
     geoms: list[BaseGeometry] = []
-    for p in parcels:
-        g = to_puwg92(parcel_shape(p.geojson))
+    for gj in geojsons:
+        g = to_puwg92(parcel_shape(gj))
         geoms.append(g if g.is_valid else g.buffer(0))
-    if not parcels:
-        return JointZones({}, FINE_CELL_M, NO_DEM_SOURCE)
+    sources = sorted({d.source for d in dems if d.source})
+    dem_source = " + ".join(sources) if sources else (dems[0].source if dems else NO_DEM_SOURCE) or NO_DEM_SOURCE
+    if not pids:
+        empty_grid = _Grid(0.0, 0.0, FINE_CELL_M, 0, 0)
+        return _PreparedGroup([], [], empty_grid, np.zeros((0, 0)), NO_DEM_SOURCE)
 
     offset: np.ndarray | None = None
     dem_grid: _Grid | None = None
@@ -301,9 +313,27 @@ def compute_joint_zones(parcels: list[ZoneParcelInput], dems: list[DemRaster]) -
         off = np.where(np.isfinite(off), off, 0.0)
     else:
         off = np.zeros((grid.height, grid.width))
+    return _PreparedGroup(list(pids), geoms, grid, off, dem_source)
+
+
+def _classify_group(
+    prepared: _PreparedGroup,
+    states_by_pid: dict[str, float],
+    crops_by_pid: dict[str, str],
+) -> JointZones:
+    """Classify and polygonize wetness zones on a prepared terrain group for given water states and crops."""
+    if not prepared.pids:
+        return JointZones({}, FINE_CELL_M, NO_DEM_SOURCE)
+    geoms = prepared.geoms
+    grid = prepared.grid
+    cell = grid.cell
+    off = prepared.off
+    margin = math.ceil(3.0 * BLEND_SIGMA_M / cell) + 2
+    all_states = [states_by_pid[pid] for pid in prepared.pids]
+    all_crops = [crops_by_pid.get(pid, "") for pid in prepared.pids]
 
     zones: dict[str, dict[str, Any]] = {}
-    for members in _touching_groups(geoms, [p.crop for p in parcels]):
+    for members in _touching_groups(geoms, all_crops):
         gx0 = min(geoms[i].bounds[0] for i in members)
         gy0 = min(geoms[i].bounds[1] for i in members)
         gx1 = max(geoms[i].bounds[2] for i in members)
@@ -314,7 +344,7 @@ def compute_joint_zones(parcels: list[ZoneParcelInput], dems: list[DemRaster]) -
         r1 = min(grid.height, math.ceil((grid.top - gy0) / cell) + margin)
         win = _Grid(grid.left + c0 * cell, grid.top - r0 * cell, cell, r1 - r0, c1 - c0)
         member_geoms = [geoms[i] for i in members]
-        states = [parcels[i].water_state for i in members]
+        states = [all_states[i] for i in members]
         sub_off = off[r0:r1, c0:c1]
         ids = _parcel_ids(member_geoms, win)
         cells = [ids == k + 1 for k in range(len(members))]
@@ -372,6 +402,8 @@ def compute_joint_zones(parcels: list[ZoneParcelInput], dems: list[DemRaster]) -
         tree = STRtree([poly for poly, _ in polys]) if polys else None
         for i in members:
             g = geoms[i]
+            pid = prepared.pids[i]
+            pstate = all_states[i]
             # Blended class at the parcel's inner point: used for gaps and for too-thin parcels.
             px, py = g.representative_point().coords[0]
             row = min(max(int((fine.top - py) / fine.cell), 0), fine.height - 1)
@@ -382,14 +414,38 @@ def compute_joint_zones(parcels: list[ZoneParcelInput], dems: list[DemRaster]) -
                     grouped = {}
                 else:
                     grouped = group_zone_polygons([polys[j] for j in tree.query(g)], g)
-                zones[parcels[i].key] = zone_collection(grouped, g, parcels[i].water_state, fill)
+                zones[pid] = zone_collection(grouped, g, pstate, fill)
             except Exception:  # never omit a parcel: one zone over the whole parcel
-                logger.warning("Zones of %s fell back to one zone", parcels[i].key, exc_info=True)
-                zones[parcels[i].key] = zone_collection({}, g, parcels[i].water_state, fill)
+                logger.warning("Zones of %s fell back to one zone", pid, exc_info=True)
+                zones[pid] = zone_collection({}, g, pstate, fill)
 
-    sources = sorted({d.source for d in dems if d.source})
-    dem_source = " + ".join(sources) if sources else (dems[0].source if dems else NO_DEM_SOURCE) or NO_DEM_SOURCE
-    return JointZones(zones, float(cell), dem_source)
+    return JointZones(zones, float(cell), prepared.dem_source)
+
+
+def _prepare_and_classify(
+    pids: list[str],
+    geojsons: list[dict[str, Any]],
+    dems: list[DemRaster],
+    states: dict[str, float],
+    crops: dict[str, str],
+) -> tuple[_PreparedGroup, JointZones]:
+    prepared = _prepare_group(pids, geojsons, dems)
+    return prepared, _classify_group(prepared, states, crops)
+
+
+def compute_joint_zones(parcels: list[ZoneParcelInput], dems: list[DemRaster]) -> JointZones:
+    """Zones of all parcels on one shared grid (CPU only; call it from a worker thread).
+
+    ``dems``: rasters of ONE source covering the group (per-parcel or tiles); empty = flat.
+    """
+    if not parcels:
+        return JointZones({}, FINE_CELL_M, NO_DEM_SOURCE)
+    pids = [p.key for p in parcels]
+    geojsons = [p.geojson for p in parcels]
+    states = {p.key: p.water_state for p in parcels}
+    crops = {p.key: p.crop for p in parcels}
+    prepared = _prepare_group(pids, geojsons, dems)
+    return _classify_group(prepared, states, crops)
 
 
 class ZonesService:
@@ -398,6 +454,7 @@ class ZonesService:
     def __init__(self, collector: Any) -> None:
         self.collector = collector
         self._cache: OrderedDict[tuple[Any, ...], JointZones] = OrderedDict()
+        self._terrain_cache: OrderedDict[tuple[Any, ...], _PreparedGroup] = OrderedDict()
 
     async def zones(self, request: ZonesRequest) -> ZonesResponse:
         started = perf_counter()
@@ -430,11 +487,27 @@ class ZonesService:
         if joint is not None:
             self._cache.move_to_end(key)
         elif parcels:
-            geoms = list(parcels.values())
-            dems: list[DemRaster] = await nmt.group_dems(geoms) if nmt is not None else []
-            inputs = [ZoneParcelInput(pid, g.geojson, states[pid], crops[pid]) for pid, g in parcels.items()]
+            tkey = (ZONES_VERSION, tuple(sorted(parcels)), source)
+            prepared = self._terrain_cache.get(tkey)
             try:
-                joint = await asyncio.to_thread(compute_joint_zones, inputs, dems)
+                if prepared is not None:
+                    self._terrain_cache.move_to_end(tkey)
+                    joint = await asyncio.to_thread(_classify_group, prepared, states, crops)
+                else:
+                    pids = list(parcels)
+                    geoms = [parcels[pid] for pid in pids]
+                    dems: list[DemRaster] = await nmt.group_dems(geoms) if nmt is not None else []
+                    prepared, joint = await asyncio.to_thread(
+                        _prepare_and_classify,
+                        pids,
+                        [g.geojson for g in geoms],
+                        dems,
+                        states,
+                        crops,
+                    )
+                    self._terrain_cache[tkey] = prepared
+                    while len(self._terrain_cache) > TERRAIN_CACHE_SIZE:
+                        self._terrain_cache.popitem(last=False)
             except Exception:
                 logger.exception("Joint zones failed for %s", list(parcels))
                 for pid in parcels:

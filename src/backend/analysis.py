@@ -56,8 +56,8 @@ from hydro_core.scoring import (
     physical_water_state,
 )
 from hydro_core.text import days, num
-from hydro_core.timeline import build_timeline, kind_is_forecast
-from hydro_core.topography import analyse_terrain
+from hydro_core.timeline import DailyTimeline, build_timeline, kind_is_forecast
+from hydro_core.topography import TerrainAnalysis, analyse_terrain
 
 logger = logging.getLogger(__name__)
 
@@ -95,34 +95,60 @@ class AnalysisState:
     created: float
 
 
-class AnalysisCache:
-    """Thread-safe LRU with TTL (L1 cache of the scaling plan; L2 = Redis/PostGIS in production)."""
+@dataclass
+class _CachedBundle:
+    """Crop-independent parcel data, terrain model, and weather timeline for one (parcel, date)."""
+
+    bundle: ParcelDataBundle
+    terrain: TerrainAnalysis | None
+    timeline: DailyTimeline
+    created: float
+
+
+class _TtlCache:
+    """Thread-safe LRU cache with monotonic TTL for items holding a ``created`` timestamp."""
 
     def __init__(self, max_items: int = 64, ttl_s: float = 3600.0) -> None:
-        self._data: OrderedDict[tuple[str, str, str], AnalysisState] = OrderedDict()
+        self._data: OrderedDict[tuple[str, ...], Any] = OrderedDict()
         self._lock = threading.Lock()
         self.max_items = max_items
         self.ttl_s = ttl_s
+
+    def get(self, key: tuple[str, ...]) -> Any | None:
+        with self._lock:
+            item = self._data.get(key)
+            if item is None or time.monotonic() - item.created > self.ttl_s:
+                self._data.pop(key, None)
+                return None
+            self._data.move_to_end(key)
+            return item
+
+    def put(self, key: tuple[str, ...], item: Any) -> None:
+        with self._lock:
+            self._data[key] = item
+            self._data.move_to_end(key)
+            while len(self._data) > self.max_items:
+                self._data.popitem(last=False)
+
+    def pop(self, key: tuple[str, ...]) -> None:
+        with self._lock:
+            self._data.pop(key, None)
+
+
+class AnalysisCache(_TtlCache):
+    """Thread-safe LRU with TTL (L1 cache of the scaling plan; L2 = Redis/PostGIS in production)."""
 
     @staticmethod
     def key(parcel_id: str, crop: CropCode, day: dt.date) -> tuple[str, str, str]:
         return (parcel_id, crop.value, day.isoformat())
 
-    def get(self, key: tuple[str, str, str]) -> AnalysisState | None:
-        with self._lock:
-            state = self._data.get(key)
-            if state is None or time.monotonic() - state.created > self.ttl_s:
-                self._data.pop(key, None)
-                return None
-            self._data.move_to_end(key)
-            return state
 
-    def put(self, key: tuple[str, str, str], state: AnalysisState) -> None:
-        with self._lock:
-            self._data[key] = state
-            self._data.move_to_end(key)
-            while len(self._data) > self.max_items:
-                self._data.popitem(last=False)
+class _BundleCache(_TtlCache):
+    """Crop-independent bundle + terrain + timeline cache keyed by (parcel_id, analysis_date, today)."""
+
+    @staticmethod
+    def key(parcel_id: str, day: dt.date, today: dt.date) -> tuple[str, str, str]:
+        return (parcel_id, day.isoformat(), today.isoformat())
 
 
 def _rl_card_version() -> str:
@@ -191,6 +217,20 @@ class AnalysisService:
         self.collector = collector
         self.settings = settings or get_settings()
         self.cache = AnalysisCache(ttl_s=self.settings.analysis_cache_ttl_s)
+        self._bundles = _BundleCache(ttl_s=self.settings.analysis_cache_ttl_s)
+
+    def _dem_upgraded_on_disk(self, parcel_id: str, bundle: ParcelDataBundle) -> bool:
+        """True when a cached Copernicus fallback bundle now has a finished 1 m GUGiK NMT on disk."""
+        if bundle.dem is None or not bundle.dem.is_surface_model:
+            return False
+        clients = getattr(self.collector, "clients", None)
+        nmt = clients.get("nmt") if isinstance(clients, dict) else None
+        if nmt is None or not hasattr(nmt, "_cache_path"):
+            return False
+        try:
+            return bool(nmt._cache_path(parcel_id, "gugik1m").exists())
+        except OSError:
+            return False
 
     async def analyze(self, request: AnalysisRequest, today: dt.date | None = None) -> AnalysisState:
         today = today or dt.date.today()
@@ -199,8 +239,33 @@ class AnalysisService:
             if cached is not None:
                 return cached
         started = perf_counter()
-        bundle = await self.collector.collect(request, today=today)
-        state = await asyncio.to_thread(self._compute, bundle, request, today, started)
+        cached_bundle: _CachedBundle | None = None
+        if request.parcel_id:
+            bkey = _BundleCache.key(request.parcel_id, request.analysis_date, today)
+            candidate = self._bundles.get(bkey)
+            if candidate is not None:
+                if self._dem_upgraded_on_disk(request.parcel_id, candidate.bundle):
+                    self._bundles.pop(bkey)
+                else:
+                    cached_bundle = candidate
+
+        if cached_bundle is not None:
+            bundle = cached_bundle.bundle
+            state, _, _ = await asyncio.to_thread(
+                self._build_state,
+                bundle,
+                request,
+                today,
+                started,
+                (cached_bundle.terrain, cached_bundle.timeline),
+            )
+        else:
+            bundle = await self.collector.collect(request, today=today)
+            state, terrain, tl = await asyncio.to_thread(self._build_state, bundle, request, today, started, None)
+            self._bundles.put(
+                _BundleCache.key(bundle.parcel.parcel_id, request.analysis_date, today),
+                _CachedBundle(bundle=bundle, terrain=terrain, timeline=tl, created=time.monotonic()),
+            )
         self.cache.put(AnalysisCache.key(bundle.parcel.parcel_id, request.crop, request.analysis_date), state)
         return state
 
@@ -210,6 +275,16 @@ class AnalysisService:
 
     # ----------------------------------------------------------------------------------
     def _compute(self, bundle: ParcelDataBundle, request: AnalysisRequest, today: dt.date, started: float) -> AnalysisState:
+        return self._build_state(bundle, request, today, started, None)[0]
+
+    def _build_state(
+        self,
+        bundle: ParcelDataBundle,
+        request: AnalysisRequest,
+        today: dt.date,
+        started: float,
+        precomputed: tuple[TerrainAnalysis | None, DailyTimeline] | None = None,
+    ) -> tuple[AnalysisState, TerrainAnalysis | None, DailyTimeline]:
         parcel = bundle.parcel
         if bundle.non_agricultural:
             raise ParcelOutOfScopeError(
@@ -223,23 +298,26 @@ class AnalysisService:
         if bundle.soil_category is None:
             raise AnalysisUnavailableError("Brak danych glebowych (IUNG-PIB i SoilGrids) – bilansu wodnego nie da się policzyć.")
 
-        f = bundle.weather_forecast
-        tl = build_timeline(
-            dates=w.dates, precipitation_mm=w.precipitation_mm, et0_mm=w.et0_mm, tmax_c=w.tmax_c,
-            analysis_date=request.analysis_date, today=today,
-            archive_delay_days=self.settings.open_meteo_archive_delay_days,
-            forecast_dates=f.dates if f else None, forecast_precip_mm=f.precipitation_mm if f else None,
-            forecast_et0_mm=f.et0_mm if f else None, forecast_tmax_c=f.tmax_c if f else None,
-            providers=w.providers, forecast_model=f.model if f else None,
-        )
+        if precomputed is not None:
+            terrain, tl = precomputed
+        else:
+            f = bundle.weather_forecast
+            tl = build_timeline(
+                dates=w.dates, precipitation_mm=w.precipitation_mm, et0_mm=w.et0_mm, tmax_c=w.tmax_c,
+                analysis_date=request.analysis_date, today=today,
+                archive_delay_days=self.settings.open_meteo_archive_delay_days,
+                forecast_dates=f.dates if f else None, forecast_precip_mm=f.precipitation_mm if f else None,
+                forecast_et0_mm=f.et0_mm if f else None, forecast_tmax_c=f.tmax_c if f else None,
+                providers=w.providers, forecast_model=f.model if f else None,
+            )
 
-        terrain = None
-        if bundle.dem is not None:
-            try:
-                d = bundle.dem
-                terrain = analyse_terrain(d.elevation, d.transform, d.resolution_m, d.parcel_mask, source=d.source)
-            except ValueError:
-                logger.warning("Terrain analysis failed", exc_info=True)
+            terrain = None
+            if bundle.dem is not None:
+                try:
+                    d = bundle.dem
+                    terrain = analyse_terrain(d.elevation, d.transform, d.resolution_m, d.parcel_mask, source=d.source)
+                except ValueError:
+                    logger.warning("Terrain analysis failed", exc_info=True)
 
         crop = crop_params(request.crop)
         category = bundle.soil_category
@@ -363,7 +441,7 @@ class AnalysisService:
             runoff_60d_mm=round(fx.get("runoff_60d_mm") or 0.0, 1),
         )
         audit = AuditMetadata(
-            sources=bundle.audit,
+            sources=list(bundle.audit),
             execution_time_s=round(perf_counter() - started, 2),
             model_versions={
                 "silnik": f"AgroRetencja {ENGINE_VERSION}",
@@ -378,7 +456,7 @@ class AnalysisService:
             parcel=parcel, assessment=assessment, causes=causes, retention=retention,
             irrigation=irrigation, map_layers=layers, audit=audit, advice=advice,
         )
-        return AnalysisState(response=response, fx=fx, bundle=bundle, created=time.monotonic())
+        return AnalysisState(response=response, fx=fx, bundle=bundle, created=time.monotonic()), terrain, tl
 
 
 def response_json(state: AnalysisState) -> dict[str, Any]:

@@ -35,6 +35,8 @@ export function useJointZones(rows: JointZoneInput[]): JointZones {
     return () => { mounted.current = false; };
   }, []);
 
+  const hasPending = rows.some((r) => r.pending);
+
   useEffect(() => {
     if (!key) return;
     const hit = zonesCache.peek(key);
@@ -44,8 +46,7 @@ export function useJointZones(rows: JointZoneInput[]): JointZones {
     }
     if (!zonesCache.available()) return;
     const req = planRef.current!.req;
-    // The debounce only delays the start; a started request is never cancelled.
-    const t = setTimeout(() => {
+    const run = () => {
       zonesCache.get(key, req).then(
         (data) => { if (mounted.current && latest.current === key) setShown({ key, data }); },
         () => {
@@ -54,12 +55,18 @@ export function useJointZones(rows: JointZoneInput[]): JointZones {
           if (!zonesCache.available()) setOffTick((n) => n + 1);
         },
       );
-    }, DEBOUNCE_MS);
+    };
+    if (!hasPending) {
+      run();
+      return;
+    }
+    // The debounce only delays initial arrivals while rows are still pending; a started request is never cancelled.
+    const t = setTimeout(run, DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [key]);
+  }, [key, hasPending]);
 
   const zones = useMemo(() => zonesByParcel(shown?.data), [shown]);
   const expecting = backendEnabled && zonesCache.available();
-  const loading = expecting && ((!!key && shown?.key !== key && failed !== key) || rows.some((r) => r.pending));
+  const loading = expecting && ((!!key && shown?.key !== key && failed !== key) || hasPending);
   return { zones, loading };
 }
