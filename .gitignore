@@ -51,3 +51,6 @@ ml/rl_irrigator/models/checkpoints/
 ml/rl_irrigator/models/**/*.zip
 ml/rl_irrigator/models/**/*.pkl
 ml/rl_irrigator/models/**/*.npz
+
+# HydroFusion-PL: working copy of the last training run; the deployed model is in artifacts/models/
+ml/hydrofusion/models/

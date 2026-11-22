@@ -91,4 +91,11 @@ uv run python ml/hydrofusion/build_dataset.py      # ok. 6 min
 uv run python ml/hydrofusion/train.py              # ok. 30 s; wdraża model tylko po spełnieniu reguły
 ```
 
-Pobrane próbki (`data/s2_samples.parquet`, `data/dataset.parquet`, `data/soilgrids_points.json`, razem ok. 2,3 MB) są w repozytorium, więc trening da się powtórzyć bez pobierania danych.
+Pobrane próbki (`data/s2_samples.parquet`, `data/dataset.parquet`, `data/soilgrids_points.json`, razem ok. 2,3 MB) są w repozytorium. Sam trening (`train.py`) da się więc powtórzyć bez pobierania danych.
+
+Pełne odtworzenie od zera (`fetch_s2_samples.py`, `build_dataset.py`) wymaga pogody punktów RL w `ml/rl_irrigator/data/weather` i `data/holdout/weather`. Od 22.11.2026 te pliki nie są w repozytorium, a w repozytorium zostają tylko manifesty. Odtwarza je skrypt modułu RL:
+
+```bash
+uv run python ml/rl_irrigator/scripts/fetch_training_data.py
+uv run python ml/rl_irrigator/scripts/fetch_training_data.py --out-dir data/holdout --grid-offset 0.35 --exclude-manifest data/MANIFEST.json --min-dist-km 25 --forecast-years 2025 2026
+```
