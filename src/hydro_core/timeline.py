@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
@@ -195,6 +195,29 @@ def build_timeline(
         et0[gap] = np.nan_to_num(ce, nan=1.0)
         tmax[gap] = ct
     return timeline
+
+
+GAUGE_DAYS = 7
+_GAUGE_MIN_GRID_MM = 0.5  # below this the grid has no rain pattern to keep
+
+
+def with_gauge_rain(tl: DailyTimeline, total_mm: float, days: int = GAUGE_DAYS) -> tuple[DailyTimeline, slice, float]:
+    """Copy of ``tl`` with the rain of the ``days`` days ending on the analysis date set to the farmer's gauge total.
+
+    The grid's day-to-day pattern is kept and scaled to the gauge total (the timing of showers in the
+    model is usually right, their amount on the parcel is not); a dry grid week gets the total spread
+    evenly. Returns the new timeline, the replaced window and the grid total it replaced.
+    """
+    end = tl.analysis_index
+    window = slice(max(0, end - days + 1), end + 1)
+    grid = np.nan_to_num(tl.precip[window])
+    grid_total = float(grid.sum())
+    precip = tl.precip.copy()
+    if grid_total >= _GAUGE_MIN_GRID_MM:
+        precip[window] = grid * (total_mm / grid_total)
+    else:
+        precip[window] = total_mm / len(grid)
+    return replace(tl, precip=precip), window, grid_total
 
 
 def kind_is_forecast(kind: DayKind) -> bool:

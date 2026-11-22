@@ -12,6 +12,8 @@ export interface AnalyzeCache {
   get(req: AnalysisRequest, opts?: AnalyzeGetOptions): Promise<AnalysisResponse>;
   /** Resolved result for the request, or undefined when it is missing or still pending. */
   peek(req: AnalysisRequest): AnalysisResponse | undefined;
+  /** Drops the settled results of one parcel (all crops, dates and farmer data), e.g. when its NMT 1 m arrived. */
+  invalidateParcel(parcelId: string): void;
   clear(): void;
   /** Requests started and not yet settled (for tests and diagnostics). */
   inFlight(): number;
@@ -24,8 +26,13 @@ interface Entry {
   waiting?: () => void;
 }
 
+/** `parcel|crop[~farmer]|date`: the date stays last (callers match keys by the `|date` suffix). */
 export function analyzeKey(req: AnalysisRequest): string {
-  return `${req.parcel_id}|${req.crop}|${req.analysis_date}`;
+  const farmer = [
+    req.tile_drainage === undefined ? "" : `d${req.tile_drainage ? 1 : 0}`,
+    req.gauge_rain_7d_mm === undefined ? "" : `r${req.gauge_rain_7d_mm}`,
+  ].join("");
+  return `${req.parcel_id}|${req.crop}${farmer ? `~${farmer}` : ""}|${req.analysis_date}`;
 }
 
 function abortError(signal: AbortSignal): unknown {
@@ -136,6 +143,10 @@ export function createAnalyzeCache(fetcher: AnalyzeFetcher, opts: { maxEntries?:
     },
     peek(req) {
       return entries.get(analyzeKey(req))?.data;
+    },
+    invalidateParcel(parcelId) {
+      // Pending requests stay: their callers still wait for them and the server answers with the newest data.
+      for (const [key, e] of entries) if (key.startsWith(`${parcelId}|`) && e.data !== undefined) entries.delete(key);
     },
     clear() {
       entries.clear();

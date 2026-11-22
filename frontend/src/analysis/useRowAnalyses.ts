@@ -4,6 +4,7 @@ import { BackendError, backendEnabled } from "../api/backend";
 import type { AnalysisRequest, AnalysisResponse } from "../api/contract";
 import { backendCrop, type CropCode } from "../lib/crops";
 import type { Iso } from "../lib/dates";
+import { useFarmerVersion, withFarmer } from "./farmerData";
 import { message } from "./useAnalysis";
 
 export interface RowAnalysisItem {
@@ -19,7 +20,7 @@ const RETRY_DELAY_MS = 1500;
 function requestOf(item: RowAnalysisItem, date: Iso): AnalysisRequest | null {
   if (!backendEnabled || !item.eligible) return null;
   const bc = backendCrop(item.crop);
-  return bc ? { parcel_id: item.id, crop: bc, analysis_date: date } : null;
+  return bc ? withFarmer({ parcel_id: item.id, crop: bc, analysis_date: date }) : null;
 }
 
 /** HTTP answers from the backend are final; network failures and timeouts get one retry. */
@@ -30,12 +31,14 @@ function retryable(e: unknown): boolean {
 /**
  * Backend analysis for every parcel of the list, through the shared analyze cache.
  * Requests are never cancelled by re-renders; results for another date or after unmount are ignored.
+ * The farmer's data of each parcel is part of its request; a new `rev` (terrain upgrade) fetches the dropped results again.
  */
-export function useRowAnalyses(items: RowAnalysisItem[], date: Iso): Record<string, RowAnalysis> {
+export function useRowAnalyses(items: RowAnalysisItem[], date: Iso, rev = 0): Record<string, RowAnalysis> {
   const [rows, setRows] = useState<Record<string, RowAnalysis>>({});
   const started = useRef(new Set<string>());
   const mounted = useRef(true);
   const dateRef = useRef(date);
+  const revRef = useRef(rev);
   dateRef.current = date;
 
   useEffect(() => {
@@ -43,6 +46,7 @@ export function useRowAnalyses(items: RowAnalysisItem[], date: Iso): Record<stri
     return () => { mounted.current = false; };
   }, []);
 
+  useFarmerVersion();
   const reqs = items.map((it) => requestOf(it, date));
   const sig = reqs.map((r) => (r ? analyzeKey(r) : "")).join(",");
 
@@ -79,6 +83,11 @@ export function useRowAnalyses(items: RowAnalysisItem[], date: Iso): Record<stri
     };
     const suffix = `|${date}`;
     for (const k of started.current) if (!k.endsWith(suffix)) started.current.delete(k);
+    // After a terrain upgrade the cache dropped some results: ask again for everything not cached.
+    if (rev !== revRef.current) {
+      revRef.current = rev;
+      for (const req of reqs) if (req && !analyzeCache.peek(req)) started.current.delete(analyzeKey(req));
+    }
     for (const req of reqs) {
       if (!req) continue;
       const key = analyzeKey(req);
@@ -89,11 +98,12 @@ export function useRowAnalyses(items: RowAnalysisItem[], date: Iso): Record<stri
         settle(key, { loading: false, data: hit, error: null });
         continue;
       }
-      setRows((prev) => (prev[key]?.loading ? prev : { ...prev, [key]: { loading: true, data: null, error: null } }));
+      // A refetch keeps the previous result visible until the new one arrives.
+      setRows((prev) => (prev[key]?.loading ? prev : { ...prev, [key]: { loading: true, data: prev[key]?.data ?? null, error: null } }));
       run(req, key, 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sig, date]);
+  }, [sig, date, rev]);
 
   return useMemo(() => {
     const out: Record<string, RowAnalysis> = {};
@@ -106,5 +116,5 @@ export function useRowAnalyses(items: RowAnalysisItem[], date: Iso): Record<stri
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, sig]);
+  }, [rows, sig, rev]);
 }

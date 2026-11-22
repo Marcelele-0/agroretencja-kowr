@@ -77,6 +77,13 @@ def _ditch_touching(fx: FeatureContext) -> bool:
     return fx.inputs.hydro.ditches_touching_parcel > 0 or (fx.inputs.hydro.nearest_ditch_m or 1e9) <= 20.0
 
 
+@APPLICABILITY.register("tile_drained")
+def _tile_drained(fx: FeatureContext) -> bool:
+    """The farmer's answer when given; otherwise a ditch at the parcel border (a likely drain outlet)."""
+    known = fx.inputs.tile_drainage
+    return _ditch_touching(fx) if known is None else known
+
+
 @APPLICABILITY.register("has_depressions")
 def _depressions(fx: FeatureContext) -> bool:
     return (fx.get("depression_volume_m3") or 0.0) >= 5.0

@@ -232,6 +232,17 @@ button.rs-st__day:hover { background: var(--hairline); }
 /* ---------- Hero and collapsible details ---------- */
 .rs-hero { gap: 16px; }
 .rs-hero .rs-status { padding-top: 14px; border-top: 1px solid var(--hairline); }
+/* The farmer's own data (drainage, rain gauge) under the confidence badge */
+.rs-farmer { padding-top: 12px; border-top: 1px solid var(--hairline); }
+.rs-farmer__sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink); }
+.rs-farmer__sum .ar-muted { font-size: 12px; font-weight: 500; }
+.rs-farmer__body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px 28px; padding-top: 12px; }
+.rs-farmer__field { display: grid; align-content: start; gap: 4px; min-width: 0; margin: 0; }
+.rs-farmer__rain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rs-farmer__input { width: 7.5em; flex: none; font-variant-numeric: tabular-nums; }
+.rs-farmer__input[aria-invalid="true"] { border-bottom-color: var(--dry-4); }
+.rs-farmer__unit { font-size: 13px; color: var(--ink-muted); }
+.rs-farmer__hint { margin: 2px 0 0; font-size: 12px; line-height: 1.4; }
 .rs-zhist { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--hairline); }
 .rs-zhist__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .rs-zhist__meta { font-size: 12px; font-variant-numeric: tabular-nums; }

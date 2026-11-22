@@ -228,13 +228,13 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
 
 ## 9. Sposób weryfikacji wyników i metryki walidacji
 
-1. **Testy jednostkowe frontendu** (`pnpm test`, 38 testów) sprawdzają:
+1. **Testy jednostkowe frontendu** (`pnpm test`, 43 testy) sprawdzają:
    - parsery ULDK i WKT oraz powierzchnię działki;
    - 14 okien IUNG i zgodność tabeli progów z publikacją IUNG;
    - KBW i skalę stanu wody;
    - zakresy pobierania pogody;
    - bufor analiz i strefy łączone kilku działek.
-2. **Testy backendu i modułu RL bez sieci** (`uv run pytest`, 154 testy): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, stan wody na osi susza–nadmiar, WaterScore i weta, przyczyny (bez procentów przy braku niedoboru), ranking retencji, waga NDMI zależna od uprawy i jej fazy, limit zapytań i nagłówki bezpieczeństwa, pełna analiza dla każdej z 15 upraw, porady, API kroków 1–5, odmowa dla działki nierolniczej, HydroFusion-PL, środowisko i polityka RL.
+2. **Testy backendu i modułu RL bez sieci** (`uv run pytest`, 159 testów): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, stan wody na osi susza–nadmiar, WaterScore i weta, przyczyny (bez procentów przy braku niedoboru), ranking retencji, waga NDMI zależna od uprawy i jej fazy, limit zapytań i nagłówki bezpieczeństwa, pełna analiza dla każdej z 15 upraw, porady, API kroków 1–5, odmowa dla działki nierolniczej, HydroFusion-PL, środowisko i polityka RL.
 3. **Test na prawdziwych usługach** (`pnpm test:live`) przechodzi działkę 040706_5.0050.78/2 od numeru do wyniku.
 4. **Test end-to-end backendu** (22.11.2026, prawdziwe usługi): działki z 6 województw, daty 2018–2026, 15 upraw. Analiza trwa 5–16 s; las i zabudowa dostają odmowę; ocena i nawadnianie pokazują ten sam zapas wody. Przykładowe raporty: [reports/](reports/).
 5. **Walidacja z IUNG (plan):** werdykt suszy dla działki porównany z wykazem gminnym SMSR z lat 2020–2025.

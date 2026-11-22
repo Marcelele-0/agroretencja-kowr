@@ -42,6 +42,7 @@ from hydro_core.schemas import (
     DataMode,
     IungSoilCategory,
     ParcelGeometry,
+    RainGaugeCorrection,
     RiskLevel,
     WaterAssessmentSummary,
     WaterStatePoint,
@@ -56,7 +57,7 @@ from hydro_core.scoring import (
     physical_water_state,
 )
 from hydro_core.text import days, num, state_label
-from hydro_core.timeline import DailyTimeline, build_timeline, kind_is_forecast
+from hydro_core.timeline import DailyTimeline, build_timeline, kind_is_forecast, with_gauge_rain
 from hydro_core.topography import TerrainAnalysis, analyse_terrain
 
 logger = logging.getLogger(__name__)
@@ -139,8 +140,9 @@ class AnalysisCache(_TtlCache):
     """Thread-safe LRU with TTL (L1 cache of the scaling plan; L2 = Redis/PostGIS in production)."""
 
     @staticmethod
-    def key(parcel_id: str, crop: CropCode, day: dt.date) -> tuple[str, str, str]:
-        return (parcel_id, crop.value, day.isoformat())
+    def key(parcel_id: str, crop: CropCode, day: dt.date, farmer: str = "") -> tuple[str, str, str, str]:
+        """``farmer`` = AnalysisRequest.farmer_key(): the farmer's own data changes the result."""
+        return (parcel_id, crop.value, day.isoformat(), farmer)
 
 
 class _BundleCache(_TtlCache):
@@ -182,7 +184,7 @@ def _satellite(bundle: ParcelDataBundle) -> SatelliteObservation:
 def _hydro(bundle: ParcelDataBundle) -> HydroContext:
     h = bundle.hydro_network
     if h is None:
-        return HydroContext()
+        return HydroContext(available=False)
     return HydroContext(
         nearest_ditch_m=h.nearest_ditch_m, ditches_touching_parcel=h.ditches_touching_parcel,
         ditch_length_in_radius_m=h.ditch_length_in_radius_m, nearest_watercourse_m=h.nearest_watercourse_m,
@@ -224,24 +226,31 @@ class AnalysisService:
         self.cache = AnalysisCache(ttl_s=self.settings.analysis_cache_ttl_s)
         self._bundles = _BundleCache(ttl_s=self.settings.analysis_cache_ttl_s)
 
+    def nmt_state(self, parcel_id: str) -> str:
+        """NMT 1 m of the parcel: 'ready', 'downloading' or 'none' (also when the collector has no NMT client)."""
+        clients = getattr(self.collector, "clients", None)
+        nmt = clients.get("nmt") if isinstance(clients, dict) else None
+        if nmt is None or not hasattr(nmt, "download_state"):
+            return "none"
+        try:
+            return str(nmt.download_state(parcel_id))
+        except OSError:
+            return "none"
+
     def _dem_upgraded_on_disk(self, parcel_id: str, bundle: ParcelDataBundle) -> bool:
         """True when a cached Copernicus fallback bundle now has a finished 1 m GUGiK NMT on disk."""
         if bundle.dem is None or not bundle.dem.is_surface_model:
             return False
-        clients = getattr(self.collector, "clients", None)
-        nmt = clients.get("nmt") if isinstance(clients, dict) else None
-        if nmt is None or not hasattr(nmt, "_cache_path"):
-            return False
-        try:
-            return bool(nmt._cache_path(parcel_id, "gugik1m").exists())
-        except OSError:
-            return False
+        return self.nmt_state(parcel_id) == "ready"
 
     async def analyze(self, request: AnalysisRequest, today: dt.date | None = None) -> AnalysisState:
         today = today or dt.date.today()
         if request.parcel_id:
-            cached = self.cache.get(AnalysisCache.key(request.parcel_id, request.crop, request.analysis_date))
-            if cached is not None:
+            akey = AnalysisCache.key(request.parcel_id, request.crop, request.analysis_date, request.farmer_key())
+            cached = self.cache.get(akey)
+            if cached is not None and self._dem_upgraded_on_disk(request.parcel_id, cached.bundle):
+                self.cache.pop(akey)  # NMT 1 m arrived after this result: recompute the terrain
+            elif cached is not None:
                 return cached
         started = perf_counter()
         cached_bundle: _CachedBundle | None = None
@@ -271,11 +280,16 @@ class AnalysisService:
                 _BundleCache.key(bundle.parcel.parcel_id, request.analysis_date, today),
                 _CachedBundle(bundle=bundle, terrain=terrain, timeline=tl, created=time.monotonic()),
             )
-        self.cache.put(AnalysisCache.key(bundle.parcel.parcel_id, request.crop, request.analysis_date), state)
+        self.cache.put(
+            AnalysisCache.key(bundle.parcel.parcel_id, request.crop, request.analysis_date, request.farmer_key()), state
+        )
         return state
 
     async def what_if(self, req: WhatIfRequest) -> WhatIfScenarioResult:
-        state = await self.analyze(AnalysisRequest(parcel_id=req.parcel_id, crop=req.crop, analysis_date=req.analysis_date))
+        state = await self.analyze(AnalysisRequest(
+            parcel_id=req.parcel_id, crop=req.crop, analysis_date=req.analysis_date,
+            tile_drainage=req.tile_drainage, gauge_rain_7d_mm=req.gauge_rain_7d_mm,
+        ))
         return await asyncio.to_thread(what_if, state.fx, req.enabled_measures, state.response.retention.what_if_default.reference_dry_year)
 
     # ----------------------------------------------------------------------------------
@@ -324,6 +338,17 @@ class AnalysisService:
                 except ValueError:
                     logger.warning("Terrain analysis failed", exc_info=True)
 
+        base_tl = tl  # the bundle cache keeps the grid timeline; the farmer's gauge changes only this result
+        gauge: RainGaugeCorrection | None = None
+        gauge_grid_mm: float | None = None
+        if request.gauge_rain_7d_mm is not None:
+            tl, window, gauge_grid_mm = with_gauge_rain(base_tl, request.gauge_rain_7d_mm)
+            gauge = RainGaugeCorrection(
+                days=window.stop - window.start,
+                start=tl.dates[window.start].astype(dt.date), end=tl.dates[window.stop - 1].astype(dt.date),
+                gauge_mm=round(request.gauge_rain_7d_mm, 1), grid_mm=round(gauge_grid_mm, 1),
+            )
+
         crop = crop_params(request.crop)
         category = bundle.soil_category
         taw = taw_for(category)
@@ -350,6 +375,9 @@ class AnalysisService:
             terrain_is_fallback=bool(bundle.dem and bundle.dem.is_surface_model),
             weather_is_fallback="nasa-power" in w.providers,
             missing_sources=missing,
+            tile_drainage=request.tile_drainage,
+            gauge_rain_mm=request.gauge_rain_7d_mm,
+            gauge_grid_rain_mm=gauge_grid_mm,
         )
         fx = FeatureContext(inputs)
         inputs.kbw_periods = kbw_for_year(fx, request.analysis_date.year)
@@ -381,6 +409,7 @@ class AnalysisService:
             confidence.missing_factors.append(
                 "Warunki działki wykraczają poza dane treningowe HydroFusion-PL (AoA) – wilgotności pod chmurami nie odtworzono."
             )
+        confidence.terrain_upgrade_pending = inputs.terrain_is_fallback and self.nmt_state(parcel.parcel_id) == "downloading"
         state_value = physical_water_state(fx, risk=risk.level)
 
         i0 = tl.analysis_index
@@ -444,6 +473,7 @@ class AnalysisService:
             kbw_is_drought=kbw_verdict, in_season=in_season,
             crop_stage=stage_on(crop, request.analysis_date), kc_today=round(fx.get("kc_today") or 0.0, 2),
             runoff_60d_mm=round(fx.get("runoff_60d_mm") or 0.0, 1),
+            rain_gauge=gauge,
         )
         audit = AuditMetadata(
             sources=list(bundle.audit),
@@ -461,7 +491,7 @@ class AnalysisService:
             parcel=parcel, assessment=assessment, causes=causes, retention=retention,
             irrigation=irrigation, map_layers=layers, audit=audit, advice=advice,
         )
-        return AnalysisState(response=response, fx=fx, bundle=bundle, created=time.monotonic()), terrain, tl
+        return AnalysisState(response=response, fx=fx, bundle=bundle, created=time.monotonic()), terrain, base_tl
 
 
 def response_json(state: AnalysisState) -> dict[str, Any]:

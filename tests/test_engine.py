@@ -165,7 +165,71 @@ def test_veto_and_state_cap() -> None:
 def test_confidence_lists_missing_factors(fx: FeatureContext) -> None:
     conf = assess_confidence(fx)
     assert any("Sentinel-2" in m for m in conf.missing_factors)
-    assert any("drenażu" in m for m in conf.missing_factors)
+    # the fixture has a ditch 40 m away: drainage is possible and the farmer is asked
+    assert any("drenaż" in m and "40 m" in m for m in conf.missing_factors)
+
+
+def test_drainage_and_groundwater_notes_only_with_reasons(fx: FeatureContext) -> None:
+    from hydro_core.features import HydroContext
+
+    inputs = fx.inputs
+    inputs.hydro = HydroContext(nearest_ditch_m=900.0, ditch_length_in_radius_m=200.0)
+    inputs.soil_organic = False
+    notes = assess_confidence(FeatureContext(inputs)).missing_factors
+    assert not any("drenaż" in m for m in notes)
+    assert not any("podsiąk" in m for m in notes)
+
+    inputs.hydro = HydroContext(available=False)
+    assert any("drenażu" in m for m in assess_confidence(FeatureContext(inputs)).missing_factors)
+
+    inputs.hydro = HydroContext(ditches_touching_parcel=2, ditch_length_in_radius_m=2400.0, nearest_watercourse_m=60.0)
+    notes = assess_confidence(FeatureContext(inputs)).missing_factors
+    assert any("przy granicy działki" in m and "2,4 km" in m for m in notes)
+    assert any("podsiąk" in m and "60 m" in m for m in notes)
+
+    inputs.tile_drainage = False  # the farmer knows: no drainage note, groundwater stays
+    notes = assess_confidence(FeatureContext(inputs)).missing_factors
+    assert not any("drenaż" in m for m in notes)
+    assert any("podsiąk" in m for m in notes)
+
+
+def test_farmer_drainage_answer_decides_controlled_drainage(fx: FeatureContext) -> None:
+    from hydro_core.features import HydroContext
+
+    inputs = fx.inputs
+    inputs.hydro = HydroContext(nearest_ditch_m=900.0)
+    m = RETENTION_MEASURES.get("sterowany_odplyw")
+    assert not m.applicable(FeatureContext(inputs))
+    inputs.tile_drainage = True
+    assert m.applicable(FeatureContext(inputs))
+    inputs.hydro = HydroContext(ditches_touching_parcel=1)
+    inputs.tile_drainage = False
+    assert not m.applicable(FeatureContext(inputs))
+
+
+def test_gauge_rain_replaces_the_last_week_only(fx: FeatureContext) -> None:
+    from hydro_core.timeline import with_gauge_rain
+
+    tl = fx.inputs.timeline
+    new, window, grid = with_gauge_rain(tl, 30.0)
+    i0 = tl.analysis_index
+    assert window == slice(i0 - 6, i0 + 1)
+    assert grid == pytest.approx(float(np.nansum(tl.precip[window])))
+    assert new.precip[window].sum() == pytest.approx(30.0)
+    keep = np.ones(len(tl), bool)
+    keep[window] = False
+    np.testing.assert_array_equal(new.precip[keep], tl.precip[keep])
+    assert tl.precip[window].sum() == pytest.approx(grid)  # the cached timeline is not touched
+    if grid >= 0.5:  # the grid's day-to-day pattern is kept
+        wet = tl.precip[window] > 0
+        np.testing.assert_allclose(new.precip[window][wet] / tl.precip[window][wet], 30.0 / grid)
+    dry = tl.precip.copy()
+    dry[window] = 0.0
+    from dataclasses import replace
+
+    spread, _, g0 = with_gauge_rain(replace(tl, precip=dry), 14.0)
+    assert g0 == 0.0
+    np.testing.assert_allclose(spread.precip[window], 2.0)
 
 
 # --- steps 2-3, history, advice -----------------------------------------------------------

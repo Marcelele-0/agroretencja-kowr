@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { API_URL, backendEnabled, postWhatIf, reportPdfUrl } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlPlan14d, RlRecommendResponse, RlSoilZoneDay, RlSource, WhatIfScenarioResult } from "../api/contract";
@@ -7,6 +7,9 @@ import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, ty
 import { useRowAnalyses } from "../analysis/useRowAnalyses";
 import { alignBins, zoneBins, zoneClassOrder, zonesFromFeatures, type JointZoneInput } from "../analysis/jointZones";
 import { useJointZones } from "../analysis/useJointZones";
+import { useTerrainUpgrade } from "../analysis/useTerrainUpgrade";
+import { farmerFields, useFarmerVersion } from "../analysis/farmerData";
+import { FarmerInputs } from "./FarmerInputs";
 import { BAL, balKey, balStep, cx, Icon, Button, CauseBreakdown, ConfidenceBadge, CropSelect, DateBar, dateBounds, FloatingNav, KbwWindows, LayerSwitch, MetricTile, PhotoCard, Pill, RiskChip, StateTimeline, WaterBalance, Wordmark, YearCompare, type IconName } from "../ds";
 import { DRY_MEASURES, measureLook, PERMIT_URL, simForBackend, WET_MEASURES, type Measure } from "../lib/catalog";
 import { backendCrop, cropOf, DEFAULT_CROP, isCropCode, type CropCode } from "../lib/crops";
@@ -82,7 +85,10 @@ export function Analysis() {
   const rawDate = sp.get("data");
   const { min, max } = dateBounds();
   const date: Iso = isIso(rawDate) && rawDate >= min && rawDate <= max ? rawDate : todayIso();
-  const st = useAnalysis({ parcelId, crop, date });
+  // Grows when NMT 1 m of a listed parcel arrived after its analysis: the analyses and zones are fetched again.
+  const [terrainRev, setTerrainRev] = useState(0);
+  const st = useAnalysis({ parcelId, crop, date, rev: terrainRev });
+  useFarmerVersion();
   const key = items.map((x) => `${x.id}~${x.crop}`).join(",");
   const stableItems = useMemo(() => items, [key]);
   const portfolio = usePortfolio(stableItems, date);
@@ -157,7 +163,7 @@ export function Analysis() {
     () => portfolio.map((r) => ({ id: r.id, crop: r.crop, eligible: r.parcel.status === "ready" && r.land?.kind !== "nonAgri" })),
     [portfolio],
   );
-  const rowAnalyses = useRowAnalyses(rowItems, date);
+  const rowAnalyses = useRowAnalyses(rowItems, date, terrainRev);
 
   const rowBackend = (r: PortfolioRow): AnalysisResponse | null => {
     const own = rowAnalyses[r.id]?.data ?? null;
@@ -178,7 +184,12 @@ export function Analysis() {
     return [{ id: r.id, crop: r.crop, state, pending: state === null && !r.error }];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [portfolio, rowAnalyses, backend, activeId, st.local?.stage]);
-  const joint = useJointZones(jointInputs);
+  const joint = useJointZones(jointInputs, terrainRev);
+  const terrainPending = [
+    ...portfolio.map((r) => (rowBackend(r)?.assessment?.confidence?.terrain_upgrade_pending ? r.id : "")),
+    backend?.assessment?.confidence?.terrain_upgrade_pending ? activeId : "",
+  ].filter(Boolean);
+  const terrainWaiting = useTerrainUpgrade(terrainPending, () => setTerrainRev((n) => n + 1));
 
   /** Fallback order per parcel: joint zones, then the zones of its own /api/analyze, then (in the histogram) the single-bin stage. */
   const rowZones = (r: PortfolioRow): MapZone[] | null => joint.zones[r.id] ?? zonesOf(rowBackend(r));
@@ -276,7 +287,7 @@ export function Analysis() {
   }), [portfolio, activeId, local?.stage, backend, rowAnalyses, joint.zones, showZones, replay.active, replay.extra, replayDate, activeLand, st.weather, date]);
 
   if (!parcelId) return <Navigate to="/" replace />;
-  const pdf = parcel && backendCrop(crop) ? reportPdfUrl({ parcel_id: parcel.id, crop: backendCrop(crop)!, analysis_date: date }) : null;
+  const pdf = parcel && backendCrop(crop) ? reportPdfUrl({ parcel_id: parcel.id, crop: backendCrop(crop)!, analysis_date: date, ...farmerFields(parcel.id, date) }) : null;
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const show = (id: string) => write(items, id);
@@ -407,6 +418,8 @@ export function Analysis() {
                 zonesLoading={zonesLoading}
                 replay={replayView}
                 onPickDate={(d) => write(items, activeId, { data: d })}
+                terrainWaiting={terrainWaiting.includes(activeId)}
+                farmer={backendEnabled && parcel && backend ? <FarmerInputs parcelId={parcel.id} date={date} gauge={backend.assessment?.rain_gauge ?? null} /> : null}
               />
             ) : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
           </section>
@@ -522,8 +535,19 @@ function withBackend(local: LocalResult | null, backend: AnalysisResponse | null
     stage,
     risk: r ? { level: (a.water_risk?.level as typeof local.risk.level) ?? r.level, side: r.side, veto, vetoReason: a.water_risk?.veto_reasons?.join(" ") || local.risk.vetoReason } : local.risk,
     caption: a.summary_text ?? local.caption,
+    ...gaugeShift(local, a.rain_gauge),
     confidence: a.confidence ? { level: a.confidence.level, detail: [...(a.confidence.resolution_warnings ?? []), ...(a.confidence.missing_factors ?? [])].join(" ") || "Wynik z modelu serwera." } : local.confidence,
     timeline,
+  };
+}
+
+/** The gauge replaced the grid rain of the last 7 days, which sit inside the 30- and 60-day windows of the tiles. */
+function gaugeShift(local: LocalResult, g: NonNullable<AnalysisResponse["assessment"]>["rain_gauge"]): Partial<LocalResult> {
+  if (!g) return {};
+  const d = g.gauge_mm - g.grid_mm;
+  return {
+    metrics: { ...local.metrics, p30: local.metrics.p30 === null ? null : Math.max(0, local.metrics.p30 + d) },
+    kbw60: local.kbw60 === null ? null : Math.round(local.kbw60 + d),
   };
 }
 
@@ -592,8 +616,10 @@ interface ReplayView {
   onApplyDate: () => void;
 }
 
-function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAreaHa, zonesLoading, replay }: {
+function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAreaHa, zonesLoading, replay, terrainWaiting, farmer }: {
   local: LocalResult;
+  terrainWaiting?: boolean;
+  farmer?: ReactNode;
   onPickDate: (d: Iso) => void;
   components?: NonNullable<AnalysisResponse["assessment"]>["components"];
   zones: MapZone[] | null;
@@ -618,8 +644,12 @@ function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAre
         <ZoneHistogram zones={replay.active ? null : zones} order={zoneOrder} fallbackStage={heroStage} areaHa={parcelAreaHa} loading={!replay.active && zonesLoading} />
         <div className="rs-status">
           {heroStage !== null ? <RiskChip level={heroRisk.level} side={heroRisk.side} veto={heroRisk.veto} vetoReason={heroRisk.vetoReason} /> : null}
-          <ConfidenceBadge level={local.confidence.level} detail={local.confidence.detail} />
+          <ConfidenceBadge
+            level={local.confidence.level}
+            detail={terrainWaiting ? `${local.confidence.detail} NMT 1 m pobiera się w tle – ocena odświeży się sama.` : local.confidence.detail}
+          />
         </div>
+        {farmer}
         <Why local={local} components={components} />
       </div>
       <div className="ar-card">
@@ -914,8 +944,9 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
 
   const bc = backendCrop(crop);
   const pickedSorted = [...picked].sort().join(",");
+  const farmer = farmerFields(parcelId, date);
   const whatIfKey = backendEnabled && backend && bc && own === null && picked.size > 0
-    ? `${parcelId}|${bc}|${date}|${pickedSorted}`
+    ? `${parcelId}|${bc}|${date}|${pickedSorted}|${JSON.stringify(farmer)}`
     : "";
 
   useEffect(() => {
@@ -926,7 +957,7 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
     }
     const ctl = new AbortController();
     setWhatIf((prev) => ({ key: whatIfKey, loading: true, data: prev.data, error: null }));
-    postWhatIf({ parcel_id: parcelId, crop: bc, analysis_date: date, enabled_measures: [...picked] }, ctl.signal).then(
+    postWhatIf({ parcel_id: parcelId, crop: bc, analysis_date: date, enabled_measures: [...picked], ...farmer }, ctl.signal).then(
       (data) => {
         if (ctl.signal.aborted) return;
         setWhatIf({ key: whatIfKey, loading: false, data, error: null });

@@ -69,6 +69,7 @@ class HydroContext:
     ditch_length_in_radius_m: float = 0.0
     nearest_watercourse_m: float | None = None
     nearest_water_body_m: float | None = None
+    available: bool = True  # False when BDOT10k did not answer (no ditch data at all)
 
 
 @dataclass
@@ -97,6 +98,10 @@ class AnalysisInputs:
     terrain_is_fallback: bool = False
     weather_is_fallback: bool = False
     missing_sources: list[str] = field(default_factory=list)
+    # the farmer's own data (None = not given)
+    tile_drainage: bool | None = None
+    gauge_rain_mm: float | None = None  # replaced the grid rain of the last GAUGE_DAYS days
+    gauge_grid_rain_mm: float | None = None  # what the grid had for the same days
     extra: dict[str, Any] = field(default_factory=dict)
 
 

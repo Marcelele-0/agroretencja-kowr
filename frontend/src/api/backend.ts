@@ -1,5 +1,5 @@
 import { request } from "../lib/http";
-import type { AnalysisRequest, AnalysisResponse, RlCompareResponse, RlRecommendRequest, RlRecommendResponse, WhatIfRequest, WhatIfScenarioResult, ZonesRequest, ZonesResponse } from "./contract";
+import type { AnalysisRequest, AnalysisResponse, RlCompareResponse, RlRecommendRequest, RlRecommendResponse, TerrainStatus, WhatIfRequest, WhatIfScenarioResult, ZonesRequest, ZonesResponse } from "./contract";
 
 /**
  * Hooks to the FastAPI backend. VITE_API_URL not set = "/" (same-origin proxy of `pnpm dev` / `pnpm preview` to
@@ -67,7 +67,17 @@ export function postRlRecommend(req: RlRecommendRequest, signal?: AbortSignal): 
 export function postRlCompare(req: { parcel_id: string; crop: string; budget_mm?: number }, signal?: AbortSignal): Promise<RlCompareResponse> {
   return post<RlCompareResponse>("/rl/compare", req, 45000, signal);
 }
+/** Is the NMT 1 m of the parcel ready yet (asked while an analysis reports terrain_upgrade_pending). */
+export async function getTerrainStatus(parcelId: string, signal?: AbortSignal): Promise<TerrainStatus> {
+  const path = "/api/terrain/status";
+  const res = await request(`${API_URL}${path}?${new URLSearchParams({ parcel_id: parcelId })}`, 10000, signal);
+  if (!res.ok) throw parseBackendError(path, res.status, res.text);
+  return JSON.parse(res.text) as TerrainStatus;
+}
 export function reportPdfUrl(req: AnalysisRequest): string | null {
   if (!backendEnabled) return null;
-  return `${API_URL}/api/report.pdf?${new URLSearchParams({ parcel_id: req.parcel_id, crop: req.crop, analysis_date: req.analysis_date })}`;
+  const q = new URLSearchParams({ parcel_id: req.parcel_id, crop: req.crop, analysis_date: req.analysis_date });
+  if (req.tile_drainage !== undefined) q.set("tile_drainage", String(req.tile_drainage));
+  if (req.gauge_rain_7d_mm !== undefined) q.set("gauge_rain_7d_mm", String(req.gauge_rain_7d_mm));
+  return `${API_URL}/api/report.pdf?${q}`;
 }
