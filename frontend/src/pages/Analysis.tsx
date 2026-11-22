@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { API_URL, backendEnabled, postWhatIf, reportPdfUrl } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlPlan14d, RlRecommendResponse, RlSoilZoneDay, RlSource, WhatIfScenarioResult } from "../api/contract";
-import { computeLocal, soilCause, withLevers, type Levers, type LocalResult, type TimelineDay } from "../analysis/local";
+import { computeLocal, cropComparison, leversOf, soilCause, stageShift, withLevers, type CropStage, type Levers, type LocalResult, type TimelineDay } from "../analysis/local";
 import { landForCalc, message, useAnalysis, usePortfolio, type AnalysisState, type PortfolioRow } from "../analysis/useAnalysis";
 import { useRowAnalyses } from "../analysis/useRowAnalyses";
 import { alignBins, zoneBins, zoneClassOrder, zonesFromFeatures, type JointZoneInput } from "../analysis/jointZones";
@@ -29,7 +29,6 @@ const NAV: { id: string; label: string; icon: IconName }[] = [
   { id: "ocena", label: "Ocena", icon: "gauge" }, { id: "przyczyny", label: "Przyczyny", icon: "layers" },
   { id: "retencja", label: "Retencja", icon: "sprout" }, { id: "nawadnianie", label: "Woda", icon: "drop" }, { id: "raport", label: "Raport", icon: "file" },
 ];
-const NO_LEVERS: Levers = { addMm: 0, etCut: 0 };
 
 /** Water-state colour token of a stage, for the frame of an expanded parcel. */
 function stateVar(n: number | null | undefined): string {
@@ -98,6 +97,8 @@ export function Analysis() {
   const [pickedByParcel, setPickedByParcel] = useState<Record<string, string[]>>({});
   const picked = useMemo(() => new Set(pickedByParcel[activeId] ?? []), [pickedByParcel, activeId]);
   const [whatIfData, setWhatIfData] = useState<WhatIfScenarioResult | null>(null);
+  /** Water state of the active parcel after the picked measures, while the simulation is shown (tints the map). */
+  const [simStage, setSimStage] = useState<number | null>(null);
   const [replay, setReplay] = useState<ReplayState>(REPLAY_INIT);
   const replaySeq = useRef(0);
 
@@ -116,9 +117,9 @@ export function Analysis() {
   const rl = st.rl.status === "ready" ? st.rl.data : null;
   const weatherFailed = st.weather.status === "error" ? st.weather.message : null;
   const rlCompare = st.rlCompare.status === "ready" ? st.rlCompare.data : null;
-  const showIrr = !!local && ((!local.offSeason && (rl?.status === "ok" || !!local.irrigation)) || !!rlCompare?.strategies?.length);
-
   const today = todayIso();
+  // The irrigation decision is a forecast: today always has the section (plan or hold-off card), other dates only the strategies.
+  const showIrr = !!local && (date === today || !!rlCompare?.strategies?.length);
   const replayDates = useMemo(() => (local ? seasonReplayDates(local.season, today) : []), [local?.season, today]);
   const replayDate = replay.active && replayDates.length ? replayDates[Math.min(replay.idx, replayDates.length - 1)]! : null;
 
@@ -126,6 +127,7 @@ export function Analysis() {
     replaySeq.current++;
     setReplay(REPLAY_INIT);
     setWhatIfData(null);
+    setSimStage(null);
   }, [activeId, date]);
 
   useEffect(() => {
@@ -201,7 +203,14 @@ export function Analysis() {
   const activeLand = landForCalc(st.land);
   const activeCat = activeLand?.kind === "mineral" ? activeLand.category : null;
   const activeThresholds = useMemo(() => thresholdsFor(cropOf(crop).iung, activeCat), [crop, activeCat]);
-  const replaySeries = replay.active ? (replay.extra[activeId] ?? (st.weather.status === "ready" ? st.weather.data : null)) : null;
+  // Same parcel, soil and date graded for every crop; the last rows stay while the weather of a new date loads.
+  const lastCropRows = useRef<CropStage[]>([]);
+  const cropRows = useMemo(() => {
+    if (st.weather.status !== "ready") return lastCropRows.current;
+    lastCropRows.current = cropComparison(activeCat, st.weather.data, date);
+    return lastCropRows.current;
+  }, [st.weather, activeCat, date]);
+  const replaySeries =replay.active ? (replay.extra[activeId] ?? (st.weather.status === "ready" ? st.weather.data : null)) : null;
 
   const replayTimeline = useMemo<TimelineDay[] | null>(() => {
     if (!replay.active || !replaySeries || !replayDate) return null;
@@ -260,11 +269,13 @@ export function Analysis() {
     return r.id === activeId ? local?.stage ?? r.local?.stage ?? null : r.local?.stage ?? null;
   };
 
+  // While a measures simulation is shown, the active parcel drops its zones and takes the flat colour of the "after" state.
+  const simTint = !replay.active && simStage !== null;
   const allZones = useMemo<MapZone[] | null>(() => {
-    const list = portfolio.flatMap((r) => rowZones(r) ?? []);
+    const list = portfolio.flatMap((r) => (simTint && r.id === activeId ? [] : rowZones(r) ?? []));
     return list.length ? list : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portfolio, activeId, backend, rowAnalyses, joint.zones, date]);
+  }, [portfolio, activeId, backend, rowAnalyses, joint.zones, date, simTint]);
 
   /** One class order (dry→wet) shared by every row histogram and the detail histogram: a class keeps its slot across parcels. */
   const zoneOrder = useMemo(() => zoneClassOrder(portfolio.flatMap((r) => (r.land?.kind === "nonAgri" ? [] : [{ zones: replay.active ? null : rowZones(r), fallbackStage: stageOf(r) }]))),
@@ -274,17 +285,18 @@ export function Analysis() {
   /** Every parcel on the map, coloured by its water state; parcels with loaded zones render them cleanly without overlapping fill/hatch. */
   const mapParcels = useMemo<MapParcel[]>(() => portfolio.flatMap((r) => {
     if (r.parcel.status !== "ready") return [];
-    const hasZ = !replay.active && showZones && !!(rowZones(r)?.length);
+    const tint = simTint && r.id === activeId;
+    const hasZ = !replay.active && !tint && showZones && !!(rowZones(r)?.length);
     return [{
       id: r.id,
       geometry: r.parcel.data.geometry,
-      value: stageOf(r),
+      value: tint ? simStage : stageOf(r),
       active: r.id === activeId,
       hasZones: hasZ,
       cropLabel: cropOf(r.crop).label,
     }];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [portfolio, activeId, local?.stage, backend, rowAnalyses, joint.zones, showZones, replay.active, replay.extra, replayDate, activeLand, st.weather, date]);
+  }), [portfolio, activeId, local?.stage, backend, rowAnalyses, joint.zones, showZones, replay.active, replay.extra, replayDate, activeLand, st.weather, date, simTint, simStage]);
 
   if (!parcelId) return <Navigate to="/" replace />;
   const pdf = parcel && backendCrop(crop) ? reportPdfUrl({ parcel_id: parcel.id, crop: backendCrop(crop)!, analysis_date: date, ...farmerFields(parcel.id, date) }) : null;
@@ -389,7 +401,8 @@ export function Analysis() {
         land: rowLand,
         local: isAct ? local : r.local,
         backend: isAct ? backend : null,
-        rl: isAct ? rl : null,
+        // The dose plan is a forecast: the report carries it only for today, like the page.
+        rl: isAct && date === today ? rl : null,
         rlCompare: isAct ? rlCompare : null,
         whatIfBackend: isAct ? whatIfData : null,
         pickedMeasures: new Set(pickedByParcel[r.id] ?? []),
@@ -398,7 +411,7 @@ export function Analysis() {
       });
     }
     return builder.build();
-  }, [portfolio, activeId, date, parcel, activeLand, local, backend, backendRefused, st.backend, rl, rlCompare, whatIfData, pickedByParcel, st.sources]);
+  }, [portfolio, activeId, date, today, parcel, activeLand, local, backend, backendRefused, st.backend, rl, rlCompare, whatIfData, pickedByParcel, st.sources]);
 
   const body = (
     <>
@@ -420,6 +433,7 @@ export function Analysis() {
                 onPickDate={(d) => write(items, activeId, { data: d })}
                 terrainWaiting={terrainWaiting.includes(activeId)}
                 farmer={backendEnabled && parcel && backend ? <FarmerInputs parcelId={parcel.id} date={date} gauge={backend.assessment?.rain_gauge ?? null} /> : null}
+                cropCompare={replay.active ? null : <CropCompare key={activeId} rows={cropRows} current={crop} shownStage={local.stage} offSeason={local.offSeason} onPick={(c) => setCropOf(activeId, c)} />}
               />
             ) : weatherFailed ? <ErrorCard text={weatherFailed} retry /> : <Skeleton lines={["Stan wody", "Okna IUNG", "10 lat"]} />}
           </section>
@@ -429,12 +443,12 @@ export function Analysis() {
           </section>
           <section id="retencja" className="rs-section">
             <h3 className="ar-section-title">Co możesz zrobić</h3>
-            <Measures parcelId={activeId} local={local} st={st} backend={backend} crop={crop} date={date} weatherFailed={!!weatherFailed} picked={picked} onPick={togglePick} onWhatIfData={setWhatIfData} />
+            <Measures parcelId={activeId} local={local} st={st} backend={backend} crop={crop} date={date} weatherFailed={!!weatherFailed} picked={picked} onPick={togglePick} onWhatIfData={setWhatIfData} onSimStage={setSimStage} />
           </section>
           {local && showIrr ? (
             <section id="nawadnianie" className="rs-section">
               <h3 className="ar-section-title">Nawadnianie</h3>
-              <Irrigation local={local} rl={rl} compare={rlCompare} />
+              <Irrigation local={local} rl={rl} compare={rlCompare} onToday={() => write(items, activeId, { data: today })} />
             </section>
           ) : null}
         </>
@@ -616,10 +630,11 @@ interface ReplayView {
   onApplyDate: () => void;
 }
 
-function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAreaHa, zonesLoading, replay, terrainWaiting, farmer }: {
+function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAreaHa, zonesLoading, replay, terrainWaiting, farmer, cropCompare }: {
   local: LocalResult;
   terrainWaiting?: boolean;
   farmer?: ReactNode;
+  cropCompare?: ReactNode;
   onPickDate: (d: Iso) => void;
   components?: NonNullable<AnalysisResponse["assessment"]>["components"];
   zones: MapZone[] | null;
@@ -652,6 +667,7 @@ function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAre
         {farmer}
         <Why local={local} components={components} />
       </div>
+      {cropCompare}
       <div className="ar-card">
         {replay.dates.length >= 2 ? (
           <div className="rs-replay">
@@ -731,6 +747,54 @@ function Assessment({ local, onPickDate, components, zones, zoneOrder, parcelAre
         </YearCompare>
       </div>
     </>
+  );
+}
+
+const CROP_ROWS_FOLDED = 5;
+
+/** The same parcel, soil and date for every crop with IUNG thresholds: one row per crop, a click switches the crop. */
+function CropCompare({ rows, current, shownStage, offSeason, onPick }: {
+  rows: CropStage[]; current: CropCode; shownStage: number | null; offSeason: boolean; onPick: (c: CropCode) => void;
+}) {
+  const [all, setAll] = useState(false);
+  if (rows.length < 2) return null;
+  const word = (n: number | null) => (n === null ? "Brak danych" : BAL[String(balStep(n))]!);
+  const own = rows.find((r) => r.crop.code === current);
+  const season = offSeason ? " Teraz jest poza sezonem, więc porównanie dotyczy sezonu: progi IUNG z jego końca." : "";
+  // The comparison grades KBW of 60 days; the assessment above may come from the root-zone balance of the server.
+  const method = own && own.stage !== shownStage ? " Porównanie liczymy z opadu i parowania z 60 dni, więc stan Twojej uprawy może różnić się od oceny powyżej." : "";
+  if (rows.every((r) => r.stage === rows[0]!.stage)) {
+    return (
+      <div className="ar-card rs-cropcmp">
+        <h4 className="rs-subtitle">Ta sama działka przy innej uprawie</h4>
+        <p className="ar-card__text">Przy każdej uprawie z progami IUNG-PIB stan wody jest ten sam: {word(rows[0]!.stage).toLowerCase()}. Progi suszy różnią się dopiero przy niedoborze wody.</p>
+        {season || method ? <p className="ar-muted rs-why__note">{(season + method).trim()}</p> : null}
+      </div>
+    );
+  }
+  let shown = all ? rows : rows.slice(0, CROP_ROWS_FOLDED);
+  // Folded, the current crop always stays in view.
+  if (!all && own && !shown.includes(own)) shown = [...rows.slice(0, CROP_ROWS_FOLDED - 1), own];
+  return (
+    <div className="ar-card rs-cropcmp">
+      <h4 className="rs-subtitle">Ta sama działka przy innej uprawie</h4>
+      <ul className="rs-cropcmp__list" aria-label="Stan wody tej działki przy innych uprawach">
+        {shown.map((r) => {
+          const on = r.crop.code === current;
+          const n = balStep(r.stage);
+          return (
+            <li key={r.crop.code}>
+              <button type="button" className={cx("rs-cropcmp__row", on && "is-on")} aria-pressed={on} onClick={() => { if (!on) onPick(r.crop.code); }}>
+                <span className="rs-cropcmp__crop">{r.crop.label}</span>
+                <span className="rs-cropcmp__state"><i className={cx("rs-zhist__sw", n !== null && `ar-b-${balKey(n)}`)} aria-hidden="true" />{word(r.stage)}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {rows.length > CROP_ROWS_FOLDED ? <button type="button" className="rs-linkbtn rs-cropcmp__more" aria-expanded={all} onClick={() => setAll((v) => !v)}>{all ? "Pokaż mniej" : "Pokaż wszystkie uprawy"}</button> : null}
+      <p className="ar-muted rs-why__note">Uprawy mają różne progi suszy IUNG-PIB, więc ta sama pogoda i gleba dają inny stan.{season}{method}</p>
+    </div>
   );
 }
 
@@ -910,8 +974,8 @@ const stageName = (n: number | null) => (n === null ? "brak danych" : BAL[String
  * One list of measures: the whole card toggles it into the simulation. Each measure is simulated alone to rank
  * the list by water gain; the selected ones are simulated together below the list.
  */
-function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, picked, onPick, onWhatIfData }: {
-  parcelId: string; local: LocalResult | null; st: AnalysisState; backend: AnalysisResponse | null; crop: CropCode; date: Iso; weatherFailed: boolean; picked: Set<string>; onPick: (id: string) => void; onWhatIfData?: (res: WhatIfScenarioResult | null) => void;
+function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, picked, onPick, onWhatIfData, onSimStage }: {
+  parcelId: string; local: LocalResult | null; st: AnalysisState; backend: AnalysisResponse | null; crop: CropCode; date: Iso; weatherFailed: boolean; picked: Set<string>; onPick: (id: string) => void; onWhatIfData?: (res: WhatIfScenarioResult | null) => void; onSimStage?: (stage: number | null) => void;
 }) {
   const [own, setOwn] = useState<Levers | null>(null);
   const [whatIf, setWhatIf] = useState<{ key: string; loading: boolean; data: WhatIfScenarioResult | null; error: string | null }>({
@@ -936,10 +1000,13 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
   const gain = (id: string) => { const r = solo.get(id); return r && local?.kbw60 !== null && local?.kbw60 !== undefined && r.kbw60 !== null ? r.kbw60 - local.kbw60 : -Infinity; };
   const ordered = recs?.length ? items : [...items].sort((a, b) => gain(b.id) - gain(a.id));
 
-  const preset = useMemo<Levers>(() => items.filter((m) => picked.has(m.id) && m.sim).reduce((acc, m) => ({ addMm: acc.addMm + (m.sim?.addMm ?? 0), etCut: Math.min(0.5, acc.etCut + (m.sim?.etCut ?? 0)) }), NO_LEVERS), [picked, items.map((m) => m.id).join()]);
+  const preset = useMemo<Levers>(() => leversOf(items.filter((m) => picked.has(m.id)).map((m) => m.sim)), [picked, items.map((m) => m.id).join()]);
   useEffect(() => setOwn(null), [preset, parcelId]);
   const lv = own ?? preset;
   const combined = useMemo(() => (lv.addMm || lv.etCut ? run(lv) : null), [lv, series, land, crop, date]);
+  // Baseline of the simulation: the same rain-and-evaporation grading with no measures. `local.stage` can hold the
+  // server's soil-water state, which would mix two models in one "before → after".
+  const base = useMemo(() => run({ addMm: 0, etCut: 0 }), [series, land, crop, date]); // eslint-disable-line react-hooks/exhaustive-deps
   const dryYears = (r: LocalResult) => r.years.filter((y) => y.value !== null && y.value <= -3).length;
 
   const bc = backendCrop(crop);
@@ -975,13 +1042,44 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
 
   const activeWhatIf = whatIfKey && whatIf.key === whatIfKey ? whatIf.data : null;
 
+  // Water state before → after, both from KBW 60 against the IUNG threshold, with the same levers the
+  // "Dostosuj założenia" sliders show. The backend season simulation stays in the table below; mixing its
+  // season total in here made the result jump when the response arrived and contradict the sliders.
+  const simLv = lv;
+  const simShown = !!activeWhatIf || !!combined;
+  // Same baseline and same simulation as the per-measure lines above (computeLocal with levers), so the
+  // summary never disagrees with a single measure's "before → after".
+  const shift = useMemo(
+    () => (simShown && local && series && land && land.kind !== "nonAgri"
+      ? { before: base?.stage ?? null, after: (combined ?? base)?.stage ?? null, kbwGainMm: stageShift(land, series, crop, date, simLv).kbwGainMm }
+      : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [simShown, local, base, combined, series, land, crop, date, simLv.addMm, simLv.etCut],
+  );
+  const hasShift = !!shift && shift.before !== null && shift.after !== null;
+  useEffect(() => { onSimStage?.(hasShift ? shift!.after : null); }, [hasShift, shift?.after]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => onSimStage?.(null), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const shiftText = (() => {
+    if (!hasShift || shift!.after !== shift!.before) return null;
+    const days = activeWhatIf?.delta_reserve_days ?? 0;
+    if (days > 0) return `Stan się nie zmienia, ale zapas wody rośnie o ${days} ${days === 1 ? "dzień" : "dni"}.`;
+    const g = shift!.kbwGainMm;
+    return g !== null && g >= 1 ? `Stan się nie zmienia, ale bilans wody z 60 dni rośnie o ${dec(g, 0)} mm.` : "Stan się nie zmienia.";
+  })();
+  const shiftNote = [
+    hasShift ? "Stan po działaniach liczymy z założeń poniżej: woda zatrzymana w glebie i mniej parowania w 60 dniach." : null,
+    hasShift && backend ? "Stan wyjściowy liczymy z opadu i parowania z 60 dni, więc może różnić się od oceny powyżej." : null,
+  ].filter(Boolean).join(" ");
+  const stateWord = (n: number) => BAL[String(n)]!;
+
   if (!local && !recs && !weatherFailed) return <Skeleton lines={["Działania"]} />;
   const groups = [{ title: "Bez urządzeń wodnych", items: ordered.filter((m) => !m.permit) }, { title: "Wymaga zgody Wód Polskich", items: ordered.filter((m) => m.permit) }];
   const effectLine = (m: MeasureItem) => {
     if (m.backendNote) return m.backendNote;
     const r = solo.get(m.id);
     if (!r || !local) return null;
-    if (r.stage !== null && local.stage !== null && r.stage !== local.stage) return `${BAL[String(local.stage)]} → ${stageName(r.stage)}`;
+    const b = base?.stage ?? null;
+    if (r.stage !== null && b !== null && r.stage !== b) return `${BAL[String(b)]} → ${stageName(r.stage)}`;
     const g = gain(m.id);
     return Number.isFinite(g) && g > 0 ? `+${dec(g, 0)} mm wody w bilansie 60 dni` : null;
   };
@@ -1024,6 +1122,19 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
           </p>
           {whatIf.loading && whatIfKey ? <p className="rs-updating" role="status">Przeliczam symulację na serwerze…</p> : null}
           {whatIf.error && whatIfKey ? <p className="rs-updating" role="status">{whatIf.error} (wynik lokalny poniżej).</p> : null}
+          {hasShift ? (
+            <div className="rs-shift">
+              <p className="rs-shift__states" role="img" aria-label={`Stan wody teraz: ${stateWord(shift!.before!).toLowerCase()}, z działaniami: ${stateWord(shift!.after!).toLowerCase()}`}>
+                <span className="rs-shift__st"><i className={cx("rs-zhist__sw", `ar-b-${balKey(shift!.before!)}`)} aria-hidden="true" />{stateWord(shift!.before!)}</span>
+                <span className="rs-shift__to">
+                  <span className="rs-shift__arrow" aria-hidden="true">→</span>
+                  <span className="rs-shift__st rs-shift__st--after"><i className={cx("rs-zhist__sw", `ar-b-${balKey(shift!.after!)}`)} aria-hidden="true" />{stateWord(shift!.after!)}</span>
+                </span>
+              </p>
+              {shiftText ? <p className="ar-card__text rs-shift__text">{shiftText}</p> : null}
+              {shiftNote ? <p className="ar-muted rs-why__note">{shiftNote}</p> : null}
+            </div>
+          ) : null}
           <table className="rs-compare">
             <colgroup><col className="rs-compare__k" /><col className="rs-compare__v" /><col className="rs-compare__v" /></colgroup>
             <thead><tr><th /><th>Teraz</th><th>Z działaniami</th></tr></thead>
@@ -1052,11 +1163,13 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
               </tbody>
             ) : (
               <tbody>
-                <tr>
-                  <td>Stan wody</td>
-                  <td><WaterBalance size="sm" value={local.stage} /></td>
-                  <td className={combined ? undefined : "rs-compare__same"}><WaterBalance size="sm" value={(combined ?? local).stage} /></td>
-                </tr>
+                {hasShift ? null : (
+                  <tr>
+                    <td>Stan wody</td>
+                    <td><WaterBalance size="sm" value={local.stage} /></td>
+                    <td className={combined ? undefined : "rs-compare__same"}><WaterBalance size="sm" value={(combined ?? local).stage} /></td>
+                  </tr>
+                )}
                 <tr>
                   <td>Bilans wody z 60 dni</td>
                   <td>{mm(local.kbw60)} mm</td>
@@ -1098,7 +1211,11 @@ function Measures({ parcelId, local, st, backend, crop, date, weatherFailed, pic
 
 const WATER_CLASS: Record<string, string> = { "bardzo sucho": "bardzo sucho", sucho: "sucho", "umiarkowany zapas": "umiarkowany zapas", wilgotno: "wilgotno", "pelny zapas": "pełny zapas" };
 const SOIL_ZONE: Record<string, string> = { "0-28 cm": "0–28 cm (wierzchnia)", "28-100 cm": "28–100 cm", "100-200 cm": "100–200 cm (głęboka)" };
-const dayShort = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("pl-PL", { weekday: "short", day: "numeric" });
+/** "pon. 23": weekday and day without the locale comma, so the label wraps cleanly in narrow strip cells. */
+const dayShort = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00`);
+  return `${d.toLocaleDateString("pl-PL", { weekday: "short" })} ${d.getDate()}`;
+};
 
 /** 14-day plan (dose + chance of irrigating) and the soil water of three zones as classes with their probability. */
 function Plan14({ plan }: { plan: RlPlan14d }) {
@@ -1108,21 +1225,25 @@ function Plan14({ plan }: { plan: RlPlan14d }) {
   const w = plan.water_need_mm;
   const withPlan = picks.some((d) => d.stress_probability_with_plan !== undefined);
   const scenarios = ens ? `${w?.n_scenarios ?? 51} wariantów prognozy ECMWF` : "pogoda tych samych dni z innych lat";
+  // A hold-off plan (off season) has no dose on any day: the strip then reads "0 mm" without chances of irrigating.
+  const noDose = plan.days.every((d) => d.dose_mm <= 0 && !d.irrigation_probability);
   return (
     <div className="ar-card rs-table rs-plan14">
-      <h4 className="rs-subtitle">Plan i woda w glebie na 14 dni</h4>
+      <h4 className="rs-subtitle">{noDose ? "Woda w glebie na 14 dni" : "Plan i woda w glebie na 14 dni"}</h4>
       <div className="rs-fc" aria-label="Plan nawadniania na 14 dni">
         {plan.days.map((d) => (
-          <div key={d.date} className="rs-fc__day" title={`Pewność planu: ${d.confidence}`}>
-            <span className="rs-fc__mm">{dec(d.dose_mm, 0)}</span>
+          <div key={d.date} className={cx("rs-fc__day", d.dose_mm <= 0 && "is-zero")} title={`Pewność planu: ${d.confidence}`}>
+            <span className="rs-fc__mm">{dec(d.dose_mm, 0)}<span className="rs-fc__unit"> mm</span></span>
             <span className="rs-fc__d">{dayShort(d.date)}</span>
-            {d.irrigation_probability !== null ? <span className="rs-fc__p">{dec(100 * d.irrigation_probability, 0)}%</span> : null}
+            {!noDose && d.irrigation_probability !== null ? <span className="rs-fc__p">{dec(100 * d.irrigation_probability, 0)}%</span> : null}
           </div>
         ))}
       </div>
       <p className="ar-muted rs-why__note">
-        Duża liczba to dawka w mm, procent to szansa, że tego dnia trzeba będzie podlać ({scenarios}). Pewność planu: dni 1–3 wysoka, 4–7 średnia, dalej niska.
-        {w ? ` Woda na 14 dni: ok. ${dec(w.expected_mm, 0)} mm (zwykle ${dec(w.p10_mm, 0)}–${dec(w.p90_mm, 0)} mm).` : ""}
+        {noDose
+          ? "Przez 14 dni bez podlewania: dawka 0 mm każdego dnia."
+          : `Duża liczba to dawka na dzień, procent to szansa, że tego dnia trzeba będzie podlać (${scenarios}). Pewność planu: dni 1–3 wysoka, 4–7 średnia, dalej niska.`}
+        {w && !noDose ? ` Woda na 14 dni: ok. ${dec(w.expected_mm, 0)} mm (zwykle ${dec(w.p10_mm, 0)}–${dec(w.p90_mm, 0)} mm).` : ""}
       </p>
       {z && picks.length ? (
         <table>
@@ -1159,18 +1280,44 @@ function Plan14({ plan }: { plan: RlPlan14d }) {
   );
 }
 
-function Irrigation({ local, rl, compare }: { local: LocalResult; rl: RlRecommendResponse | null; compare: RlCompareResponse | null }) {
+/** Why there is no dose today: the crop season of the RL module (structured, else parsed from its message), else the IUNG season. */
+function holdOffText(cropLabel: string, rl: RlRecommendResponse | null): string {
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  let from = rl?.crop?.season_start, to = rl?.crop?.season_end;
+  if (!(from && to && iso.test(from) && iso.test(to)) && rl?.status === "out_of_season") {
+    const m = /\((\d{4}-\d{2}-\d{2})\s*[–—-]\s*(\d{4}-\d{2}-\d{2})\)/.exec(rl.message);
+    from = m?.[1]; to = m?.[2];
+  }
+  const season = from && to && iso.test(from) && iso.test(to) ? `${formatDayMonth(from)} – ${formatDayMonth(to)}` : null;
+  return season
+    ? `${cropLabel} jest poza sezonem (${season}). Następna decyzja od początku sezonu.`
+    : "Teraz jest poza sezonem wegetacyjnym (21 marca – 30 września). Następna decyzja od początku sezonu.";
+}
+
+function Irrigation({ local, rl, compare, onToday }: { local: LocalResult; rl: RlRecommendResponse | null; compare: RlCompareResponse | null; onToday: () => void }) {
+  const isToday = local.date === todayIso();
   const fc = local.forecast;
   const strip = fc ? (
     <div className="rs-fc" aria-label="Prognoza opadu na 7 dni">
-      {fc.days.map((d) => <div key={d.date} className="rs-fc__day"><span className="rs-fc__mm">{dec(d.p, 0)}</span><span className="rs-fc__d">{new Date(`${d.date}T12:00:00`).toLocaleDateString("pl-PL", { weekday: "short", day: "numeric" })}</span></div>)}
+      {fc.days.map((d) => <div key={d.date} className="rs-fc__day"><span className="rs-fc__mm">{dec(d.p, 0)}</span><span className="rs-fc__d">{dayShort(d.date)}</span></div>)}
     </div>
   ) : null;
   let card: JSX.Element | null = null;
-  if (!local.offSeason && rl?.status === "ok" && rl.recommendation) {
-    const r = rl.recommendation;
+  if (!isToday) {
+    // Other dates: the dose plan is a forecast, so only the strategies of past seasons stay.
     card = (
-      <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={r.action_now} text={rl.message}>
+      <p className="ar-muted rs-irr__today">
+        Plan podlewania na najbliższe 14 dni pokazujemy dla dzisiejszej daty.{" "}
+        <button type="button" className="rs-linkbtn" onClick={onToday}>Pokaż dziś</button>
+      </p>
+    );
+  } else if (!local.offSeason && rl?.status === "ok" && rl.recommendation) {
+    const r = rl.recommendation;
+    // The message usually repeats the decision as its first clause; the card title already says it.
+    const why = rl.message.startsWith(r.action_now) ? rl.message.slice(r.action_now.length).replace(/^\s*[–—-]\s*/, "") : rl.message;
+    const text = why ? why.charAt(0).toLocaleUpperCase("pl") + why.slice(1) : rl.message;
+    card = (
+      <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={r.action_now} text={text}>
         <p className="ar-card__text">Dawka dziś: {dec(r.dose_today_mm, 0)} mm · w 7 dni: {dec(r.total_7d_mm, 0)} mm{rl.policy ? ` · ${rl.policy.label}` : ""}.</p>
         {r.plan_14d ? null : (
           <>
@@ -1184,9 +1331,17 @@ function Irrigation({ local, rl, compare }: { local: LocalResult; rl: RlRecommen
     );
   } else if (!local.offSeason && local.irrigation) {
     card = <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={local.irrigation.title} text={local.irrigation.text}>{strip}</PhotoCard>;
+  } else if (local.offSeason || rl?.status === "out_of_season") {
+    // The RL hold-off decision when it is in; else the local reason from the crop season.
+    const fromRl = rl?.status === "out_of_season" && rl.recommendation && rl.message && !/^Data \d{4}-/.test(rl.message);
+    card = (
+      <PhotoCard image="/img/rozlewiska-biebrza.jpg" title={fromRl ? rl!.recommendation!.action_now : "Nie podlewaj teraz"} text={fromRl ? rl!.message : holdOffText(local.crop.label, rl)}>
+        {strip ? <><h4 className="rs-subtitle rs-irr__fc">Opad w najbliższych dniach, mm</h4>{strip}</> : null}
+      </PhotoCard>
+    );
   }
   const strategies = compare?.strategies ?? [];
-  const plan14 = !local.offSeason && rl?.status === "ok" ? rl.recommendation?.plan_14d : undefined;
+  const plan14 = isToday && (rl?.status === "ok" || rl?.status === "out_of_season") ? rl.recommendation?.plan_14d : undefined;
   return (
     <>
       {card}

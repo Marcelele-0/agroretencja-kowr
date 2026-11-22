@@ -1,5 +1,5 @@
 import { addDays, formatDayMonth, inSeason, isoOf, lastDayOfMonth, parts, seasonYear, type Iso } from "../lib/dates";
-import { cropOf, type Crop, type CropCode } from "../lib/crops";
+import { CROP_GROUPS, cropOf, type Crop, type CropCode } from "../lib/crops";
 import { CAT_WOD, IUNG_PROGI, thresholdsFor, type LandUse, type SoilCategory, type Threshold } from "../lib/iung";
 import { activeWindow, gradingThreshold, kbw60, riskFromStage, sameTermByYear, seasonWindows, stageAt, stageFromKbw, stageRule, sumOf, type KbwWindow, type RiskLevel } from "../lib/kbw";
 import { compareYears, type DailySeries } from "../lib/openMeteo";
@@ -50,6 +50,59 @@ export function withLevers(s: DailySeries, l: Levers): DailySeries {
   return { ...s, p: s.p.map((v) => (v === null ? null : v + perDay)), et0: s.et0.map((v) => (v === null ? null : v * (1 - l.etCut))) };
 }
 
+/** Sums the levers of the picked measures (catalog assumptions); the evaporation cut is capped at 50%. */
+export function leversOf(sims: ({ addMm?: number; etCut?: number } | undefined)[]): Levers {
+  return sims.reduce<Levers>((acc, m) => ({ addMm: acc.addMm + (m?.addMm ?? 0), etCut: Math.min(0.5, acc.etCut + (m?.etCut ?? 0)) }), { addMm: 0, etCut: 0 });
+}
+/** Days of the backend reference season used to spread its water over the year: 1 March to 30 September (IUNG season end). */
+export const WHATIF_SEASON_DAYS = 214;
+/**
+ * Levers from the backend what-if: the water the measures keep in the reference season (mm), spread evenly over the season
+ * and expressed per 60 days like `addMm`. The backend water already includes less evaporation and less runoff
+ * (bigger root-zone store, lower curve number), so the local evaporation cut is not added on top.
+ */
+export function leversFromBackendWater(seasonMm: number): Levers {
+  const addMm = Math.max(0, seasonMm) * 60 / WHATIF_SEASON_DAYS;
+  return { addMm: Math.round(addMm * 10) / 10, etCut: 0 };
+}
+/** Water state before and after the levers, both from KBW 60 graded against the crop's IUNG threshold. */
+export function stageShift(land: LandUse, s: DailySeries, cropCode: CropCode, date: Iso, l: Levers): { before: number | null; after: number | null; kbwGainMm: number | null } {
+  const category = land.kind === "mineral" ? land.category : null;
+  const thresholds = thresholdsFor(cropOf(cropCode).iung, category);
+  const k0 = kbw60(s, date), k1 = kbw60(withLevers(s, l), date);
+  return {
+    before: gradeKbw(k0, thresholds, date, category).stage,
+    after: gradeKbw(k1, thresholds, date, category).stage,
+    kbwGainMm: k0 === null || k1 === null ? null : k1 - k0,
+  };
+}
+
+/** Grades KBW 60 against a crop's IUNG threshold: the window of the date, or the last window of the season off season. */
+export function gradeKbw(k60: number | null, thresholds: Threshold[] | null, date: Iso, category: SoilCategory | null) {
+  const gIdx = inSeason(date) ? activeWindow(date) ?? 0 : 13;
+  const grading = gradingThreshold(thresholds, gIdx, category);
+  const stage = k60 === null || grading === null ? null : stageFromKbw(k60, grading.value);
+  return { gIdx, grading, stage };
+}
+
+export interface CropStage { crop: Crop; group: string; stage: number | null }
+/**
+ * Water state of the same parcel, soil and date for every crop with its own IUNG thresholds on this soil category.
+ * Uses the grading of computeLocal; sorted from driest to wettest, crop-group order within one state.
+ */
+export function cropComparison(category: SoilCategory | null, s: DailySeries, date: Iso): CropStage[] {
+  if (!category) return [];
+  const k60 = kbw60(s, date);
+  const rows = CROP_GROUPS.flatMap((g) => g.crops.map((crop) => ({ crop, group: g.label }))).flatMap(({ crop, group }) => {
+    const th = thresholdsFor(crop.iung, category);
+    if (!th) return [];
+    const { grading, stage } = gradeKbw(k60, th, date, category);
+    // A crop with no numeric threshold on this soil falls back to the spring-cereal reference: it has no own IUNG threshold.
+    return grading && !grading.reference ? [{ crop, group, stage }] : [];
+  });
+  return rows.sort((a, b) => (a.stage ?? 99) - (b.stage ?? 99));
+}
+
 export function computeLocal(land: LandUse, s: DailySeries, cropCode: CropCode, date: Iso, today: Iso): LocalResult {
   const crop = cropOf(cropCode);
   const category = land.kind === "mineral" ? land.category : null;
@@ -61,9 +114,7 @@ export function computeLocal(land: LandUse, s: DailySeries, cropCode: CropCode, 
   const active = offSeason ? null : activeWindow(date);
   const known = windows.filter((w) => w.kbw !== null && w.threshold !== null);
   const k60 = kbw60(s, date);
-  const gIdx = offSeason ? 13 : active ?? 0;
-  const grading = gradingThreshold(thresholds, gIdx, category);
-  const stage = k60 === null || grading === null ? null : stageFromKbw(k60, grading.value);
+  const { gIdx, grading, stage } = gradeKbw(k60, thresholds, date, category);
   const r = stage === null ? { level: "umiarkowane" as RiskLevel, side: undefined } : riskFromStage(stage);
   const aw = active !== null ? windows[active] : undefined;
   const veto = !!aw?.drought;

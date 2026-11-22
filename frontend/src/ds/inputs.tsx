@@ -172,7 +172,8 @@ export function DateBar({ date, onDate, className }: { date: Iso; onDate: (d: Is
         <div className="rs-datebar__step">
           <Button variant="icon" size="sm" icon="back" label="Dzień wcześniej" onClick={() => step(-1)} disabled={date <= min} />
           <label className="rs-datebar__date">
-            <span aria-hidden="true">{formatLong(date)}</span>
+            {/* The sizer holds the widest date, so the bar keeps one width whatever the date. */}
+            <span className="rs-datebar__text" aria-hidden="true"><span>{formatLong(date)}</span><span className="rs-datebar__sizer">30 października 2026</span></span>
             <Icon name="calendar" />
             <input type="date" value={date} min={min} max={max} aria-label={`Data analizy: ${formatLong(date)}. Zmień datę`} onChange={(e) => e.target.value && onDate(e.target.value)} />
           </label>

@@ -3,7 +3,7 @@ import { analyzeCache } from "../api/analyzeCache";
 import { BackendError, backendEnabled, postRlCompare, postRlRecommend } from "../api/backend";
 import type { AnalysisResponse, RlCompareResponse, RlRecommendResponse } from "../api/contract";
 import { backendCrop, type CropCode } from "../lib/crops";
-import { inSeason, todayIso, type Iso } from "../lib/dates";
+import { todayIso, type Iso } from "../lib/dates";
 import { isAbort, SourceError } from "../lib/http";
 import { classifyIung, IUNG_PROGI, IUNG_WMS, landUseAt, type LandUse } from "../lib/iung";
 import { ARCHIVE_URL, cachedWeatherFor, weatherFor, type DailySeries } from "../lib/openMeteo";
@@ -157,7 +157,9 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
     const ctl = new AbortController();
     const sameTarget = prevRlTarget.current?.parcelId === p.id && prevRlTarget.current?.crop === q.crop;
     prevRlTarget.current = { parcelId: p.id, crop: q.crop };
-    if (backendEnabled && inSeason(q.date)) {
+    // The dose plan is a forecast, shown only for today: other dates skip the call. Off season the answer is the
+    // hold-off decision with a zero-dose 14-day plan and the soil-water forecast.
+    if (backendEnabled && q.date === todayIso()) {
       if (!sameTarget) setRl(LOADING);
       postRlRecommend({ parcel_id: p.id, crop: q.crop, date: q.date, plan_days: RL_PLAN_DAYS }, ctl.signal).then((data) => setRl({ status: "ready", data }), (e) => !isAbort(e) && setRl(errorRes(e)));
     } else setRl(OFF);
@@ -193,7 +195,9 @@ export function useAnalysis(q: AnalysisQuery): AnalysisState {
   // Once the full analysis is in, its irrigation answer (started from the step-1 soil water) replaces the
   // separate /rl/recommend call, so the assessment and the irrigation card show one storage and one threshold.
   const fromAnalysis = backend.status === "ready" ? backend.data.irrigation?.rl_recommendation : null;
-  const rlShown: Res<RlRecommendResponse> = fromAnalysis && fromAnalysis.status === "ok" ? { status: "ready", data: fromAnalysis } : rl;
+  // Off season (today) the hold-off decision also comes as a recommendation, so it is accepted the same way.
+  const usable = fromAnalysis && (fromAnalysis.status === "ok" || (fromAnalysis.status === "out_of_season" && !!fromAnalysis.recommendation));
+  const rlShown: Res<RlRecommendResponse> = usable ? { status: "ready", data: fromAnalysis } : rl;
 
   return { parcel, land, weather: w, local, updating, backend, rl: rlShown, rlCompare, sources, elapsedMs };
 }

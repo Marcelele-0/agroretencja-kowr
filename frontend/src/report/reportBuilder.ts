@@ -281,6 +281,19 @@ function buildIrrigation(
       strategies,
     };
   }
+  // Off season, today: the RL hold-off decision with the rain forecast of the coming days.
+  if (rl?.status === "out_of_season" && rl.recommendation) {
+    const rain = local?.forecast?.days.length
+      ? local.forecast.days.slice(0, 7).map((d) => ({ date: d.date, valueMm: d.p, kind: "rain" as const }))
+      : rl.recommendation.plan_7d.slice(0, 7).map((d) => ({ date: d.date, valueMm: d.precip_assumed_mm, kind: "rain" as const }));
+    return {
+      title: rl.recommendation.action_now,
+      text: rl.message,
+      meta: rain.length ? `Prognoza opadu 7 dni: łącznie ${dec(rain.reduce((a, d) => a + d.valueMm, 0), 0)} mm` : null,
+      days: rain,
+      strategies,
+    };
+  }
   if (local?.offSeason) {
     return {
       title: "Poza sezonem wegetacji",

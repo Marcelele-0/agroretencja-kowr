@@ -134,6 +134,8 @@ export interface RlRecommendResponse {
   message: string;
   recommendation?: { action_now: string; dose_today_mm: number; total_7d_mm: number; plan_7d: { day: number; date: string; dose_mm: number; precip_assumed_mm: number; stress_expected: boolean }[]; plan_14d?: RlPlan14d };
   policy?: { used: string; label: string };
+  /** Crop of the RL module with its growing season (ISO dates of the season of the request date). */
+  crop?: { key: string; label: string; season_start?: string; season_end?: string };
   limitations?: string[];
   sources?: RlSource[];
 }
