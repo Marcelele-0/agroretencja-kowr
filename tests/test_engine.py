@@ -18,7 +18,7 @@ from synthetic_data import (
 
 from hydro_core.advisor import AdviceContext, build_advice
 from hydro_core.causes import attribute_causes
-from hydro_core.features import FEATURES, FeatureContext, feature
+from hydro_core.features import FEATURES, FeatureContext, SatelliteObservation, feature
 from hydro_core.history import build_history
 from hydro_core.registry import Registry, RegistryError
 from hydro_core.retention import (
@@ -405,3 +405,43 @@ def test_zones_are_continuous_across_shared_parcel_border() -> None:
         for yv in np.linspace(468320.0, 468880.0, 20)
     )
     assert matches >= 19
+
+
+# --- crop-aware satellite reading (KOWR 3.2 pkt 1a) --------------------------------------
+def _with_scene(crop: CropCode, day: dt.date, z: float = -1.5) -> FeatureContext:
+    """Synthetic analysis on ``day`` with a clear Sentinel-2 scene from the same day."""
+    fx = make_inputs(crop=crop, analysis_date=day)
+    fx.inputs.satellite = SatelliteObservation(
+        acquired=day, ndvi=0.6, ndmi=0.15, ndmi_history_mean=0.25, ndmi_anomaly_z=z, cloud_pct=5.0
+    )
+    return FeatureContext(fx.inputs)
+
+
+def test_ndmi_weight_follows_crop_canopy_cover() -> None:
+    mid = _with_scene(CropCode.KUKURYDZA, dt.date(2021, 7, 10))  # maize in full growth
+    dev = _with_scene(CropCode.KUKURYDZA, dt.date(2021, 6, 15))  # maize canopy still open
+    assert mid.get("ndmi_crop_weight") == pytest.approx(1.0)
+    assert 0.0 < (dev.get("ndmi_crop_weight") or 0.0) < 1.0
+    used = [
+        {c.name: c.weight_used for c in compute_water_score(f).components}["wilgotnosc_lanu_ndmi"]
+        for f in (dev, mid)
+    ]
+    assert 0.0 < used[0] < used[1]
+
+
+def test_ndmi_left_out_outside_crop_season() -> None:
+    fx = _with_scene(CropCode.KUKURYDZA, dt.date(2021, 11, 20))  # after maize harvest
+    row = {c.name: c for c in compute_water_score(fx).components}["wilgotnosc_lanu_ndmi"]
+    assert fx.get("ndmi_crop_weight") == 0.0
+    assert row.value is None and row.weight_used == 0.0
+    assert "poza sezonem" in (row.explanation or "")
+    assert any("poza sezonem" in w for w in assess_confidence(fx).resolution_warnings)
+    neutral = _with_scene(CropCode.KUKURYDZA, dt.date(2021, 11, 20), z=0.0)
+    assert physical_water_state(fx) == physical_water_state(neutral)
+
+
+def test_ndmi_weight_capped_for_orchards() -> None:
+    fx = _with_scene(CropCode.DRZEWA_OWOCOWE, dt.date(2021, 7, 10))
+    row = {c.name: c for c in compute_water_score(fx).components}["wilgotnosc_lanu_ndmi"]
+    assert 0.0 < (fx.get("ndmi_crop_weight") or 0.0) <= 0.5
+    assert "korony drzew" in (row.explanation or "")

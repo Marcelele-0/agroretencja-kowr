@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rusałka – materiał dla jury</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root {
+    --ground: #edf0ea;
+    --surface: #ffffff;
+    --ink: #13211a;
+    --ink-muted: #56625a;
+    --hairline: #13211a26;
+    --sage: #74885c;
+    --night: #101a15;
+    --on-night: #eef2ea;
+    --on-night-muted: #a9b4ac;
+    --line-night: #eef2ea33;
+    --lime: #c6ee7c;
+    --water: #2b6f9e;
+    --font-sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", Consolas, monospace;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #d9ddd5;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    line-height: 1.42;
+    -webkit-font-smoothing: antialiased;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  a { color: inherit; }
+
+  .page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    padding: 28px 42px 20px;
+    background: var(--ground);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    page-break-after: always;
+    break-after: page;
+  }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+  @media screen { .page { margin: 24px auto; box-shadow: 0 20px 50px -30px #0b17108c; } }
+
+  /* Nagłówek i stopka strony */
+  .top { display: flex; justify-content: space-between; align-items: center; }
+  .wordmark { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
+  .wordmark svg { width: 24px; height: 24px; }
+  .wordmark circle, .wordmark path { fill: none; stroke: currentColor; }
+  .mono { font-family: var(--font-mono); }
+  .eyebrow { font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); }
+  .foot { margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; letter-spacing: .06em; color: var(--ink-muted); }
+
+  /* Tytuły */
+  .title {
+    margin: 10px 0 0;
+    font-stretch: 86%;
+    font-weight: 500;
+    font-size: 39px;
+    line-height: .98;
+    letter-spacing: -.04em;
+  }
+  .title b { font-weight: 650; color: var(--sage); }
+  .lead { margin: 10px 0 0; max-width: 74ch; font-size: 12.5px; line-height: 1.45; color: var(--ink-muted); }
+  .sec { margin-top: 15px; }
+  .sec-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+
+  /* Blok ciemny z adresem */
+  .open {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 22px;
+    align-items: center;
+    padding: 16px 22px;
+    border-radius: 16px;
+    background: var(--night);
+    color: var(--on-night);
+  }
+  .open .eyebrow { color: var(--lime); }
+  .open-url { display: block; margin-top: 6px; font-family: var(--font-mono); font-weight: 500; font-size: 15.5px; letter-spacing: -.01em; color: var(--lime); text-decoration: none; word-break: break-all; }
+  .open-steps { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line-night); border-radius: 999px; font-size: 11px; color: var(--on-night); }
+  .chip i { font-style: normal; font-family: var(--font-mono); font-size: 9.5px; color: var(--lime); }
+  .open-note { margin-top: 10px; font-size: 10.5px; color: var(--on-night-muted); }
+  .qr { width: 104px; height: 104px; padding: 7px; border-radius: 10px; background: #fff; }
+  .qr svg { display: block; width: 100%; height: 100%; }
+  .qr-cap { margin-top: 5px; text-align: center; font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .08em; color: var(--on-night-muted); }
+
+  /* Karty działek */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .card { display: flex; flex-direction: column; padding: 13px 14px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--hairline); text-decoration: none; }
+  .card--lime { background: var(--lime); border-color: transparent; }
+  .card-n { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-muted); }
+  .card--lime .card-n { color: var(--ink); }
+  .card-crop { margin-top: 4px; font-stretch: 86%; font-weight: 600; font-size: 17px; line-height: 1.05; letter-spacing: -.02em; }
+  .card-meta { margin-top: 3px; font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-muted); }
+  .card--lime .card-meta { color: #2c3b30; }
+  .card-what { margin-top: 8px; font-size: 10.5px; line-height: 1.4; }
+  .card-go { margin-top: auto; padding-top: 10px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: var(--ink); }
+  .hint { margin-top: 8px; font-size: 10.5px; color: var(--ink-muted); }
+
+  /* Pięć kroków */
+  .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .step { padding-top: 8px; border-top: 1px solid var(--hairline); }
+  .step-n { font-family: var(--font-mono); font-size: 10px; color: var(--sage); font-weight: 700; }
+  .step-t { margin-top: 2px; font-stretch: 86%; font-weight: 600; font-size: 15px; letter-spacing: -.02em; }
+  .step p { margin: 4px 0 0; font-size: 10.2px; line-height: 1.4; color: var(--ink-muted); }
+  .scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 2px; width: 196px; }
+  .scale span { height: 12px; border-radius: 3px; }
+  .timing { margin-top: 10px; font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-muted); }
+
+  /* Tabele */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-family: var(--font-mono); font-weight: 500; font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-muted); padding: 0 8px 6px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 4.5px 8px 4.5px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; font-size: 10.5px; }
+  td.crit { font-weight: 600; width: 27%; }
+  td.w { width: 8%; font-family: var(--font-mono); font-weight: 700; color: var(--sage); }
+  td.src { font-weight: 600; width: 30%; }
+  td.lic { width: 30%; color: var(--ink-muted); }
+
+  /* Strona 2: schemat */
+  .flow { display: grid; grid-template-columns: 1fr 14px 1fr 14px 1.25fr 14px 1fr 14px 1fr; align-items: stretch; }
+  .node { padding: 9px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--hairline); }
+  .node--core { background: var(--night); color: var(--on-night); border-color: transparent; }
+  .node--lime { background: var(--lime); border-color: transparent; }
+  .node .eyebrow { font-size: 8px; }
+  .node--core .eyebrow { color: var(--lime); }
+  .node-t { margin-top: 3px; font-weight: 600; font-size: 11.5px; line-height: 1.2; }
+  .node p { margin: 3px 0 0; font-size: 9.5px; line-height: 1.35; color: var(--ink-muted); }
+  .node--core p { color: var(--on-night-muted); }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--ink-muted); font-size: 12px; }
+  .ml-row { display: grid; grid-template-columns: 1fr 14px 1fr 14px 1.25fr 14px 1fr 14px 1fr; margin-top: 6px; }
+  .ml { grid-column: 3 / 6; padding: 7px 10px; border: 1px dashed var(--sage); border-radius: 12px; font-size: 9.8px; line-height: 1.35; color: var(--ink-muted); }
+  .ml b { color: var(--ink); }
+
+  /* Strona 2: liczby */
+  .stats { margin-top: 14px; padding: 14px 22px 15px; border-radius: 16px; background: var(--night); color: var(--on-night); }
+  .stats-group + .stats-group { margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line-night); }
+  .stats .eyebrow { color: var(--lime); }
+  .stats-row { margin-top: 8px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .big { font-stretch: 86%; font-weight: 400; font-size: 32px; line-height: 1; letter-spacing: -.04em; }
+  .big-l { margin-top: 4px; font-weight: 600; font-size: 11px; }
+  .big-d { margin-top: 3px; font-size: 10px; line-height: 1.38; color: var(--on-night-muted); }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  ul.list { margin: 0; padding: 0; list-style: none; }
+  ul.list li { position: relative; padding: 3.5px 0 3.5px 14px; border-bottom: 1px solid var(--hairline); font-size: 10.3px; line-height: 1.4; }
+  ul.list li::before { content: ""; position: absolute; left: 0; top: 8.5px; width: 6px; height: 6px; border-radius: 50%; background: var(--sage); }
+  ul.list--warn li::before { background: #e0703f; }
+  ul.list b { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ============ STRONA 1: ŚCIĄGA ============ -->
+<section class="page">
+  <div class="top">
+    <span class="wordmark">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" stroke-width="1.5"/><g stroke-width="1.5" stroke-linecap="round"><path d="M7 12.5c3-2.6 6-2.6 9 0s6 2.6 9 0"/><path d="M7 17.5c3-2.6 6-2.6 9 0s6 2.6 9 0"/><path d="M10.5 22.5c1.8-1.5 3.7-1.5 5.5 0s3.7 1.5 5.5 0"/></g></svg>
+      Rusałka
+    </span>
+    <span class="eyebrow">Materiał dla jury · 1/2</span>
+  </div>
+
+  <div class="eyebrow" style="margin-top:14px">HackNation 2026 · Krajowy Ośrodek Wsparcia Rolnictwa</div>
+  <h1 class="title">Oceń Rusałkę <b>w trzy minuty</b></h1>
+  <p class="lead">Asystent wody dla każdej działki rolnej w Polsce. Bez logowania i bez instalacji, także na telefonie. Każdy wynik jest liczony w chwili zapytania z otwartych danych publicznych, nie z przygotowanych wcześniej przykładów.</p>
+
+  <div class="open">
+    <div>
+      <div class="eyebrow">Otwórz serwis</div>
+      <a class="open-url" href="https://licho-cachyos-pc.tail886ef4.ts.net/">licho-cachyos-pc.tail886ef4.ts.net</a>
+      <div class="open-steps">
+        <span class="chip"><i>1</i> Działka: klik na mapie albo numer</span>
+        <span class="chip"><i>2</i> Uprawa</span>
+        <span class="chip"><i>3</i> Data z ostatnich 10 lat</span>
+      </div>
+      <div class="open-note">Analiza trwa zwykle 5–16 s. Pierwsze otwarcie serwisu może potrwać kilka sekund dłużej.</div>
+    </div>
+    <div>
+      <div class="qr" id="qr" aria-label="Kod QR z adresem serwisu"></div>
+      <div class="qr-cap">NA TELEFONIE</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">Gotowe działki · kliknij i zobacz wynik</span>
+    </div>
+    <div class="cards">
+      <a class="card card--lime" href="https://licho-cachyos-pc.tail886ef4.ts.net/analiza?dzialka=040706_5.0050.78%2F2&amp;uprawa=kukurydza_ziarno&amp;data=2025-07-10">
+        <span class="card-n">01</span>
+        <span class="card-crop">Kukurydza na ziarno</span>
+        <span class="card-meta">040706_5.0050.78/2 · 10.07.2025<br>woj. kujawsko-pomorskie</span>
+        <span class="card-what">Środek lata: stan wody na skali od suszy do zalania, werdykt wg progów IUNG-PIB i dawka nawadniania z planem na 14 dni.</span>
+        <span class="card-go">OTWÓRZ ANALIZĘ →</span>
+      </a>
+      <a class="card" href="https://licho-cachyos-pc.tail886ef4.ts.net/analiza?dzialka=040706_5.0050.78%2F2&amp;uprawa=truskawki&amp;data=2024-06-01">
+        <span class="card-n">02</span>
+        <span class="card-crop">Truskawki</span>
+        <span class="card-meta">040706_5.0050.78/2 · 1.06.2024<br>woj. kujawsko-pomorskie</span>
+        <span class="card-what">Ta sama działka, inna uprawa i inny rok. Zmieniają się progi suszy, przyczyny niedoboru i porada.</span>
+        <span class="card-go">OTWÓRZ ANALIZĘ →</span>
+      </a>
+      <a class="card" href="https://licho-cachyos-pc.tail886ef4.ts.net/analiza?dzialka=141403_2.0005.145&amp;uprawa=kukurydza_ziarno&amp;data=2024-07-15">
+        <span class="card-n">03</span>
+        <span class="card-crop">Kukurydza na ziarno</span>
+        <span class="card-meta">141403_2.0005.145 · 15.07.2024<br>woj. mazowieckie</span>
+        <span class="card-what">Inny region i inna gleba. Porównaj udział przyczyn i kolejność działań retencyjnych z działką 01.</span>
+        <span class="card-go">OTWÓRZ ANALIZĘ →</span>
+      </a>
+    </div>
+    <p class="hint">Własna działka? Wpisz numer działki ewidencyjnej albo kliknij ją na ortofotomapie. Dawkę nawadniania najlepiej sprawdzić dla daty w sezonie (21.III–30.IX). Działka leśna albo zabudowana dostaje komunikat zamiast analizy.</p>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">Co zobaczysz · pięć kroków KOWR</span>
+      <span class="scale" aria-hidden="true">
+        <span style="background:#7a1a10"></span><span style="background:#b02e1c"></span><span style="background:#e0703f"></span><span style="background:#f09a52"></span><span style="background:#f4d08c"></span><span style="background:#62b86c"></span><span style="background:#a8dae2"></span><span style="background:#62b2da"></span><span style="background:#2873b5"></span><span style="background:#1c4f9c"></span><span style="background:#13265f"></span>
+      </span>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div><div class="step-t">Ocena</div><p>Stan wody od −5 (susza skrajna) do +5 (zalanie), werdykt suszy wg progów IUNG-PIB i ten sam dzień w 10 poprzednich latach.</p></div>
+      <div class="step"><div class="step-n">2</div><div class="step-t">Przyczyny</div><p>Udział klimatu, gleby, spływu z terenu i uprawy, policzony scenariuszami „co gdyby” na bilansie tej działki.</p></div>
+      <div class="step"><div class="step-n">3</div><div class="step-t">Retencja</div><p>Działania posortowane według zysku wody na tej działce i symulator „co jeśli”. Urządzenia wodne oznaczone „wymaga zgody Wód Polskich”.</p></div>
+      <div class="step"><div class="step-n">4</div><div class="step-t">Nawadnianie</div><p>Dawka na dziś i plan na 14 dni z prognozy zespołowej ECMWF (51 wariantów pogody).</p></div>
+      <div class="step"><div class="step-n">5</div><div class="step-t">Raport PDF</div><p>Wynik ze źródłami danych, datami i ograniczeniami, do pobrania jednym przyciskiem.</p></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="eyebrow">Kryteria oceny · co pokazujemy</span></div>
+    <table>
+      <thead><tr><th>Kryterium</th><th>Waga</th><th>Gdzie to widać</th></tr></thead>
+      <tbody>
+        <tr><td class="crit">Wartość praktyczna dla użytkownika</td><td class="w">25%</td><td>Decyzja dla konkretnej działki: dawka wody na dziś, działania retencyjne z efektem w milimetrach i raport PDF do pobrania.</td></tr>
+        <tr><td class="crit">Dane i wiarygodność naukowa</td><td class="w">25%</td><td>Bilans FAO-56 i progi suszy IUNG-PIB z rozporządzenia MRiRW, 8 źródeł otwartych, walidacja na nowych lokalizacjach (str. 2).</td></tr>
+        <tr><td class="crit">Innowacyjność i potencjał rozwojowy</td><td class="w">20%</td><td>HydroFusion-PL odtwarza wilgotność łanu pod chmurami, agent RL oszczędza wodę bez straty plonu. Etap 2: czujniki IoT i zastawki.</td></tr>
+        <tr><td class="crit">Prostota obsługi</td><td class="w">15%</td><td>Trzy wybory: działka, uprawa, data. Bez logowania, bez żargonu GIS, w przeglądarce komputera i telefonu.</td></tr>
+        <tr><td class="crit">Działający prototyp i jakość techniczna</td><td class="w">15%</td><td>Dane pobierane na żywo, źródła zapasowe przy awarii usług, 186 testów automatycznych.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="foot"><span>Rusałka</span><span>HackNation 2026 KOWR</span></div>
+</section>
+
+<!-- ============ STRONA 2: WIARYGODNOŚĆ ============ -->
+<section class="page">
+  <div class="top">
+    <span class="wordmark">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" stroke-width="1.5"/><g stroke-width="1.5" stroke-linecap="round"><path d="M7 12.5c3-2.6 6-2.6 9 0s6 2.6 9 0"/><path d="M7 17.5c3-2.6 6-2.6 9 0s6 2.6 9 0"/><path d="M10.5 22.5c1.8-1.5 3.7-1.5 5.5 0s3.7 1.5 5.5 0"/></g></svg>
+      Rusałka
+    </span>
+    <span class="eyebrow">Karta wiarygodności · 2/2</span>
+  </div>
+
+  <div class="eyebrow" style="margin-top:14px">Metoda i walidacja</div>
+  <h1 class="title">Liczymy, <b>nie zgadujemy</b></h1>
+  <p class="lead">Wynik liczy bilans wodny FAO-56 z progami suszy IUNG-PIB, bez modelu językowego. Uczenie maszynowe uzupełnia brakujące dane i dobiera dawkę wody. Oba modele sprawdziliśmy na lokalizacjach spoza treningu.</p>
+
+  <div class="sec">
+    <div class="sec-head"><span class="eyebrow">Od numeru działki do decyzji</span></div>
+    <div class="flow">
+      <div class="node"><div class="eyebrow">Wejście</div><div class="node-t">Działka, uprawa, data</div><p>Granica z GUGiK ULDK</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="eyebrow">Dane na żywo</div><div class="node-t">8 źródeł otwartych</div><p>Pogoda, gleba, satelita, teren, rowy</p></div>
+      <div class="arrow">→</div>
+      <div class="node node--core"><div class="eyebrow">Silnik fizyczny</div><div class="node-t">Bilans FAO-56 + progi IUNG-PIB</div><p>Stan wody, susza, przyczyny, efekt działań</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="eyebrow">Agent RL</div><div class="node-t">Dawka i plan 14 dni</div><p>Prognoza ECMWF, 51 wariantów</p></div>
+      <div class="arrow">→</div>
+      <div class="node node--lime"><div class="eyebrow" style="color:var(--ink)">Wynik</div><div class="node-t">Karta decyzji i raport PDF</div><p style="color:#2c3b30">Ze źródłami i niepewnością</p></div>
+    </div>
+    <div class="ml-row">
+      <div class="ml"><b>HydroFusion-PL</b> odtwarza wilgotność łanu (NDMI), gdy w ostatnich 15 dniach nie ma bezchmurnego zdjęcia Sentinel-2. Poza obszarem stosowalności model się wyłącza.</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stats-group">
+      <div class="eyebrow">Agent RL nawadniania · test na nowych lokalizacjach</div>
+      <div class="stats-row">
+        <div><div class="big">−45%</div><div class="big-l">wody wobec podlewania wg kalendarza</div><div class="big-d">74 zamiast 135 mm na sezon, przy plonie 97,3% zamiast 95,8%.</div></div>
+        <div><div class="big">−8,5 mm</div><div class="big-l">wody wobec reguły FAO-56</div><div class="big-d">Plon wyższy o 0,12 pkt proc. Obie różnice istotne (95% przedział ufności).</div></div>
+        <div><div class="big">24 000</div><div class="big-l">sezonów testowych na strategię</div><div class="big-d">50 lokalizacji co najmniej 25 km od danych treningowych, 15 upraw, lata 2025–2026, archiwalne prognozy ECMWF.</div></div>
+      </div>
+    </div>
+    <div class="stats-group">
+      <div class="eyebrow">HydroFusion-PL · wilgotność łanu pod chmurami</div>
+      <div class="stats-row">
+        <div><div class="big">−29%</div><div class="big-l">błędu NDMI wobec historii działki</div><div class="big-d">RMSE 0,133 zamiast 0,187 na 50 nowych lokalizacjach (12 175 obserwacji).</div></div>
+        <div><div class="big">89%</div><div class="big-l">pokrycia przedziału 90%</div><div class="big-d">Niepewność jest skalibrowana. W latach suszy 2018 i 2023 pokrycie wynosi 91%.</div></div>
+        <div><div class="big">93%</div><div class="big-l">obserwacji w obszarze stosowalności</div><div class="big-d">Poza nim serwis wraca do samej fizyki i obniża „Pewność danych”.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec two">
+    <div>
+      <div class="sec-head"><span class="eyebrow">Jak sprawdzamy</span></div>
+      <ul class="list">
+        <li><b>148 testów backendu i RL</b> bez sieci: domknięcie bilansu masy, brak zaglądania w przyszłość, pełna analiza dla 15 upraw.</li>
+        <li><b>38 testów frontendu:</b> 14 okien bilansu i tabela progów zgodne z publikacją IUNG-PIB.</li>
+        <li><b>Test end-to-end (22.11.2026):</b> działki z 6 województw, daty 2018–2026, 15 upraw, 5–16 s na analizę.</li>
+        <li><b>Odmowa poza zakresem:</b> las i zabudowa dostają komunikat zamiast analizy.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="sec-head"><span class="eyebrow">Uczciwie o ograniczeniach</span></div>
+      <ul class="list list--warn">
+        <li>Pogoda pochodzi z siatki ok. 9 km, a nie z pomiaru na działce.</li>
+        <li>Bilans jest jednowarstwowy: nie uwzględnia wód gruntowych ani drenażu.</li>
+        <li>HydroFusion-PL ma R² 0,62, poniżej celu 0,78. Dlatego tylko uzupełnia dane.</li>
+        <li>NMT 1 m bywa niedostępny. Wtedy teren pochodzi z Copernicus DEM 30 m.</li>
+        <li>Porównanie werdyktów z wykazami gminnymi SMSR 2020–2025 jest w planie.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="eyebrow">Tylko otwarte dane publiczne</span></div>
+    <table>
+      <thead><tr><th>Źródło</th><th>Co daje działce</th><th>Licencja</th></tr></thead>
+      <tbody>
+        <tr><td class="src">GUGiK: ULDK, NMT 1 m, BDOT10k</td><td>granica działki, teren i spływ, rowy i cieki</td><td class="lic">PZGiK bez opłat</td></tr>
+        <tr><td class="src">IUNG-PIB SMSR</td><td>gleba I–IV, progi: 14 upraw × 4 gleby × 14 okien</td><td class="lic">usługa publiczna; progi z rozp. MRiRW</td></tr>
+        <tr><td class="src">Open-Meteo (ERA5, ECMWF), IMGW-PIB</td><td>opad i parowanie z 10 lat, prognoza na 14 dni</td><td class="lic">CC BY 4.0; dane publiczne IMGW-PIB</td></tr>
+        <tr><td class="src">Sentinel-2 L2A</td><td>NDVI i NDMI: kondycja i wilgotność łanu</td><td class="lic">Copernicus, wolne i otwarte</td></tr>
+        <tr><td class="src">ISRIC SoilGrids 2.0</td><td>piasek, ił, węgiel organiczny</td><td class="lic">CC BY 4.0</td></tr>
+        <tr><td class="src">Copernicus DEM, NASA POWER</td><td>źródła zapasowe dla terenu i pogody</td><td class="lic">bezpłatne z podaniem źródła</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="foot"><span>Rusałka</span><span>HackNation 2026 KOWR</span></div>
+</section>
+
+<script>
+  (function () {
+    try {
+      var qr = qrcode(0, "M");
+      qr.addData("https://licho-cachyos-pc.tail886ef4.ts.net/");
+      qr.make();
+      document.getElementById("qr").innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    } catch (e) {
+      document.getElementById("qr").style.display = "none";
+    }
+  })();
+</script>
+</body>
+</html>

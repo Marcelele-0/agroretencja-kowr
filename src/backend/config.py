@@ -29,6 +29,9 @@ class Settings(BaseSettings):
         "http://127.0.0.1:4173",
         "https://licho-cachyos-pc.tail886ef4.ts.net",
     ]
+    # Requests per minute per client address to the heavy endpoints (analysis, report, what-if,
+    # zones, RL); a flood gets HTTP 429 instead of exhausting the free data quotas. 0 = off.
+    rate_limit_per_minute: int = 120
     http_user_agent: str = "AgroRetencja-KOWR/0.1 (prototyp HackNation 2026)"
     cache_dir: Path = PROJECT_ROOT / "data" / "cache"
 
@@ -65,6 +68,8 @@ class Settings(BaseSettings):
     s2_previous_window_days: int = 60
     s2_history_window_days: int = 10
     s2_history_years: int = 9
+    # once the current scene is in, history windows wait at most this long (the rest goes on in the background)
+    s2_history_grace_s: float = 1.5
     s2_max_concurrent_reads: int = 16
 
     # GUGiK NMT 1 m (WCS) + Copernicus DEM GLO-30 fallback (COG, no account)

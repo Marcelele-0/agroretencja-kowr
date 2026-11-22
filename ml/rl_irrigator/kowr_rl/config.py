@@ -128,6 +128,7 @@ def accepted_crop_codes() -> list[str]:
     return sorted(set(load_crops()) | {a for a, k in crop_aliases().items() if k in load_crops()})
 
 
+@lru_cache(maxsize=None)
 def load_pre_season(path: str | None = None) -> PreSeason:
     cfg = _read_yaml(Path(path) if path else CONFIG_DIR / "crops.yaml")["pre_season"]
     return PreSeason(tuple(cfg["start_month_day"]), float(cfg["kc"]), float(cfg["p"]))

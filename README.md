@@ -1,9 +1,10 @@
 # Rusałka: asystent wody dla działki rolnej
 
-> **Zespół:** _[UZUPEŁNIJ: nazwa zespołu z Platformy konkursowej]_
+> **Zespół:** SolvronGen Racing In Space
 > **Tytuł rozwiązania:** Rusałka – asystent wody dla działki rolnej
 > **Zadanie:** HackNation 2026, KOWR: *Zatrzymaj wodę, chroń plony – Inteligentne wsparcie gospodarowania wodą w rolnictwie*
 > **Repozytorium:** prywatne repozytorium konkursowe. Kod jest pisany od zera zgodnie z § 5 Regulaminu KOWR.
+> **Prezentacja (PDF) i film z działania prototypu:** załączone w formularzu zgłoszeniowym na Platformie konkursowej.
 > **Dokumentacja:**
 > - [docs/SOLUTION_BLUEPRINT.md](docs/SOLUTION_BLUEPRINT.md): koncepcja i metoda;
 > - [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md): plan i stan prac;
@@ -73,6 +74,7 @@ Moduł `kowr_rl` (`ml/rl_irrigator`) jest podpięty pod API FastAPI (`POST /rl/r
    - stan wody słownie i na skali od −5 (susza skrajna) przez 0 (optimum) do +5 (zalanie). Strona sucha wynika z zapasu wody w strefie korzeniowej (bilans FAO-56), poprawionego o bardzo niski bilans opad − parowanie z 60 dni i spadek wilgotności łanu z satelity; strona mokra z przesiąku i spływu z ostatnich 14–30 dni oraz dodatniego bilansu z 60 dni. Ryzyko nie jest niższe, niż wskazuje stan wody;
    - ryzyko (z wetem: susza wg progów IUNG-PIB, głęboki niedobór w fazie wrażliwej) i pewność danych;
    - ogólna ocena warunków wodnych 0–100 (WaterScore: zapas wody, KBW, satelita NDMI, pojemność gleby, teren);
+   - zdjęcie satelitarne czytane przez uprawę: waga NDMI zależy od fazy uprawy i pokrycia gleby łanem w dniu zdjęcia (FAO-56, wzór 76). Poza sezonem uprawy (goła gleba, ściernisko, spoczynek zimowy) NDMI nie wchodzi do oceny, a raport mówi dlaczego; w sadach, krzewach, chmielu, truskawkach, warzywach i na łąkach waga jest ograniczona, bo piksel 10–20 m łączy rośliny z międzyrzędziem lub łąka jest koszona;
    - wykres stanu dzień po dniu z prognozą na kolejne dni;
    - 14 okien klimatycznego bilansu wodnego (KBW) z progami IUNG dla uprawy i kategorii gleby;
    - ten sam dzień w każdym z 10 poprzednich lat.
@@ -147,9 +149,10 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
 
 ## 6. Wykaz bibliotek, komponentów, modeli ML, usług zewnętrznych i narzędzi AI
 
-- **Frontend:** React 18, React Router 6, Vite 5, TypeScript 5, MapLibre GL 4, Vitest 2.
-- **Backend:** Python 3.11, FastAPI, Uvicorn, Pydantic v2 (+ pydantic-settings), HTTPX, NumPy, SciPy, Shapely, pyproj, Rasterio (GDAL), LightGBM, Matplotlib, Pillow, Jinja2, WeasyPrint, PyYAML.
-- **Trening (grupa `train`, poza aplikacją):** PyTorch (CPU), Stable-Baselines3, sb3-contrib (`MaskablePPO`), Gymnasium, scikit-learn, Optuna, pandas, PyArrow, xarray, zarr.
+- **Frontend:** React 18, React Router 6, Vite 5 (+ @vitejs/plugin-react), TypeScript 5, MapLibre GL 4, Vitest 2.
+- **Backend:** Python 3.11, FastAPI, Uvicorn, Pydantic v2 (+ pydantic-settings), HTTPX, NumPy, SciPy, Shapely, pyproj, Rasterio (GDAL, affine), LightGBM, Matplotlib, Pillow, Jinja2, WeasyPrint, PyYAML.
+- **Trening (grupa `train`, poza aplikacją):** PyTorch (CPU), Stable-Baselines3, sb3-contrib (`MaskablePPO`), Gymnasium, TensorBoard, scikit-learn, Optuna, pandas, PyArrow, xarray, zarr, fsspec, aiohttp, tqdm, rich.
+- **Narzędzia deweloperskie (grupa `dev`):** pytest, pytest-asyncio, Ruff, mypy; menedżery pakietów uv i pnpm.
 - **Modele ML:**
   - agent nawadniania PPO (`MaskablePPO`), eksportowany do NumPy (`ml/rl_irrigator`, wagi w `artifacts/models/ppo_irrigator_weights.npz`, karta modelu `ppo_irrigator_card.json`);
   - `HydroFusion-PL`: LightGBM (kwantyle 5/50/95%) z przedziałem conformal i obszarem stosowalności AoA, odtwarza NDMI pod chmurami (`artifacts/models/hydrofusion_*`, runtime `src/backend/inference/hydrofusion.py`). Poza obszarem stosowalności model nie jest używany.
@@ -164,7 +167,7 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
   - ISRIC: `rest.isric.org`;
   - archiwum prognoz ECMWF ENS: `data.dynamical.org` (tylko skrypty treningowe i opcjonalnie plan 14 dni).
 - **Narzędzia AI:**
-  - przy tworzeniu kodu i dokumentacji: _[UZUPEŁNIJ: nazwy asystentów programistycznych używanych przez zespół]_; Claude Code (Anthropic) – przegląd zgodności z wymaganiami, testy end-to-end i poprawki (22.11.2026);
+  - przy tworzeniu kodu i dokumentacji: **Claude Code** (Anthropic) – pisanie i przegląd kodu, testy end-to-end, przegląd zgodności z wymaganiami KOWR; **Google Antigravity** – środowisko programistyczne z agentem AI do pisania i refaktoryzacji kodu. Wynik pracy tych narzędzi sprawdzają testy opisane w sekcji 9;
   - w samej aplikacji: modele ML opisane wyżej (PPO, LightGBM). Aplikacja nie używa modeli językowych: wszystkie teksty dla rolnika są generowane regułami z policzonych wartości.
 
 ---
@@ -172,7 +175,11 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
 ## 7. Licencje i warunki korzystania
 
 - **Kod i dokumentacja:** autorskie prawa majątkowe przechodzą na KOWR zgodnie z § 5 Regulaminu.
-- **Biblioteki:** licencje permisywne: MIT (React, React Router, Vite, Vitest, FastAPI, pydantic, pyproj, LightGBM, Stable-Baselines3, Gymnasium), BSD (MapLibre GL, NumPy, SciPy, Rasterio, Shapely, Jinja2, WeasyPrint, Uvicorn, HTTPX, PyTorch, scikit-learn), Apache-2.0 (TypeScript), licencja Matplotlib (oparta na PSF, zgodna z BSD).
+- **Biblioteki** (wszystkie na licencjach otwartych, pozwalających na użycie komercyjne i przeniesienie praw do rozwiązania):
+  - **MIT:** React, React DOM, React Router, Vite, @vitejs/plugin-react, Vitest, @types/react, FastAPI, Pydantic, pydantic-settings, pyproj, LightGBM, PyYAML, GDAL (w kołach Rasterio), Stable-Baselines3, sb3-contrib, Gymnasium, Optuna, zarr, rich, pytest, Ruff, mypy, pnpm;
+  - **BSD:** MapLibre GL, NumPy, SciPy, Rasterio, affine, Shapely, Jinja2, WeasyPrint, Uvicorn, HTTPX, PyTorch, scikit-learn, pandas, fsspec;
+  - **Apache-2.0:** TypeScript, PyArrow, xarray, TensorBoard, aiohttp, pytest-asyncio; uv (MIT lub Apache-2.0);
+  - **inne:** Matplotlib (licencja oparta na PSF, zgodna z BSD), Pillow (MIT-CMU), tqdm (MPL-2.0 i MIT).
 - **Dane GUGiK** (ULDK, ortofotomapa, KIEG, NMT, BDOT10k): dane PZGiK udostępniane bez opłat do dowolnych celów (ustawa Prawo geodezyjne i kartograficzne, od 31.07.2020).
 - **IUNG-PIB:** publiczna usługa WMS SMSR. Progi pochodzą z Rozporządzenia MRiRW z 11.04.2019.
 - **Open-Meteo:** dane CC BY 4.0 (ERA5 Copernicus, ECMWF). Darmowe API jest do użytku niekomercyjnego (limit ok. 10 000 zapytań na dobę). Przy wdrożeniu potrzebna jest własna instancja (kod open source) albo plan komercyjny.
@@ -183,6 +190,7 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
 - **ECMWF ENS (Open-Meteo, dynamical.org):** CC BY 4.0.
 - **ISRIC SoilGrids:** CC BY 4.0.
 - **Zdjęcia w interfejsie:** CC0, domena publiczna i CC BY, z autorami w `frontend/public/img/CREDITS.md`.
+- **Narzędzia AI (Claude Code, Google Antigravity):** używane wyłącznie jako narzędzia deweloperskie, na warunkach ich dostawców (Anthropic, Google). Nie są częścią aplikacji i nie są z nią rozpowszechniane.
 
 ---
 
@@ -193,7 +201,7 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
 - **Gleba:** kategorię I–IV wyznacza 5 punktów na działce (większość głosów). Pojemność wodna to wartość reprezentatywna kategorii, a nie pomiar.
 - **Bilans wody:** jednowarstwowy model FAO-56 („wiadro”) ze spływem SCS-CN. Nie uwzględnia wód gruntowych, podsiąku ani drenażu rurkowego.
 - **Ewapotranspiracja:** IUNG liczy ją metodą Penmana, a Open-Meteo metodą FAO-56 Penman-Monteith. Wyniki mogą różnić się o kilka procent.
-- **Satelita:** NDMI porównujemy z tym samym okresem na tej samej działce w poprzednich latach, a nie z wartością typową dla uprawy (w poprzednich latach na działce mogła rosnąć inna roślina). HydroFusion-PL odtwarza NDMI pod chmurami z R² 0,62, poniżej celu 0,78.
+- **Satelita:** NDMI porównujemy z tym samym okresem na tej samej działce w poprzednich latach; w tamtych latach mogła tu rosnąć inna uprawa (płodozmian), a tej informacji nie mamy. Uprawę uwzględniamy przez jej fazę i pokrycie gleby łanem w dniu zdjęcia (krzywa Kc i wysokość rośliny z FAO-56, wzór 76): poza sezonem uprawy NDMI nie wchodzi do oceny, w fazie początkowej i dojrzewania ma mniejszą wagę, w sadach, krzewach, chmielu, truskawkach, warzywach i na łąkach wagę ograniczoną. Parametry tej reguły wymagają weryfikacji z ekspertem; nie mamy wzorcowych wartości NDMI dla każdej uprawy i fazy w Polsce. HydroFusion-PL odtwarza NDMI pod chmurami z R² 0,62, poniżej celu 0,78.
 - **Model terenu:** usługa NMT 1 m (WCS GUGiK) nie odpowiadała w testach 22.11.2026 nawet w 120 s. Analiza czeka na nią ok. 4,5 s, potem używa Copernicus DEM 30 m (spadki przybliżone). Pobieranie 1 m trwa dalej w tle; gdy się uda, kolejna analiza działki użyje NMT 1 m.
 - **ULDK:** przy przeciążeniu GUGiK przekierowuje zapytania na stronę zastępczą. Pośrednik frontendu ponawia zapytanie do 5 razy, backend buforuje granice działek.
 - **Zgody wodnoprawne:** każda zmiana urządzeń wodnych (zastawka, piętrzenie, zbiornik) wymaga zgody Wód Polskich.
@@ -205,6 +213,17 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
 - **Aktualizacja danych:** archiwum pogody i sceny satelitarne starsze niż 7 dni nie zmieniają się; prognoza odświeża się co godzinę; progi IUNG skryptem `pnpm iung:progi`.
 - **Koszty:** jeden serwer obsługujący ponad 50 tys. analiz na dobę to szacunkowo ok. 350–500 zł/mies., plus plan komercyjny Open-Meteo albo własna instancja przy wdrożeniu (szacunek zespołu, [docs/SOLUTION_BLUEPRINT.md](docs/SOLUTION_BLUEPRINT.md)). Pozostałe źródła są bezpłatne.
 
+### Bezpieczeństwo i dane osobowe
+- **Brak danych osobowych:** aplikacja nie ma kont ani logowania i nie pyta o imię, adres czy PESEL. Wejście to numer działki (publiczne dane EGiB), uprawa i data. Bufor serwera (`data/cache`) zawiera tylko dane publiczne: granice działek, pogodę, zdjęcia satelitarne, model terenu. Przeglądarka zapisuje w `localStorage` tylko bufor pogody. Limit zapytań trzyma adres klienta w pamięci najwyżej 60 s.
+- **Walidacja wejścia (Pydantic):** format numeru TERYT sprawdzany przed zapytaniem do ULDK, długość pól tekstowych, współrzędne w granicach Polski, data od 1.01.2016 do dziś, uprawa z zamkniętej listy, najwyżej 12 działek w jednym zapytaniu o strefy.
+- **Limit zapytań:** analiza, raport, „co jeśli”, strefy i moduł RL przyjmują najwyżej 120 zapytań na minutę z jednego adresu (`AGRO_RATE_LIMIT_PER_MINUTE`). Nadmiar dostaje HTTP 429 z nagłówkiem `Retry-After`. Chroni to wspólny limit darmowych usług (Open-Meteo). Za pośrednikiem Vite wszystkie zapytania mają adres 127.0.0.1, więc limit działa łącznie; przy wdrożeniu za reverse proxy: `uvicorn --proxy-headers --forwarded-allow-ips=<adres proxy>`.
+- **Nagłówki HTTP:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy`; raport w wersji HTML ma `Content-Security-Policy` blokujący skrypty i zasoby zewnętrzne.
+- **CORS:** tylko adresy z listy `AGRO_CORS_ORIGINS`, metody GET i POST, nagłówek `Content-Type`.
+- **Wstrzykiwanie kodu:** bufor SQLite używa wyłącznie zapytań parametryzowanych; szablon raportu (Jinja2) ma automatyczne escapowanie HTML; zapytania do usług zewnętrznych budują parametry przez HTTPX.
+- **Pośredniki frontendu** (`/uldk`, `/om`) wysyłają zapytania tylko do stałych adresów GUGiK i Open-Meteo, więc nie działają jako otwarte proxy.
+- **Sekrety:** opcjonalny klucz Open-Meteo tylko w pliku `.env` (w `.gitignore`), przechowywany jako `SecretStr`. Repozytorium nie zawiera kluczy.
+- **Przy wdrożeniu:** HTTPS na reverse proxy, wyłączenie `/docs`, limit zapytań w proxy lub w Redis (przy kilku procesach Uvicorn).
+
 ---
 
 ## 9. Sposób weryfikacji wyników i metryki walidacji
@@ -215,7 +234,7 @@ Wynik i rekomendacje zawsze liczy aplikacja w chwili zapytania. Wcześniej pobra
    - KBW i skalę stanu wody;
    - zakresy pobierania pogody;
    - bufor analiz i strefy łączone kilku działek.
-2. **Testy backendu i modułu RL bez sieci** (`uv run pytest`, 148 testów): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, stan wody na osi susza–nadmiar, WaterScore i weta, przyczyny (bez procentów przy braku niedoboru), ranking retencji, pełna analiza dla każdej z 15 upraw, porady, API kroków 1–5, odmowa dla działki nierolniczej, HydroFusion-PL, środowisko i polityka RL.
+2. **Testy backendu i modułu RL bez sieci** (`uv run pytest`, 154 testy): fizyka bilansu (domknięcie bilansu masy), oś czasu bez zaglądania w przyszłość, teren, stan wody na osi susza–nadmiar, WaterScore i weta, przyczyny (bez procentów przy braku niedoboru), ranking retencji, waga NDMI zależna od uprawy i jej fazy, limit zapytań i nagłówki bezpieczeństwa, pełna analiza dla każdej z 15 upraw, porady, API kroków 1–5, odmowa dla działki nierolniczej, HydroFusion-PL, środowisko i polityka RL.
 3. **Test na prawdziwych usługach** (`pnpm test:live`) przechodzi działkę 040706_5.0050.78/2 od numeru do wyniku.
 4. **Test end-to-end backendu** (22.11.2026, prawdziwe usługi): działki z 6 województw, daty 2018–2026, 15 upraw. Analiza trwa 5–16 s; las i zabudowa dostają odmowę; ocena i nawadnianie pokazują ten sam zapas wody. Przykładowe raporty: [reports/](reports/).
 5. **Walidacja z IUNG (plan):** werdykt suszy dla działki porównany z wykazem gminnym SMSR z lat 2020–2025.

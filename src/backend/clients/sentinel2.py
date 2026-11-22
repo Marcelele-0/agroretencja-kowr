@@ -12,6 +12,9 @@ Speed rules (COGs are hosted in AWS us-west-2):
   nine history windows never queue in front of it,
 - past years use NDMI only (2 bands), the current scene also NDVI (4 bands),
 - per-scene parcel statistics are cached forever (a scene never changes),
+- once the current scene is in, the history windows get only a short grace period
+  (``s2_history_grace_s``); the ones still running finish in the background (until the source
+  deadline) and fill the scene cache, and the answer reports those years as not fetched,
 - years that do not finish before the source deadline are reported, the rest is kept.
 """
 
@@ -68,6 +71,8 @@ _GDAL_ENV = {
 # GDAL range reads release the GIL; a dedicated pool keeps them from starving the default executor
 # (SQLite cache, terrain, compute) when several analyses run at once.
 _READ_POOL = ThreadPoolExecutor(max_workers=96, thread_name_prefix="s2-read")
+# History windows left running after the answer; strong references stop them being collected.
+_BACKGROUND_TASKS: set[asyncio.Task[Any]] = set()
 
 
 class S2SceneStats(BaseModel):
@@ -206,6 +211,11 @@ def _base_stats(scl: _SclResult) -> S2SceneStats:
         scene_cloud_pct=props.get("eo:cloud_cover"),
         parcel_clear_fraction=round(scl.clear_fraction, 3),
     )
+
+
+def _ok(task: asyncio.Task[Any]) -> bool:
+    """The task finished with a result (not cancelled, no exception)."""
+    return task.done() and not task.cancelled() and task.exception() is None
 
 
 def _same_day_in_year(day: date, year: int) -> date:
@@ -383,21 +393,38 @@ class Sentinel2Client(BaseSourceClient[S2ParcelSeries]):
         tasks = [asyncio.create_task(run_window(i)) for i in range(len(windows))]
         previous_task = asyncio.create_task(run_previous())
         budget = max(1.0, s.s2_timeout_s - 1.0 - (perf_counter() - started))
-        await asyncio.wait([*tasks, previous_task], timeout=budget)
+        deadline = perf_counter() + budget
+        await asyncio.wait([tasks[0]], timeout=budget)
+        # With a clear current scene the history only refines the NDMI anomaly and the previous
+        # scene (HydroFusion input) is unused, so they get a short grace instead of the full budget.
+        has_current = _ok(tasks[0]) and tasks[0].result()[0] is not None
+        rest = max(0.0, deadline - perf_counter())
+        await asyncio.wait([*tasks, previous_task], timeout=min(rest, s.s2_history_grace_s) if has_current else rest)
+
+        def release(task: asyncio.Task[Any]) -> None:
+            """A window still running either finishes in the background (cache) or is cancelled."""
+            if not has_current or deadline - perf_counter() <= 0:
+                task.cancel()
+                return
+            _BACKGROUND_TASKS.add(task)
+            task.add_done_callback(_BACKGROUND_TASKS.discard)
+            task.add_done_callback(lambda t: t.cancelled() or t.exception())  # no "exception never retrieved"
+            asyncio.get_running_loop().call_later(deadline - perf_counter(), task.cancel)
+
         previous: S2SceneStats | None = None
-        if previous_task.done() and not previous_task.cancelled() and previous_task.exception() is None:
+        if _ok(previous_task):
             previous = previous_task.result()
         elif not previous_task.done():
-            previous_task.cancel()
+            release(previous_task)
 
         outcomes: list[tuple[S2SceneStats | None, np.ndarray | None, _Grid | None] | None] = []
         timed_out: list[int] = []
         for i, task in enumerate(tasks):
-            if task.done() and not task.cancelled() and task.exception() is None:
+            if _ok(task):
                 outcomes.append(task.result())
             else:
                 if not task.done():
-                    task.cancel()
+                    release(task)
                     if i > 0:
                         timed_out.append(history_years[i - 1])
                 outcomes.append(None)

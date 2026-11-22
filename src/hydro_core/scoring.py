@@ -13,6 +13,7 @@ that reads it here, give it a weight in scoring.yaml.
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import lru_cache
@@ -21,10 +22,11 @@ from typing import Any
 import numpy as np
 import yaml
 
-from hydro_core.crops import CONFIG_DIR, stage_on
-from hydro_core.features import FeatureContext
+from hydro_core.crops import CONFIG_DIR, kc_and_p_for_dates, stage_on
+from hydro_core.features import FeatureContext, feature
 from hydro_core.registry import Registry
 from hydro_core.schemas import (
+    PERENNIAL_CROPS,
     ConfidenceLevel,
     CropCode,
     DataConfidence,
@@ -103,18 +105,98 @@ def _c_kbw(fx: FeatureContext) -> ComponentResult:
     return _clip(50.0 + anomaly / 2.0), f"KBW 60 dni odbiega od średniej wielolecia o {anomaly:+.0f} mm."
 
 
+# --------------------------------------------------------------------------------------
+# Crop-aware reading of Sentinel-2 NDMI (KOWR task 3.2 pkt 1a: the satellite interpretation takes
+# the crop and its vegetation into account). The feature lives here, not in features.py, because
+# it reads scoring.yaml (satellite.crop_canopy) and features.py must not import this module.
+# --------------------------------------------------------------------------------------
+def _canopy_cfg() -> dict[str, Any]:
+    return scoring_config()["satellite"]["crop_canopy"]
+
+
+def scene_date(fx: FeatureContext) -> dt.date:
+    """Day the satellite value describes (analysis date for an NDMI reconstructed by HydroFusion-PL)."""
+    return fx.inputs.satellite.acquired or fx.inputs.analysis_date
+
+
+def ndmi_canopy_cover(fx: FeatureContext) -> float | None:
+    """Soil fraction covered by the crop on the scene date (FAO-56 eq. 76 from Kc); None outside the season."""
+    cfg = _canopy_cfg()
+    crop = fx.inputs.crop
+    kc, _, in_season = kc_and_p_for_dates(crop, np.array([scene_date(fx)], dtype="datetime64[D]"))
+    if not bool(in_season[0]):
+        return None
+    kc_min = float(cfg["kc_min"])
+    kc_max = max(crop.kc_ini, crop.kc_mid, crop.kc_end)
+    ratio = _clip((float(kc[0]) - kc_min) / max(kc_max - kc_min, 1e-6), 0.0, 1.0)
+    height = float(cfg["height_m"].get(fx.inputs.crop_code.value, cfg["height_default_m"]))
+    return float(ratio ** (1.0 + 0.5 * height))
+
+
+@feature("ndmi_crop_weight", group="satelita", unit="", label="Waga NDMI dla uprawy i jej fazy (0–1)")
+def _ndmi_crop_weight(fx: FeatureContext) -> float | None:
+    cover = ndmi_canopy_cover(fx)
+    if cover is None:
+        return 0.0
+    cfg = _canopy_cfg()
+    cap = cfg["cover_cap"].get(fx.inputs.crop_code.value)
+    weight = min(cover, float(cap["cap"])) if cap else cover
+    return 0.0 if weight < float(cfg["min_weight"]) else round(weight, 3)
+
+
+def ndmi_crop_note(fx: FeatureContext) -> str:
+    """One sentence for the farmer: what the scene shows for this crop on its date."""
+    cfg = _canopy_cfg()
+    crop, code = fx.inputs.crop, fx.inputs.crop_code
+    day = scene_date(fx)
+    stage = stage_on(crop, day)
+    if stage is None:
+        start, end = crop.season_start(day.year), crop.season_end(day.year)
+        before = day < start
+        if code in PERENNIAL_CROPS or code == CropCode.UZYTKI_ZIELONE:
+            what = "rośliny są w spoczynku"
+        elif code.value in cfg["winter_crops"]:
+            what = "uprawa ozima jest przed wznowieniem wegetacji" if before else "pole jest po zbiorze uprawy ozimej"
+        elif before:
+            what = "pole jest przed siewem (goła gleba lub międzyplon)"
+        else:
+            what = "pole jest po zbiorze (ściernisko, resztki pożniwne lub międzyplon)"
+        return (f"Zdjęcie z {day:%d.%m.%Y} jest poza sezonem uprawy „{crop.label_pl}” "
+                f"({start:%d.%m}–{end:%d.%m}): {what}, więc NDMI nie wchodzi do oceny.")
+    cover = ndmi_canopy_cover(fx) or 0.0
+    weight = fx.get("ndmi_crop_weight")
+    text = (f"Zdjęcie z {day:%d.%m.%Y}: uprawa w fazie {cfg['stage_labels'][stage]}, "
+            f"łan pokrywa ok. {100 * cover:.0f}% gleby (FAO-56, wzór 76)")
+    if weight is None:
+        return f"{text}."
+    if weight == 0.0:
+        return f"{text}, więc NDMI pokazuje głównie glebę i nie wchodzi do oceny."
+    cap = cfg["cover_cap"].get(code.value)
+    if cap and cover > float(cap["cap"]):
+        return f"{text}, ale {cap['reason']}, więc NDMI liczy się w ocenie w {100 * weight:.0f}%."
+    if weight < 1.0:
+        return f"{text}, więc NDMI liczy się w ocenie w {100 * weight:.0f}%."
+    return f"{text}, więc NDMI opisuje stan tej uprawy."
+
+
 @component("wilgotnosc_lanu_ndmi", "Wilgotność łanu z satelity (Sentinel-2 NDMI)")
 def _c_ndmi(fx: FeatureContext) -> ComponentResult:
     cfg = scoring_config()["satellite"]
     age = fx.get("s2_age_days")
     if age is not None and age > 30:
         return None, None
-    z = fx.get("ndmi_anomaly_z")
-    if z is not None:
-        return _clip(50.0 + cfg["ndmi_anomaly_points_per_sigma"] * z), f"NDMI odbiega od tego samego okresu poprzednich lat o {z:+.1f} σ."
     ndmi = fx.get("ndmi")
     if ndmi is None:
         return None, None
+    crop_note = ndmi_crop_note(fx)
+    if fx.get("ndmi_crop_weight") == 0.0:
+        return None, crop_note
+    z = fx.get("ndmi_anomaly_z")
+    if z is not None:
+        return _clip(50.0 + cfg["ndmi_anomaly_points_per_sigma"] * z), (
+            f"NDMI odbiega od tego samego okresu poprzednich lat o {z:+.1f} σ "
+            f"(w tamtych latach mogła tu rosnąć inna uprawa). {crop_note}"
+        )
     lo, hi = cfg["ndmi_abs_low"], cfg["ndmi_abs_high"]
     sat = fx.inputs.satellite
     if sat.reconstructed and sat.interval is not None:
@@ -122,7 +204,7 @@ def _c_ndmi(fx: FeatureContext) -> ComponentResult:
                 f"(przedział 90%: {num(sat.interval[0], 2)} … {num(sat.interval[1], 2)}).")
     else:
         text = f"NDMI łanu = {num(ndmi, 2)} (bez porównania z latami poprzednimi)."
-    return _clip(100.0 * (ndmi - lo) / (hi - lo)), text
+    return _clip(100.0 * (ndmi - lo) / (hi - lo)), f"{text} {crop_note}"
 
 
 @component("pojemnosc_wodna_gleby", "Pojemność wodna gleby (kategoria IUNG)")
@@ -146,26 +228,38 @@ def _c_topo(fx: FeatureContext) -> ComponentResult:
     return _clip(value), f"Średni spadek {slope:.1f}°, spływ {100 * share:.0f}% opadu z 60 dni."
 
 
+def _weight_factor(fx: FeatureContext, meta: dict[str, Any]) -> float:
+    """Share (0-1) of the nominal weight given by the feature named in ``weight_feature``; 1 without one."""
+    name = meta.get("weight_feature")
+    factor = fx.get(str(name)) if name else None
+    return 1.0 if factor is None else _clip(factor, 0.0, 1.0)
+
+
 def compute_water_score(fx: FeatureContext, overrides: dict[str, float | None] | None = None) -> WaterScoreBreakdown:
-    """Weighted mean of available components (weights rescaled when some are missing)."""
+    """Weighted mean of available components (weights rescaled when some are missing).
+
+    A component may scale its weight with a feature of the analysis (``weight_feature`` in
+    scoring.yaml), e.g. NDMI with the canopy cover of the crop on the scene date.
+    """
     cfg = scoring_config()["components"]
-    values: list[tuple[ScoreComponent, float | None, str | None, float, str]] = []
+    values: list[tuple[ScoreComponent, float | None, str | None, float, float, str]] = []
     for name, comp in SCORE_COMPONENTS.items():
         meta = cfg.get(name, {"weight": 0.0, "pillar": "other"})
         if overrides and name in overrides:
             val, expl = overrides[name], None
         else:
             val, expl = comp.fn(fx)
-        values.append((comp, val, expl, float(meta["weight"]), str(meta["pillar"])))
-    total_w = sum(w for _, v, _, w, _ in values if v is not None)
+        w = float(meta["weight"])
+        values.append((comp, val, expl, w, w * _weight_factor(fx, meta), str(meta["pillar"])))
+    total_w = sum(w_eff for _, v, _, _, w_eff, _ in values if v is not None)
     rows: list[ScoreComponentValue] = []
     total = 0.0
     pillars: dict[str, list[tuple[float, float]]] = {}
-    for comp, val, expl, w, pillar in values:
-        used = w / total_w if (val is not None and total_w > 0) else 0.0
-        if val is not None:
+    for comp, val, expl, w, w_eff, pillar in values:
+        used = w_eff / total_w if (val is not None and total_w > 0) else 0.0
+        if val is not None and w_eff > 0:
             total += used * val
-            pillars.setdefault(pillar, []).append((w, val))
+            pillars.setdefault(pillar, []).append((w_eff, val))
         rows.append(
             ScoreComponentValue(
                 name=comp.name, label=comp.label, pillar=pillar, value=None if val is None else round(val, 1),
@@ -324,7 +418,8 @@ def physical_water_state(
         if i == fx.i0:
             ndmi_z = fx.get("ndmi_anomaly_z")
             if ndmi_z is not None and ndmi_z < -0.5:
-                val += max(-0.5, 0.25 * (ndmi_z + 0.5))
+                trust = fx.get("ndmi_crop_weight")  # canopy cover of the crop on the scene date
+                val += (1.0 if trust is None else trust) * max(-0.5, 0.25 * (ndmi_z + 0.5))
         val = max(-5.0, min(0.0, val))
     else:
         sat_gate = max(0.0, 1.0 - dr / max(0.25 * raw, 10.0))
@@ -388,6 +483,9 @@ def _cc_sat(fx: FeatureContext) -> list[ConfidenceNote]:
         return [ConfidenceNote("missing", "Brak bezchmurnego zdjęcia Sentinel-2 – ocena bez stanu łanu.", 1)]
     age = fx.get("s2_age_days") or 0
     notes = []
+    trust = fx.get("ndmi_crop_weight")
+    if trust is not None and trust < 1.0:
+        notes.append(ConfidenceNote("resolution", ndmi_crop_note(fx)))
     if age > 10:
         notes.append(ConfidenceNote("resolution", f"Ostatnie bezchmurne zdjęcie sprzed {age:.0f} dni ({sat.acquired}).", 1 if age > 20 else 0))
     if sat.reconstructed:
@@ -421,6 +519,9 @@ def _cc_weather(fx: FeatureContext) -> list[ConfidenceNote]:
 @CONFIDENCE_CHECKS.register("spojnosc_zrodel")
 def _cc_consistency(fx: FeatureContext) -> list[ConfidenceNote]:
     anomaly, z = fx.get("kbw_60_anomaly"), fx.get("ndmi_anomaly_z")
+    trust = fx.get("ndmi_crop_weight")
+    if trust is not None and trust < 0.5:  # sparse canopy or outside the season: NDMI says little about the crop
+        return []
     if anomaly is not None and z is not None and anomaly < -60 and z > 1.0:
         return [
             ConfidenceNote(

@@ -535,7 +535,7 @@ function backendComponents(assessment: AnalysisResponse["assessment"] | undefine
   return scoreComponents.map((c) => ({
     key: c.name,
     label: c.label,
-    value: c.value != null ? `${Math.round(c.value)}/100` : "brak danych",
+    value: c.value != null ? `${Math.round(c.value)}/100` : c.explanation ? "pominięte" : "brak danych",
     weight: c.weight_used > 0 ? c.weight_used : undefined,
     detail: c.explanation ?? undefined,
   }));

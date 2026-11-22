@@ -392,7 +392,7 @@ class AuditMetadata(BaseModel):
 class AnalysisRequest(BaseModel):
     """Input payload for running a full parcel water decision analysis."""
 
-    parcel_id: str | None = Field(default=None, description="Cadastral TERYT parcel ID.")
+    parcel_id: str | None = Field(default=None, max_length=64, description="Cadastral TERYT parcel ID.")
     lat: float | None = Field(default=None, ge=48.0, le=56.0)
     lon: float | None = Field(default=None, ge=13.0, le=25.0)
     crop: CropCode
@@ -411,10 +411,10 @@ class AnalysisRequest(BaseModel):
 class WhatIfRequest(BaseModel):
     """Input payload for interactive What-If retention simulation."""
 
-    parcel_id: str
+    parcel_id: str = Field(max_length=64)
     crop: CropCode
     analysis_date: date
-    enabled_measures: list[str] = Field(default_factory=list)
+    enabled_measures: list[str] = Field(default_factory=list, max_length=20)
 
 
 class AnalysisResponse(BaseModel):

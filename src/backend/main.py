@@ -23,7 +23,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -32,6 +32,15 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from kowr_rl.api import router as rl_router
+from kowr_rl.config import (
+    crop_aliases,
+    crops_raw,
+    load_crops,
+    load_pre_season,
+    load_rl_config,
+    load_soils,
+)
+from kowr_rl.inference import load_rl_policy
 
 from backend.analysis import AnalysisService, AnalysisUnavailableError, ParcelOutOfScopeError
 from backend.clients.base import SourceUnavailableError
@@ -43,11 +52,13 @@ from backend.inference.hydrofusion import load_hydrofusion
 from backend.irrigation import IRRIGATION_PROVIDERS
 from backend.map_layers import MAP_LAYERS
 from backend.pdf.report import RENDERERS, render_report
+from backend.security import REPORT_CSP, SECURITY_HEADERS, RateLimiter, is_rate_limited_path
 from backend.zones import ZonesService
 from hydro_core.advisor import ADVICE_RULES
 from hydro_core.causes import COUNTERFACTUALS
+from hydro_core.crops import all_crops, pre_season
 from hydro_core.features import FEATURES
-from hydro_core.retention import APPLICABILITY, RETENTION_MEASURES
+from hydro_core.retention import APPLICABILITY, RETENTION_MEASURES, measures_config
 from hydro_core.schemas import (
     AnalysisRefusal,
     AnalysisRequest,
@@ -60,12 +71,25 @@ from hydro_core.schemas import (
     ZonesRequest,
     ZonesResponse,
 )
-from hydro_core.scoring import CONFIDENCE_CHECKS, SCORE_COMPONENTS, VETO_RULES
+from hydro_core.scoring import CONFIDENCE_CHECKS, SCORE_COMPONENTS, VETO_RULES, scoring_config
 
 logger = logging.getLogger(__name__)
 
 API_VERSION = "1.0.0"
 EARLIEST_DATE = dt.date(2016, 1, 1)
+
+
+def _warm_up() -> None:
+    """Models and YAML configs load once at startup, so the first analysis does not pay for them (~1 s)."""
+    loaders = (
+        load_hydrofusion, load_rl_policy, load_crops, crop_aliases, load_soils, load_rl_config,
+        crops_raw, load_pre_season, all_crops, pre_season, measures_config, scoring_config,
+    )
+    for loader in loaders:
+        try:
+            loader()
+        except Exception:  # warm-up must never stop the server; the first request loads it again
+            logger.warning("Warm-up of %s failed", loader.__name__, exc_info=True)
 
 
 @asynccontextmanager
@@ -76,6 +100,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.collector = collector
     app.state.service = AnalysisService(collector, settings)
     app.state.zones = ZonesService(collector)
+    await asyncio.to_thread(_warm_up)
     try:
         yield
     finally:
@@ -89,12 +114,37 @@ app = FastAPI(
     description="Cyfrowy asystent retencji i bilansu wodnego działki rolnej (HackNation 2026 – KOWR).",
     lifespan=lifespan,
 )
+limiter = RateLimiter(settings.rate_limit_per_minute)
+
+
+@app.middleware("http")
+async def _security(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """Rate limit of the heavy endpoints and security headers on every response.
+
+    Registered before CORS, so CORS stays the outer layer and a 429 still carries its headers.
+    """
+    wait: int | None = None
+    if is_rate_limited_path(request.method, request.url.path):
+        wait = limiter.check(request.client.host if request.client else "unknown")
+    if wait is not None:
+        response: Response = JSONResponse(
+            status_code=429,
+            content={"status": "rate_limited", "message": f"Za dużo zapytań. Spróbuj ponownie za {wait} s."},
+            headers={"Retry-After": str(wait)},
+        )
+    else:
+        response = await call_next(request)
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    return response
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-    expose_headers=["X-Report-Renderer"],
+    allow_headers=["Content-Type"],
+    expose_headers=["X-Report-Renderer", "Retry-After"],
 )
 app.include_router(rl_router)
 
@@ -160,7 +210,7 @@ def registries() -> dict[str, Any]:
 
 
 @app.get("/api/parcels/search", response_model=list[ParcelCandidate])
-async def search_parcels(request: Request, q: str = Query(..., min_length=2, description="np. 'Mińsk Mazowiecki 6509'")) -> list[ParcelCandidate]:
+async def search_parcels(request: Request, q: str = Query(..., min_length=2, max_length=100, description="np. 'Mińsk Mazowiecki 6509'")) -> list[ParcelCandidate]:
     return await request.app.state.collector.search_parcels(q)
 
 
@@ -203,8 +253,8 @@ async def weather_daily(
     request: Request,
     start: dt.date,
     end: dt.date,
-    lat: float = Query(..., ge=-90.0, le=90.0),
-    lon: float = Query(..., ge=-180.0, le=180.0),
+    lat: float = Query(..., ge=48.0, le=56.0),
+    lon: float = Query(..., ge=13.0, le=25.0),
 ) -> JSONResponse:
     """Daily weather for the Open-Meteo proxy of the frontend when Open-Meteo is limited or failing.
 
@@ -268,7 +318,11 @@ async def _report(request: Request, body: AnalysisRequest) -> Response:
     return Response(
         content=rendered.content,
         media_type=rendered.media_type,
-        headers={"Content-Disposition": f'inline; filename="{name}"', "X-Report-Renderer": rendered.renderer},
+        headers={
+            "Content-Disposition": f'inline; filename="{name}"',
+            "X-Report-Renderer": rendered.renderer,
+            "Content-Security-Policy": REPORT_CSP,
+        },
     )
 
 

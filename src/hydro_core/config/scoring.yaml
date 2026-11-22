@@ -10,7 +10,8 @@
 components:
   zapas_wody_w_glebie: {weight: 0.28, pillar: balance}
   kbw_iung: {weight: 0.12, pillar: balance}
-  wilgotnosc_lanu_ndmi: {weight: 0.30, pillar: satellite}
+  # weight_feature: the nominal weight is multiplied by this feature (0-1) of the analysis
+  wilgotnosc_lanu_ndmi: {weight: 0.30, pillar: satellite, weight_feature: ndmi_crop_weight}
   pojemnosc_wodna_gleby: {weight: 0.15, pillar: soil}
   teren_splyw: {weight: 0.15, pillar: topography}
 
@@ -21,6 +22,42 @@ satellite:
   ndmi_anomaly_points_per_sigma: 15.0
   ndmi_abs_low: -0.20         # absolute NDMI mapped to 0 (used without 10-year history)
   ndmi_abs_high: 0.40         # absolute NDMI mapped to 100
+  # Crop-aware reading of NDMI (hydro_core/scoring.py: ndmi_crop_weight, ndmi_crop_note).
+  # NDMI describes the water of the crop canopy only where the canopy covers the soil; over bare
+  # soil, stubble or a sparse canopy it mostly shows the wetness of the topsoil. Weight of NDMI =
+  # canopy cover fc on the scene date from the crop's Kc curve, FAO-56 eq. 76:
+  #   fc = ((Kc - Kc_min) / (Kc_max - Kc_min)) ** (1 + 0.5 h)
+  # (single Kc used instead of Kcb, Kc_max = highest Kc of the crop). Outside the crop season fc = 0.
+  # STATUS: DO WERYFIKACJI Z MENTOREM (dr hab. D. Gozdowski).
+  crop_canopy:
+    kc_min: 0.15              # FAO-56 eq. 76: Kc_min ~ 0.15-0.20 (bare dry soil)
+    min_weight: 0.15          # below this cover NDMI is left out of the score
+    height_default_m: 1.0
+    height_m:                 # maximum crop height h [m], FAO-56 Tab. 12 (tyton: assumption)
+      pszenica_ozima: 1.0
+      pszenica_jara: 1.0
+      kukurydza: 2.0
+      kukurydza_kiszonka: 2.0
+      rzepak_ozimy: 0.6
+      burak_cukrowy: 0.5
+      ziemniak: 0.6
+      uzytki_zielone: 0.3
+      straczkowe: 0.5
+      warzywa: 0.4
+      chmiel: 5.0
+      tyton: 1.2
+      drzewa_owocowe: 4.0
+      krzewy_owocowe: 1.5
+      truskawki: 0.2
+    cover_cap:                # a 10-20 m pixel mixes the crop with something else
+      drzewa_owocowe: {cap: 0.5, reason: "piksel 10–20 m łączy korony drzew z murawą międzyrzędzi"}
+      krzewy_owocowe: {cap: 0.5, reason: "piksel 10–20 m łączy krzewy z międzyrzędziami"}
+      chmiel: {cap: 0.5, reason: "piksel 10–20 m łączy rzędy chmielu z glebą między nimi"}
+      truskawki: {cap: 0.5, reason: "piksel 10–20 m łączy rośliny ze ściółką i ścieżkami"}
+      warzywa: {cap: 0.7, reason: "łan warzyw jest rzędowy i często zbierany etapami"}
+      uzytki_zielone: {cap: 0.7, reason: "koszenie zmienia łan łąki w ciągu jednego dnia"}
+    winter_crops: [pszenica_ozima, rzepak_ozimy]
+    stage_labels: {ini: "początkowej", dev: "rozwoju", mid: "pełni wzrostu", late: "dojrzewania"}
 soil:
   taw_reference_mm: 220.0     # TAW scored as 100
 topography:
