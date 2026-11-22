@@ -49,7 +49,39 @@ a { color: inherit; }
 .rs-panel__item { flex: 1; display: grid; gap: 4px; min-width: 0; padding: 8px 10px; }
 .rs-panel__name { display: grid; gap: 2px; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .rs-panel__name b { font-size: 13.5px; font-weight: 600; }
-.rs-panel__crop.ar-select { height: 28px; font-size: 13px; }
+.rs-panel__crop.rs-crop { height: 26px; padding: 0 8px 0 10px; font-size: 12px; }
+/* Crop picker: an outline pill like Pill/LayerSwitch; the list is the smoked-glass card of ParcelPopover; a BottomSheet on phones. */
+.rs-crop { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-width: 0; height: 32px; padding: 0 10px 0 14px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: transparent; color: var(--ink); font: 600 13px/1 var(--font-sans); text-align: left; cursor: pointer; transition: background .15s, border-color .15s; }
+.rs-crop:hover { background: var(--surface-sunk); }
+.rs-crop.is-open { border-color: var(--ink); background: var(--surface-sunk); }
+.rs-crop:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rs-crop__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rs-crop__chev { flex: none; width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s; }
+.rs-crop.is-open .rs-crop__chev { transform: rotate(180deg); }
+.rs-crop-layer { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.rs-crop-layer__scrim { display: none; }
+.rs-crop-menu { position: fixed; display: grid; gap: 1px; max-height: min(380px, calc(100vh - 24px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 6px; border: 1px solid var(--glass-line); border-radius: 14px; background: var(--glass-dark); color: var(--photo-ink); box-shadow: var(--shadow-float); -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); pointer-events: auto; outline: none; animation: rs-crop-in .14s ease-out; }
+.rs-crop-menu.is-up { transform: translateY(-100%); }
+.rs-crop-menu__group + .rs-crop-menu__group { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--glass-line); }
+.rs-crop-menu__head { padding: 7px 12px 5px; font: 500 11.5px/1.2 var(--font-sans); opacity: .7; }
+.rs-crop-menu__opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 32px; padding: 0 12px; border-radius: var(--radius-pill); font: 600 13px/1.2 var(--font-sans); cursor: pointer; user-select: none; }
+.rs-crop-menu__opt.is-active { background: var(--glass-line); }
+.rs-crop-menu__opt.is-sel { background: var(--surface); color: var(--ink); }
+.rs-crop-menu__opt .ar-ico { flex: none; width: 15px; height: 15px; }
+@keyframes rs-crop-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 640px) {
+  .rs-crop-layer { pointer-events: auto; }
+  .rs-crop-layer__scrim { display: block; position: absolute; inset: 0; background: var(--scrim-soft); }
+  .rs-crop-menu, .rs-crop-menu.is-up { left: 0 !important; right: 0; top: auto !important; bottom: 0; width: auto !important; max-height: 72vh; padding: 26px 12px calc(16px + env(safe-area-inset-bottom)); border: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface); color: var(--ink); box-shadow: 0 -12px 32px -20px var(--scrim); -webkit-backdrop-filter: none; backdrop-filter: none; transform: none; animation: rs-crop-up .2s ease-out; }
+  .rs-crop-menu::before { content: ""; position: absolute; top: 9px; left: 50%; width: 38px; height: 4px; border-radius: 4px; background: var(--line-strong); opacity: .5; transform: translateX(-50%); }
+  .rs-crop-menu__group + .rs-crop-menu__group { border-top-color: var(--hairline); }
+  .rs-crop-menu__head { color: var(--ink-muted); opacity: 1; }
+  .rs-crop-menu__opt { min-height: 44px; font-size: 15px; }
+  .rs-crop-menu__opt.is-active { background: var(--surface-sunk); }
+  .rs-crop-menu__opt.is-sel { background: var(--forest); color: var(--on-forest); }
+}
+@keyframes rs-crop-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rs-crop-menu, .rs-crop__chev { animation: none; transition: none; } }
 .rs-panel__name span { overflow: hidden; color: var(--ink-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .rs-panel .ar-btn--icon { flex: none; border: 1px solid var(--hairline); box-shadow: none; }
 .rs-panel__form { flex: none; display: grid; gap: 10px; margin-top: auto; padding: 12px 14px 14px; border-top: 1px solid var(--hairline); }

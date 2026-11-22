@@ -1,4 +1,5 @@
-import { useId, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { CROP_GROUPS, type CropCode } from "../lib/crops";
 import { addDays, formatLong, inSeason, isoOf, parts, seasonYear, todayIso, type Iso } from "../lib/dates";
 import { Button, cx, Icon, Pill } from "./core";
@@ -38,11 +39,100 @@ export function quickPicks(today: Iso = todayIso()): { label: string; date: Iso 
   return picks;
 }
 
-export function CropSelect({ value, onChange, label, className }: { value: CropCode; onChange: (c: CropCode) => void; label: string; className?: string }) {
+const CROP_LIST = CROP_GROUPS.flatMap((g) => g.crops);
+
+/** Crop picker: a quiet text trigger and a grouped list card (bottom sheet on phones), keyboard operable like a listbox. */
+export function CropSelect({ value, onChange, label, className, id: idProp }: { value: CropCode; onChange: (c: CropCode) => void; label: string; className?: string; id?: string }) {
+  const autoId = useId();
+  const id = idProp ?? autoId;
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const [pos, setPos] = useState<{ left: number; top: number; width: number; up: boolean } | null>(null);
+  const trig = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const current = CROP_LIST.find((c) => c.code === value);
+
+  const place = () => {
+    const r = trig.current?.getBoundingClientRect();
+    if (!r) return;
+    const width = Math.max(r.width, 300);
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+    const up = r.bottom + 360 > window.innerHeight && r.top > 360;
+    setPos({ left, top: up ? r.top - 6 : r.bottom + 6, width, up });
+  };
+  const show = () => { place(); setActive(Math.max(0, CROP_LIST.findIndex((c) => c.code === value))); setOpen(true); };
+  const close = (focus = true) => { setOpen(false); if (focus) trig.current?.focus(); };
+  const pick = (code: CropCode) => { if (code !== value) onChange(code); close(); };
+
+  useEffect(() => {
+    if (!open) return;
+    list.current?.focus();
+    const away = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!list.current?.contains(t) && !trig.current?.contains(t)) close(false);
+    };
+    const reflow = () => place();
+    document.addEventListener("pointerdown", away);
+    window.addEventListener("resize", reflow);
+    window.addEventListener("scroll", reflow, true);
+    return () => { document.removeEventListener("pointerdown", away); window.removeEventListener("resize", reflow); window.removeEventListener("scroll", reflow, true); };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) list.current?.querySelector(`[data-i="${active}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [open, active]);
+
+  const onKey = (e: ReactKeyboardEvent) => {
+    const n = CROP_LIST.length;
+    if (e.key === "ArrowDown") setActive((i) => (i + 1) % n);
+    else if (e.key === "ArrowUp") setActive((i) => (i - 1 + n) % n);
+    else if (e.key === "Home") setActive(0);
+    else if (e.key === "End") setActive(n - 1);
+    else if (e.key === "Enter" || e.key === " ") pick(CROP_LIST[active]!.code);
+    else if (e.key === "Escape" || e.key === "Tab") { close(e.key === "Escape"); if (e.key === "Tab") return; }
+    else if (e.key.length === 1) {
+      const k = e.key.toLocaleLowerCase("pl");
+      const from = (active + 1) % n;
+      const hit = [...CROP_LIST.slice(from), ...CROP_LIST.slice(0, from)].find((c) => c.label.toLocaleLowerCase("pl").startsWith(k));
+      if (hit) setActive(CROP_LIST.indexOf(hit));
+      else return;
+    } else return;
+    e.preventDefault();
+  };
+
+  let i = -1;
   return (
-    <select className={cx("ar-select", className)} value={value} aria-label={label} onChange={(e) => onChange(e.target.value as CropCode)}>
-      {CROP_GROUPS.map((g) => <optgroup key={g.label} label={g.label}>{g.crops.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}</optgroup>)}
-    </select>
+    <>
+      <button ref={trig} id={id} type="button" className={cx("rs-crop", open && "is-open", className)} aria-haspopup="listbox" aria-expanded={open} aria-label={`${label}: ${current?.label ?? ""}`}
+        onClick={() => (open ? close() : show())} onKeyDown={(e) => { if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); show(); } }}>
+        <span className="rs-crop__value">{current?.label ?? "Wybierz uprawę"}</span>
+        <svg className="rs-crop__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" /></svg>
+      </button>
+      {open && pos ? createPortal(
+        <div className="rs-crop-layer">
+          <div className="rs-crop-layer__scrim" aria-hidden="true" />
+          <div ref={list} className={cx("rs-crop-menu", pos.up && "is-up")} role="listbox" tabIndex={-1} aria-label={label} aria-activedescendant={`${id}-o${active}`} onKeyDown={onKey}
+            style={{ left: pos.left, top: pos.top, width: pos.width } as CSSProperties}>
+            {CROP_GROUPS.map((g) => (
+              <div key={g.label} className="rs-crop-menu__group" role="group" aria-label={g.label}>
+                <div className="rs-crop-menu__head" aria-hidden="true">{g.label}</div>
+                {g.crops.map((c) => {
+                  i += 1;
+                  const idx = i;
+                  const sel = c.code === value;
+                  return (
+                    <div key={c.code} id={`${id}-o${idx}`} data-i={idx} role="option" aria-selected={sel} className={cx("rs-crop-menu__opt", sel && "is-sel", idx === active && "is-active")}
+                      onPointerEnter={() => setActive(idx)} onClick={() => pick(c.code)}>
+                      <span>{c.label}</span>
+                      {sel ? <Icon name="check" /> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>, document.body) : null}
+    </>
   );
 }
 
@@ -55,9 +145,7 @@ export function CropDateForm({ crop, date, onCrop, onDate, onSubmit, disabled, b
     <form className={cx("ar-form", layout === "stack" && "ar-form--stack", className)} style={style} onSubmit={(e) => { e.preventDefault(); if (!disabled) onSubmit(); }}>
       {hideCrop ? null : <div className="ar-form__cell">
         <label className="ar-form__label" htmlFor={`${id}c`}>Uprawa</label>
-        <select id={`${id}c`} className="ar-select" value={crop} onChange={(e) => onCrop(e.target.value as CropCode)}>
-          {CROP_GROUPS.map((g) => <optgroup key={g.label} label={g.label}>{g.crops.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}</optgroup>)}
-        </select>
+        <CropSelect id={`${id}c`} value={crop} onChange={onCrop} label="Uprawa" />
       </div>}
       <div className="ar-form__cell">
         <label className="ar-form__label" htmlFor={`${id}d`}>Data analizy</label>
