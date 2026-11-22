@@ -637,7 +637,7 @@ button.rs-st__day:hover { background: var(--hairline); }
 .ar-kbw__head { flex-wrap: nowrap; }
 .ar-kbw__title { flex: none; font-size: 13px; white-space: nowrap; }
 .ar-kbw__sum { min-width: 0; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.ar-kbw__legend { min-height: calc(3 * 1.4 * 11.5px + 12px); align-content: flex-start; }
+.ar-kbw__legend { min-height: 64px; align-content: flex-start; }
 .rs-hero .rs-status { flex-direction: column; flex-wrap: nowrap; gap: 14px; }
 @media (max-width: 560px) {
   .ar-kbw__head { flex-direction: column; align-items: flex-start; gap: 2px; }
